@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .input-cell {
+    @apply w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors;
+  }
+}
+
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background-color: #0f172a;
+  color: #f1f5f9;
+}
+
+@keyframes ping-once {
+  0% {
+    transform: scale(1.4);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes trolley-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes trolley-spin-rev {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+@keyframes trolley-stripe-fwd {
+  to {
+    transform: translateY(6px);
+  }
+}
+@keyframes trolley-stripe-bwd {
+  to {
+    transform: translateY(-6px);
+  }
+}
