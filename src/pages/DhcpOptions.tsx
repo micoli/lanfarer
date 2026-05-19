@@ -1,19 +1,21 @@
-import { useState, useEffect, type FormEvent } from "react";
-import { Save, Trash2, Plus, Check, X, Lock, Pencil } from "lucide-react";
+import { Check, Download, Lock, Pencil, Plus, Save, Trash2, X } from "lucide-react";
+import { type FormEvent, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
-  useDhcpConfig,
-  useUpdateDhcpConfig,
-  useDhcpOptions,
   useCreateDhcpOption,
-  useUpdateDhcpOption,
   useDeleteDhcpOption,
+  useDhcpConfig,
+  useDhcpOptions,
+  useUpdateDhcpConfig,
+  useUpdateDhcpOption,
 } from "../hooks/useBbox";
 import type {
-  DhcpResponse,
-  DhcpOptionsResponse,
   DhcpOption,
   DhcpOptionCapability,
+  DhcpOptionsResponse,
+  DhcpResponse,
 } from "../lib/bbox/types";
+import { exportCsv } from "../lib/exportCsv";
 
 function parseDhcpOptions(raw: unknown): DhcpOptionsResponse["dhcp"] | null {
   if (!raw) return null;
@@ -33,6 +35,7 @@ function OptionRow({
   onSave: (id: number, option: number, value: string) => void;
   onDelete: (id: number) => void;
 }) {
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(opt.value);
 
@@ -63,7 +66,7 @@ function OptionRow({
                   setEditing(false);
                 }}
                 className="p-1 text-blue-400 hover:text-blue-300 transition-colors"
-                title="Sauvegarder"
+                title={t("common.save")}
               >
                 <Check size={13} />
               </button>
@@ -74,7 +77,7 @@ function OptionRow({
                   setEditing(false);
                 }}
                 className="p-1 text-slate-400 hover:text-slate-200 transition-colors"
-                title="Annuler"
+                title={t("common.cancel")}
               >
                 <X size={13} />
               </button>
@@ -84,7 +87,7 @@ function OptionRow({
               <button
                 type="button"
                 onClick={() => setEditing(true)}
-                title="Modifier"
+                title={t("common.edit")}
                 className="p-1 rounded text-slate-400 hover:text-slate-200 transition-colors"
               >
                 <Pencil size={13} />
@@ -92,7 +95,7 @@ function OptionRow({
               <button
                 type="button"
                 onClick={() => onDelete(opt.id)}
-                title="Supprimer"
+                title={t("common.delete")}
                 className="p-1 rounded text-red-400 hover:text-red-300 transition-colors"
               >
                 <Trash2 size={13} />
@@ -106,6 +109,7 @@ function OptionRow({
 }
 
 function DhcpOptionsTable({ raw }: { raw: unknown }) {
+  const { t } = useTranslation();
   const parsed = parseDhcpOptions(raw);
   const [addOpen, setAddOpen] = useState(false);
   const [newOption, setNewOption] = useState<number>(6);
@@ -121,17 +125,54 @@ function DhcpOptionsTable({ raw }: { raw: unknown }) {
 
   return (
     <div className="flex flex-col gap-3 p-4 bg-slate-800/60 rounded-xl border border-slate-700">
-      <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-        Options DHCP
-      </h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+          {t("dhcpOptions.sectionTitle")}
+        </h2>
+        <button
+          type="button"
+          onClick={() =>
+            exportCsv(
+              "options-dhcp.csv",
+              [
+                t("dhcpOptions.colOption"),
+                t("dhcpOptions.colDescription"),
+                t("dhcpOptions.colType"),
+                t("dhcpOptions.colValue"),
+                "Static",
+              ],
+              [
+                ...(optionsstatic ?? []).map((o) => [
+                  o.option,
+                  capMap.get(o.option)?.description ?? "",
+                  capMap.get(o.option)?.type ?? "",
+                  o.value,
+                  "oui",
+                ]),
+                ...(options ?? []).map((o) => [
+                  o.option,
+                  capMap.get(o.option)?.description ?? "",
+                  capMap.get(o.option)?.type ?? "",
+                  o.value,
+                  "non",
+                ]),
+              ]
+            )
+          }
+          className="p-1 text-slate-400 hover:text-slate-200 transition-colors"
+          title={t("common.exportCsv")}
+        >
+          <Download size={13} />
+        </button>
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="text-xs uppercase tracking-wider text-slate-500">
-              <th className="px-3 py-2 font-medium">Option</th>
-              <th className="px-3 py-2 font-medium">Description</th>
-              <th className="px-3 py-2 font-medium">Type</th>
-              <th className="px-3 py-2 font-medium">Valeur</th>
+              <th className="px-3 py-2 font-medium">{t("dhcpOptions.colOption")}</th>
+              <th className="px-3 py-2 font-medium">{t("dhcpOptions.colDescription")}</th>
+              <th className="px-3 py-2 font-medium">{t("dhcpOptions.colType")}</th>
+              <th className="px-3 py-2 font-medium">{t("dhcpOptions.colValue")}</th>
               <th className="px-3 py-2 font-medium"></th>
             </tr>
           </thead>
@@ -179,7 +220,7 @@ function DhcpOptionsTable({ raw }: { raw: unknown }) {
                 <td className="px-3 py-2">
                   <input
                     className="input-cell font-mono w-40"
-                    placeholder="valeur"
+                    placeholder={t("dhcpOptions.valueLabel")}
                     value={newValue}
                     onChange={(e) => setNewValue(e.target.value)}
                   />
@@ -217,7 +258,7 @@ function DhcpOptionsTable({ raw }: { raw: unknown }) {
                     className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition-colors"
                   >
                     <Plus size={13} />
-                    Ajouter une option
+                    {t("dhcpOptions.addOption")}
                   </button>
                 </td>
               </tr>
@@ -273,6 +314,7 @@ function Field({
 }
 
 export default function DhcpOptions() {
+  const { t } = useTranslation();
   const { data: rawDhcp, isLoading: loadingDhcp, error: errorDhcp } = useDhcpConfig();
   const { data: rawDhcpOptions, isLoading: loadingOptions } = useDhcpOptions();
   const updateDhcp = useUpdateDhcpConfig();
@@ -311,7 +353,7 @@ export default function DhcpOptions() {
   if (errorDhcp) {
     return (
       <div className="p-6 flex flex-col gap-3">
-        <p className="text-red-400 text-sm font-medium">Erreur DHCP</p>
+        <p className="text-red-400 text-sm font-medium">{t("dhcpOptions.errorDhcp")}</p>
         <pre className="text-xs text-red-300 bg-slate-800 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap">
           {errorDhcp instanceof Error ? errorDhcp.message : JSON.stringify(errorDhcp, null, 2)}
         </pre>
@@ -321,11 +363,11 @@ export default function DhcpOptions() {
 
   return (
     <div className="p-6 max-w-lg">
-      <h1 className="text-lg font-semibold text-slate-100 mb-6">Options DHCP</h1>
+      <h1 className="text-lg font-semibold text-slate-100 mb-6">{t("dhcpOptions.title")}</h1>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         <div className="flex items-center justify-between p-4 bg-slate-800/60 rounded-xl border border-slate-700">
-          <span className="text-sm text-slate-200">Serveur DHCP activé</span>
+          <span className="text-sm text-slate-200">{t("dhcpOptions.serverEnabled")}</span>
           <button
             type="button"
             onClick={() => setEnable(enable ? 0 : 1)}
@@ -339,17 +381,17 @@ export default function DhcpOptions() {
 
         <div className="flex flex-col gap-4 p-4 bg-slate-800/60 rounded-xl border border-slate-700">
           <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-            Plage d'adresses
+            {t("dhcpOptions.range")}
           </h2>
           <div className="grid grid-cols-2 gap-4">
             <Field
-              label="IP de début"
+              label={t("dhcpOptions.rangeStart")}
               value={minaddress}
               onChange={setMinaddress}
               placeholder="192.168.2.10"
             />
             <Field
-              label="IP de fin"
+              label={t("dhcpOptions.rangeEnd")}
               value={maxaddress}
               onChange={setMaxaddress}
               placeholder="192.168.2.199"
@@ -358,7 +400,7 @@ export default function DhcpOptions() {
         </div>
 
         <Field
-          label="Durée du bail (secondes)"
+          label={t("dhcpOptions.leaseDuration")}
           value={leasetime}
           onChange={setLeasetime}
           type="number"
@@ -366,7 +408,9 @@ export default function DhcpOptions() {
         />
 
         {updateDhcp.error && (
-          <p className="text-xs text-red-400">Erreur : {(updateDhcp.error as Error).message}</p>
+          <p className="text-xs text-red-400">
+            {t("common.error")} : {(updateDhcp.error as Error).message}
+          </p>
         )}
 
         <button
@@ -375,7 +419,7 @@ export default function DhcpOptions() {
           className="flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition-all disabled:opacity-50 text-sm"
         >
           <Save size={15} />
-          {updateDhcp.isPending ? "Sauvegarde…" : saved ? "Sauvegardé ✓" : "Sauvegarder"}
+          {updateDhcp.isPending ? t("common.saving") : saved ? t("common.saved") : t("common.save")}
         </button>
       </form>
 

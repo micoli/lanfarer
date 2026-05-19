@@ -1,5 +1,6 @@
+import { Eye, EyeOff, Shield, Wifi, WifiOff } from "lucide-react";
 import { useState } from "react";
-import { Wifi, WifiOff, Eye, EyeOff, Shield } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useWireless } from "../hooks/useBbox";
 
 interface RadioBand {
@@ -45,6 +46,7 @@ function standardLabel(key: string, standards: { key: string; value: string }[])
 }
 
 function PassphraseField({ passphrase }: { passphrase: string }) {
+  const { t } = useTranslation();
   const [show, setShow] = useState(false);
   return (
     <div className="flex items-center gap-2">
@@ -57,7 +59,7 @@ function PassphraseField({ passphrase }: { passphrase: string }) {
         type="button"
         onClick={() => setShow((v) => !v)}
         className="text-slate-500 hover:text-slate-300 transition-colors"
-        title={show ? "Masquer" : "Afficher"}
+        title={show ? t("wifi.hide") : t("wifi.show")}
       >
         {show ? <EyeOff size={13} /> : <Eye size={13} />}
       </button>
@@ -76,6 +78,7 @@ function BandCard({
   ssid: Ssid;
   standards: { key: string; value: string }[];
 }) {
+  const { t } = useTranslation();
   const enabled = radio.enable === 1 && ssid.enable === 1;
 
   return (
@@ -93,7 +96,7 @@ function BandCard({
         <span
           className={`text-xs px-2 py-0.5 rounded-full ${enabled ? "bg-green-500/10 text-green-400" : "bg-slate-700 text-slate-500"}`}
         >
-          {enabled ? "Actif" : "Inactif"}
+          {enabled ? t("wifi.active") : t("wifi.inactive")}
         </span>
       </div>
 
@@ -102,7 +105,7 @@ function BandCard({
         <Row label="SSID" value={ssid.id} mono />
         <Row label="BSSID" value={ssid.bssid} mono dimmed />
         <div className="flex justify-between items-center text-xs">
-          <span className="text-slate-500">Mot de passe</span>
+          <span className="text-slate-500">{t("wifi.password")}</span>
           <PassphraseField passphrase={ssid.security.passphrase} />
         </div>
       </div>
@@ -112,9 +115,11 @@ function BandCard({
       {/* Radio */}
       <div className="flex flex-col gap-2">
         <Row label="Standard" value={standardLabel(radio.standard, standards)} />
-        <Row label="Canal actuel" value={`${radio.current_channel} (auto)`} />
-        <Row label="Largeur" value={`${radio.current_bandwidth} MHz`} />
-        {radio.dfs !== undefined && <Row label="DFS" value={radio.dfs ? "Activé" : "Désactivé"} />}
+        <Row label={t("wifi.currentChannel")} value={`${radio.current_channel} (auto)`} />
+        <Row label={t("wifi.bandwidth")} value={`${radio.current_bandwidth} MHz`} />
+        {radio.dfs !== undefined && (
+          <Row label="DFS" value={radio.dfs ? t("wifi.enabled") : t("wifi.disabled")} />
+        )}
       </div>
 
       <hr className="border-slate-700" />
@@ -127,38 +132,46 @@ function BandCard({
             {ssid.security.protocol} / {ssid.security.encryption}
           </span>
         </div>
-        {ssid.wps && <Row label="WPS" value={ssid.wps.enable ? "Activé" : "Désactivé"} />}
-        {ssid.hidden === 1 && <span className="text-xs text-amber-400">Réseau masqué</span>}
+        {ssid.wps && (
+          <Row label="WPS" value={ssid.wps.enable ? t("wifi.enabled") : t("wifi.disabled")} />
+        )}
+        {ssid.hidden === 1 && (
+          <span className="text-xs text-amber-400">{t("wifi.hiddenNetwork")}</span>
+        )}
       </div>
     </div>
   );
 }
 
 function GuestCard({ ssid }: { ssid: Ssid }) {
+  const { t } = useTranslation();
   return (
     <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-5 flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Wifi size={16} className={ssid.enable ? "text-green-400" : "text-slate-500"} />
-          <span className="font-semibold text-slate-100">Réseau invité</span>
+          <span className="font-semibold text-slate-100">{t("wifi.guestNetwork")}</span>
         </div>
         <span
           className={`text-xs px-2 py-0.5 rounded-full ${ssid.enable ? "bg-green-500/10 text-green-400" : "bg-slate-700 text-slate-500"}`}
         >
-          {ssid.enable ? "Actif" : "Inactif"}
+          {ssid.enable ? t("wifi.active") : t("wifi.inactive")}
         </span>
       </div>
       {ssid.enable ? (
         <>
           <Row label="SSID" value={ssid.id} mono />
           <div className="flex justify-between items-center text-xs">
-            <span className="text-slate-500">Mot de passe</span>
+            <span className="text-slate-500">{t("wifi.password")}</span>
             <PassphraseField passphrase={ssid.security.passphrase} />
           </div>
-          <Row label="Sécurité" value={`${ssid.security.protocol} / ${ssid.security.encryption}`} />
+          <Row
+            label={t("wifi.security")}
+            value={`${ssid.security.protocol} / ${ssid.security.encryption}`}
+          />
         </>
       ) : (
-        <p className="text-xs text-slate-500">Le réseau invité est désactivé.</p>
+        <p className="text-xs text-slate-500">{t("wifi.guestDisabled")}</p>
       )}
     </div>
   );
@@ -188,6 +201,7 @@ function Row({
 }
 
 export default function WifiPage() {
+  const { t } = useTranslation();
   const { data: raw, isLoading, error } = useWireless();
   const w = parseWireless(raw);
 
@@ -202,14 +216,16 @@ export default function WifiPage() {
   if (error || !w) {
     return (
       <div className="p-6">
-        <p className="text-red-400 text-sm">{error instanceof Error ? error.message : "Erreur"}</p>
+        <p className="text-red-400 text-sm">
+          {error instanceof Error ? error.message : t("wifi.error")}
+        </p>
       </div>
     );
   }
 
   return (
     <div className="p-6 flex flex-col gap-6 overflow-auto">
-      <h1 className="text-lg font-semibold text-slate-100">Wi-Fi</h1>
+      <h1 className="text-lg font-semibold text-slate-100">{t("wifi.title")}</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <BandCard

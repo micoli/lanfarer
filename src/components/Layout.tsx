@@ -1,17 +1,42 @@
-import { Outlet, NavLink } from "react-router-dom";
-import { Home, Network, Settings2, Wifi, Radio, ScanLine } from "lucide-react";
+import { Home, Network, Radio, ScanLine, Settings2, Wifi } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { NavLink, Outlet } from "react-router-dom";
 import { ErrorBoundary } from "./ErrorBoundary";
 
-const NAV = [
-  { to: "/", icon: Home, label: "Accueil", end: true },
-  { to: "/hosts", icon: Wifi, label: "Appareils", end: false },
-  { to: "/scan", icon: ScanLine, label: "Scan réseau", end: false },
-  { to: "/wifi", icon: Radio, label: "Wi-Fi", end: false },
-  { to: "/dhcp/options", icon: Settings2, label: "Options DHCP", end: false },
-  { to: "/dhcp/reservations", icon: Network, label: "Réservations DHCP", end: false },
-] as const;
+function LangSwitcher() {
+  const { i18n: i18nHook } = useTranslation();
+  const current = i18nHook.language;
+
+  function toggle() {
+    const next = current === "fr" ? "en" : "fr";
+    void i18nHook.changeLanguage(next);
+    localStorage.setItem("lang", next);
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      className="mt-auto text-xs font-medium px-2 py-1 rounded-md bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors self-start"
+      title="Switch language"
+    >
+      {current === "fr" ? "🇬🇧 EN" : "🇫🇷 FR"}
+    </button>
+  );
+}
 
 export default function Layout() {
+  const { t } = useTranslation();
+
+  const NAV = [
+    { to: "/", icon: Home, label: t("nav.home"), end: true },
+    { to: "/hosts", icon: Wifi, label: t("nav.hosts"), end: false },
+    { to: "/scan", icon: ScanLine, label: t("nav.scan"), end: false },
+    { to: "/wifi", icon: Radio, label: t("nav.wifi"), end: false },
+    { to: "/dhcp/options", icon: Settings2, label: t("nav.dhcpOptions"), end: false },
+    { to: "/dhcp/reservations", icon: Network, label: t("nav.dhcpReservations"), end: false },
+  ] as const;
+
   return (
     <div className="flex h-dvh bg-slate-900 text-slate-100">
       {/* Sidebar desktop */}
@@ -42,6 +67,8 @@ export default function Layout() {
             </NavLink>
           ))}
         </nav>
+
+        <LangSwitcher />
       </aside>
 
       {/* Main */}

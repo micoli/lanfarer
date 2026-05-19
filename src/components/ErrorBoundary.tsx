@@ -1,5 +1,6 @@
+import { AlertTriangle, ChevronDown, ChevronUp, Copy, RefreshCw } from "lucide-react";
 import { Component, type ReactNode } from "react";
-import { AlertTriangle, RefreshCw, ChevronDown, ChevronUp, Copy } from "lucide-react";
+import i18n from "../lib/i18n";
 
 interface Props {
   children: ReactNode;
@@ -23,53 +24,39 @@ function filterAppStack(stack: string): string {
 
 function classify(error: Error): { title: string; hint: string } {
   const msg = error.message ?? "";
+  const t = i18n.t.bind(i18n);
 
   if (msg.includes("401") || msg.includes("Non autorisé") || msg.includes("Unauthorized"))
     return {
-      title: "Session expirée",
-      hint: "Votre token Spotify n'est plus valide. Reconnectez-vous.",
+      title: t("errorBoundary.sessionExpired"),
+      hint: t("errorBoundary.sessionExpiredHint"),
     };
 
   if (msg.includes("403") || msg.includes("Forbidden"))
-    return {
-      title: "Accès refusé",
-      hint: "Cette action n'est pas autorisée pour votre compte Spotify (vérifiez les scopes OAuth).",
-    };
+    return { title: t("errorBoundary.forbidden"), hint: t("errorBoundary.forbiddenHint") };
 
   if (msg.includes("429") || msg.includes("rate"))
     return {
-      title: "Trop de requêtes",
-      hint: "Limite de l'API Spotify atteinte. Attendez quelques secondes avant de réessayer.",
+      title: t("errorBoundary.tooManyRequests"),
+      hint: t("errorBoundary.tooManyRequestsHint"),
     };
 
   if (msg.includes("Network") || msg.includes("fetch") || msg.includes("Failed to fetch"))
-    return {
-      title: "Erreur réseau",
-      hint: "Impossible de joindre l'API Spotify. Vérifiez votre connexion.",
-    };
+    return { title: t("errorBoundary.networkError"), hint: t("errorBoundary.networkErrorHint") };
 
   if (msg.includes("404") || msg.includes("Not Found"))
-    return { title: "Ressource introuvable", hint: "L'élément demandé n'existe plus sur Spotify." };
+    return { title: t("errorBoundary.notFound"), hint: t("errorBoundary.notFoundHint") };
 
   if (msg.includes("500") || msg.includes("502") || msg.includes("503"))
-    return {
-      title: "Erreur serveur Spotify",
-      hint: "L'API Spotify rencontre des problèmes. Réessayez dans un moment.",
-    };
+    return { title: t("errorBoundary.serverError"), hint: t("errorBoundary.serverErrorHint") };
 
   if (
     msg.includes("VITE_SPOTIFY_CLIENT_ID") ||
     (msg.includes("undefined") && msg.includes("client"))
   )
-    return {
-      title: "Configuration manquante",
-      hint: "VITE_SPOTIFY_CLIENT_ID n'est pas défini dans .env.local.",
-    };
+    return { title: t("errorBoundary.missingConfig"), hint: t("errorBoundary.missingConfigHint") };
 
-  return {
-    title: "Erreur inattendue",
-    hint: "Une erreur s'est produite dans le rendu du composant.",
-  };
+  return { title: t("errorBoundary.unexpected"), hint: t("errorBoundary.unexpectedHint") };
 }
 
 export class ErrorBoundary extends Component<Props, State> {
@@ -108,6 +95,7 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!error) return this.props.children;
 
     const { title, hint } = classify(error);
+    const t = i18n.t.bind(i18n);
 
     return (
       <div className="min-h-dvh bg-slate-900 flex flex-col items-center justify-center p-4">
@@ -138,7 +126,7 @@ export class ErrorBoundary extends Component<Props, State> {
               className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-400 text-black text-xs font-semibold rounded-lg transition-colors"
             >
               <RefreshCw size={13} />
-              Réessayer
+              {t("errorBoundary.retry")}
             </button>
 
             <button
@@ -147,7 +135,7 @@ export class ErrorBoundary extends Component<Props, State> {
               className="flex items-center gap-1.5 px-3 py-2 text-slate-400 hover:text-slate-200 text-xs transition-colors"
             >
               {showDetails ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-              Détails
+              {t("errorBoundary.details")}
             </button>
 
             <button
@@ -156,7 +144,7 @@ export class ErrorBoundary extends Component<Props, State> {
               className="flex items-center gap-1.5 px-3 py-2 text-slate-400 hover:text-slate-200 text-xs transition-colors ml-auto"
             >
               <Copy size={13} />
-              {copied ? "Copié !" : "Copier"}
+              {copied ? t("errorBoundary.copied") : t("errorBoundary.copy")}
             </button>
           </div>
 
@@ -166,7 +154,7 @@ export class ErrorBoundary extends Component<Props, State> {
               {error.stack && (
                 <div>
                   <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1.5">
-                    Stack trace
+                    {t("errorBoundary.stackTrace")}
                   </p>
                   <pre className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-[10px] font-mono text-slate-300 overflow-x-auto whitespace-pre-wrap break-all leading-relaxed">
                     {filterAppStack(error.stack)}
@@ -177,7 +165,7 @@ export class ErrorBoundary extends Component<Props, State> {
               {componentStack && (
                 <div>
                   <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1.5">
-                    Component stack
+                    {t("errorBoundary.componentStack")}
                   </p>
                   <pre className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-[10px] font-mono text-slate-400 overflow-x-auto whitespace-pre-wrap break-all leading-relaxed">
                     {componentStack.trim()}

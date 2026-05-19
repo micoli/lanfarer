@@ -1,5 +1,5 @@
-import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { bboxApi } from "../lib/bbox/api";
 import type { DhcpClient } from "../lib/bbox/types";
 
@@ -23,7 +23,9 @@ export function useIpCheck() {
         setChecking(false);
         return;
       }
-    } catch { /* ignore network errors on check */ }
+    } catch {
+      /* ignore network errors on check */
+    }
     setChecking(false);
     onCreate();
   }

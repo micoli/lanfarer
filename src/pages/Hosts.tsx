@@ -1,8 +1,23 @@
-import { useState, useMemo } from "react";
-import { Wifi, WifiOff, RefreshCw, ChevronUp, ChevronDown, ChevronsUpDown, BookmarkPlus, Bookmark, Check, X, AlertTriangle } from "lucide-react";
-import { useHosts, useCreateDhcpClient, useDhcpClients, useIpCheck } from "../hooks/useBbox";
 import { useQueryClient } from "@tanstack/react-query";
+import {
+  AlertTriangle,
+  Bookmark,
+  BookmarkPlus,
+  Check,
+  ChevronDown,
+  ChevronsUpDown,
+  ChevronUp,
+  Download,
+  RefreshCw,
+  Wifi,
+  WifiOff,
+  X,
+} from "lucide-react";
+import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useCreateDhcpClient, useDhcpClients, useHosts, useIpCheck } from "../hooks/useBbox";
 import type { DhcpClient } from "../lib/bbox/types";
+import { exportCsv } from "../lib/exportCsv";
 
 interface Host {
   id?: number;
@@ -30,21 +45,22 @@ function parseHosts(raw: unknown): Host[] | null {
 }
 
 function Badge({ active }: { active?: number }) {
+  const { t } = useTranslation();
   return active ? (
     <span className="flex items-center gap-1 text-xs text-green-400 bg-green-500/10 px-2 py-0.5 rounded-full">
-      <Wifi size={11} /> Connecté
+      <Wifi size={11} /> {t("hosts.connected")}
     </span>
   ) : (
     <span className="flex items-center gap-1 text-xs text-slate-500 bg-slate-700/50 px-2 py-0.5 rounded-full">
-      <WifiOff size={11} /> Inactif
+      <WifiOff size={11} /> {t("hosts.inactive")}
     </span>
   );
 }
 
-function relativeTime(ts?: number): string {
+function relativeTime(ts: number | undefined, justNow: string): string {
   if (!ts) return "—";
   const diff = Math.floor(Date.now() / 1000 - ts);
-  if (diff < 60) return "à l'instant";
+  if (diff < 60) return justNow;
   if (diff < 3600) return `${Math.floor(diff / 60)} min`;
   if (diff < 86400) return `${Math.floor(diff / 3600)} h`;
   return `${Math.floor(diff / 86400)} j`;
@@ -91,6 +107,7 @@ function Th({
 }
 
 function HostRow({ host, i, isReserved }: { host: Host; i: number; isReserved: boolean }) {
+  const { t } = useTranslation();
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState<Omit<DhcpClient, "id">>({
     enable: 1,
@@ -120,7 +137,7 @@ function HostRow({ host, i, isReserved }: { host: Host; i: number; isReserved: b
           <td className="px-4 py-2" colSpan={2}>
             <input
               className="input-cell w-full"
-              placeholder="Nom d'hôte"
+              placeholder={t("common.hostname")}
               value={draft.hostname}
               onChange={(e) => setDraft({ ...draft, hostname: e.target.value })}
             />
@@ -130,7 +147,10 @@ function HostRow({ host, i, isReserved }: { host: Host; i: number; isReserved: b
               className="input-cell font-mono w-full"
               placeholder="192.168.1.x"
               value={draft.ipaddress}
-              onChange={(e) => { setDraft({ ...draft, ipaddress: e.target.value }); clearConflict(); }}
+              onChange={(e) => {
+                setDraft({ ...draft, ipaddress: e.target.value });
+                clearConflict();
+              }}
             />
           </td>
           <td className="px-4 py-2">
@@ -138,26 +158,34 @@ function HostRow({ host, i, isReserved }: { host: Host; i: number; isReserved: b
               className="input-cell font-mono w-full"
               placeholder="aa:bb:cc:dd:ee:ff"
               value={draft.macaddress}
-              onChange={(e) => { setDraft({ ...draft, macaddress: e.target.value }); clearConflict(); }}
+              onChange={(e) => {
+                setDraft({ ...draft, macaddress: e.target.value });
+                clearConflict();
+              }}
             />
           </td>
           <td className="px-4 py-2" colSpan={2}>
             <div className="flex gap-1.5 items-center">
               <button
                 type="button"
-                title={conflict ? "Forcer malgré le conflit" : "Créer la réservation"}
+                title={conflict ? t("common.forceConflict") : t("hosts.createReservation")}
                 disabled={!draft.macaddress || !draft.ipaddress || create.isPending || checking}
-                onClick={() => check(draft.ipaddress, draft.macaddress, () =>
-                  create.mutate(draft, { onSuccess: () => setAdding(false) })
-                )}
+                onClick={() =>
+                  check(draft.ipaddress, draft.macaddress, () =>
+                    create.mutate(draft, { onSuccess: () => setAdding(false) })
+                  )
+                }
                 className={`p-1 rounded disabled:opacity-40 transition-colors ${conflict ? "text-amber-400 hover:text-amber-300" : "text-blue-400 hover:text-blue-300"}`}
               >
                 {conflict ? <AlertTriangle size={14} /> : <Check size={14} />}
               </button>
               <button
                 type="button"
-                title="Annuler"
-                onClick={() => { setAdding(false); clearConflict(); }}
+                title={t("common.cancel")}
+                onClick={() => {
+                  setAdding(false);
+                  clearConflict();
+                }}
                 className="p-1 rounded text-slate-400 hover:text-slate-200 transition-colors"
               >
                 <X size={14} />
@@ -171,9 +199,13 @@ function HostRow({ host, i, isReserved }: { host: Host; i: number; isReserved: b
         </tr>
         {conflict && (
           <tr className="bg-amber-500/10 border-t border-amber-500/20">
-            <td colSpan={7} className="px-4 py-1.5 text-xs text-amber-400 flex items-center gap-1.5">
+            <td
+              colSpan={7}
+              className="px-4 py-1.5 text-xs text-amber-400 flex items-center gap-1.5"
+            >
               <AlertTriangle size={12} />
-              {conflict} — cliquer à nouveau pour forcer
+              {conflict}
+              {t("common.clickAgainToForce")}
             </td>
           </tr>
         )}
@@ -190,21 +222,23 @@ function HostRow({ host, i, isReserved }: { host: Host; i: number; isReserved: b
         <Badge active={host.active} />
       </td>
       <td className="px-4 py-2.5 text-sm text-slate-200">
-        {host.hostname || <span className="text-slate-500 italic">sans nom</span>}
+        {host.hostname || <span className="text-slate-500 italic">{t("hosts.noName")}</span>}
       </td>
       <td className="px-4 py-2.5 text-sm font-mono text-slate-300">{host.ipaddress ?? "—"}</td>
       <td className="px-4 py-2.5 text-xs font-mono text-slate-400">{host.macaddress ?? "—"}</td>
       <td className="px-4 py-2.5 text-xs text-slate-500 uppercase">{host.type ?? "—"}</td>
-      <td className="px-4 py-2.5 text-xs text-slate-500">{relativeTime(host.lastseen)}</td>
+      <td className="px-4 py-2.5 text-xs text-slate-500">
+        {relativeTime(host.lastseen, t("hosts.justNow"))}
+      </td>
       <td className="px-4 py-2.5">
         {isReserved ? (
-          <span title="Réservation DHCP active" className="p-1 inline-flex text-blue-400">
+          <span title={t("hosts.reservationActive")} className="p-1 inline-flex text-blue-400">
             <Bookmark size={14} />
           </span>
         ) : (
           <button
             type="button"
-            title="Ajouter une réservation DHCP"
+            title={t("hosts.addReservation")}
             onClick={openAdd}
             className="p-1 rounded text-slate-500 hover:text-blue-400 transition-colors"
           >
@@ -217,6 +251,7 @@ function HostRow({ host, i, isReserved }: { host: Host; i: number; isReserved: b
 }
 
 export default function Hosts() {
+  const { t, i18n } = useTranslation();
   const { data: raw, isLoading, error, dataUpdatedAt } = useHosts();
   const { data: rawClients } = useDhcpClients();
   const qc = useQueryClient();
@@ -225,9 +260,13 @@ export default function Hosts() {
     const clients = Array.isArray(rawClients)
       ? rawClients.length > 0 && "macaddress" in rawClients[0]
         ? rawClients
-        : rawClients[0]?.dhcp?.clients ?? rawClients[0]?.dhcpclients ?? []
+        : (rawClients[0]?.dhcp?.clients ?? rawClients[0]?.dhcpclients ?? [])
       : [];
-    return new Set((clients as { macaddress?: string }[]).map((c) => c.macaddress?.toLowerCase() ?? "").filter(Boolean));
+    return new Set(
+      (clients as { macaddress?: string }[])
+        .map((c) => c.macaddress?.toLowerCase() ?? "")
+        .filter(Boolean)
+    );
   }, [rawClients]);
   const [filter, setFilter] = useState("");
   const [showActive, setShowActive] = useState<"all" | "active" | "inactive">("all");
@@ -289,7 +328,7 @@ export default function Hosts() {
   if (error) {
     return (
       <div className="p-6 flex flex-col gap-3">
-        <p className="text-red-400 text-sm font-medium">Erreur</p>
+        <p className="text-red-400 text-sm font-medium">{t("common.error")}</p>
         <pre className="text-xs text-red-300 bg-slate-800 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap">
           {error instanceof Error ? error.message : JSON.stringify(error, null, 2)}
         </pre>
@@ -300,7 +339,7 @@ export default function Hosts() {
   if (!hosts) {
     return (
       <div className="p-6 flex flex-col gap-3">
-        <p className="text-amber-400 text-sm font-medium">Format inattendu</p>
+        <p className="text-amber-400 text-sm font-medium">{t("hosts.unexpectedFormat")}</p>
         <pre className="text-xs text-slate-300 bg-slate-800 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap">
           {JSON.stringify(raw, null, 2)}
         </pre>
@@ -308,31 +347,55 @@ export default function Hosts() {
     );
   }
 
+  const csvHeaders = t("hosts.csvHeaders", { returnObjects: true }) as string[];
+
   return (
     <div className="p-6 flex flex-col gap-4 overflow-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-lg font-semibold text-slate-100">Appareils</h1>
+          <h1 className="text-lg font-semibold text-slate-100">{t("hosts.title")}</h1>
           <span className="text-xs text-slate-500 bg-slate-800 px-2 py-0.5 rounded-full">
-            {active} / {hosts.length} connectés
+            {t("hosts.connectedCount", { active, total: hosts.length })}
           </span>
         </div>
         <div className="flex items-center gap-3">
           {dataUpdatedAt > 0 && (
             <span className="text-xs text-slate-600">
-              màj{" "}
-              {new Date(dataUpdatedAt).toLocaleTimeString("fr-FR", {
-                hour: "2-digit",
-                minute: "2-digit",
+              {t("hosts.updatedAt", {
+                time: new Date(dataUpdatedAt).toLocaleTimeString(
+                  i18n.language === "fr" ? "fr-FR" : "en-GB",
+                  { hour: "2-digit", minute: "2-digit" }
+                ),
               })}
             </span>
           )}
           <button
             type="button"
+            onClick={() =>
+              exportCsv(
+                "appareils.csv",
+                csvHeaders,
+                (filtered ?? []).map((h) => [
+                  h.active ? t("hosts.connected") : t("hosts.inactive"),
+                  h.hostname ?? "",
+                  h.ipaddress ?? "",
+                  h.macaddress ?? "",
+                  h.type ?? "",
+                  relativeTime(h.lastseen, t("hosts.justNow")),
+                ])
+              )
+            }
+            className="p-1.5 text-slate-400 hover:text-slate-200 transition-colors"
+            title={t("common.exportCsv")}
+          >
+            <Download size={14} />
+          </button>
+          <button
+            type="button"
             onClick={() => qc.invalidateQueries({ queryKey: ["hosts"] })}
             className="p-1.5 text-slate-400 hover:text-slate-200 transition-colors"
-            title="Rafraîchir"
+            title={t("common.refresh")}
           >
             <RefreshCw size={14} />
           </button>
@@ -343,7 +406,7 @@ export default function Hosts() {
       <div className="flex items-center gap-3 flex-wrap">
         <input
           type="search"
-          placeholder="Rechercher (nom, IP, MAC)…"
+          placeholder={t("hosts.search")}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           className="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors w-64"
@@ -360,13 +423,17 @@ export default function Hosts() {
                   : "bg-slate-800 text-slate-400 hover:text-slate-200"
               }`}
             >
-              {v === "all" ? "Tous" : v === "active" ? "Connectés" : "Inactifs"}
+              {v === "all"
+                ? t("hosts.filterAll")
+                : v === "active"
+                  ? t("hosts.filterActive")
+                  : t("hosts.filterInactive")}
             </button>
           ))}
         </div>
         {filtered && filtered.length !== hosts.length && (
           <span className="text-xs text-slate-500">
-            {filtered.length} résultat{filtered.length !== 1 ? "s" : ""}
+            {t("hosts.results", { count: filtered.length })}
           </span>
         )}
       </div>
@@ -377,30 +444,30 @@ export default function Hosts() {
           <thead>
             <tr className="text-xs uppercase tracking-wider text-slate-500 border-b border-slate-700">
               <Th
-                label="État"
+                label={t("hosts.colStatus")}
                 col="active"
                 sortKey={sortKey}
                 sortDir={sortDir}
                 onSort={handleSort}
               />
               <Th
-                label="Hôte"
+                label={t("hosts.colHost")}
                 col="hostname"
                 sortKey={sortKey}
                 sortDir={sortDir}
                 onSort={handleSort}
               />
               <Th
-                label="IP"
+                label={t("hosts.colIp")}
                 col="ipaddress"
                 sortKey={sortKey}
                 sortDir={sortDir}
                 onSort={handleSort}
               />
-              <th className="px-4 py-3 font-medium">MAC</th>
-              <th className="px-4 py-3 font-medium">Type</th>
+              <th className="px-4 py-3 font-medium">{t("hosts.colMac")}</th>
+              <th className="px-4 py-3 font-medium">{t("hosts.colType")}</th>
               <Th
-                label="Vu il y a"
+                label={t("hosts.colLastSeen")}
                 col="lastseen"
                 sortKey={sortKey}
                 sortDir={sortDir}
@@ -413,7 +480,7 @@ export default function Hosts() {
             {filtered?.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-4 py-8 text-center text-sm text-slate-500">
-                  Aucun appareil trouvé
+                  {t("hosts.noHosts")}
                 </td>
               </tr>
             )}

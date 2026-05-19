@@ -1,12 +1,12 @@
-import { HashRouter, Routes, Route } from "react-router-dom";
+import { HashRouter, Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
-import Home from "./pages/Home";
-import DhcpReservations from "./pages/DhcpReservations";
 import DhcpOptions from "./pages/DhcpOptions";
+import DhcpReservations from "./pages/DhcpReservations";
+import Home from "./pages/Home";
 import Hosts from "./pages/Hosts";
-import WifiPage from "./pages/Wifi";
 import NetworkScan from "./pages/NetworkScan";
 import NotFound from "./pages/NotFound";
+import WifiPage from "./pages/Wifi";
 
 export default function App() {
   return (

@@ -1,6 +1,7 @@
-import { ArrowDown, ArrowUp, Cpu, Clock, RefreshCw } from "lucide-react";
-import { useDevice, useWanStats } from "../hooks/useBbox";
 import { useQueryClient } from "@tanstack/react-query";
+import { ArrowDown, ArrowUp, Clock, Cpu, RefreshCw } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { useDevice, useWanStats } from "../hooks/useBbox";
 
 interface WanStats {
   rx: {
@@ -93,6 +94,7 @@ function StatCard({
 }
 
 export default function Home() {
+  const { t, i18n } = useTranslation();
   const { data: rawDevice, isLoading: loadingDevice } = useDevice();
   const { data: rawStats, isLoading: loadingStats } = useWanStats();
   const qc = useQueryClient();
@@ -146,7 +148,7 @@ export default function Home() {
             type="button"
             onClick={refresh}
             className={`p-1.5 text-slate-400 hover:text-slate-200 transition-colors ${loading ? "animate-spin" : ""}`}
-            title="Rafraîchir"
+            title={t("common.refresh")}
           >
             <RefreshCw size={14} />
           </button>
@@ -155,7 +157,7 @@ export default function Home() {
 
       {/* Device info row */}
       <div className="grid grid-cols-2 gap-4">
-        <StatCard label="Uptime" icon={<Clock size={13} />}>
+        <StatCard label={t("home.uptime")} icon={<Clock size={13} />}>
           {device ? (
             <p className="text-2xl font-semibold text-slate-100 tabular-nums">
               {formatUptime(device.uptime)}
@@ -165,21 +167,26 @@ export default function Home() {
           )}
           {device && (
             <p className="text-xs text-slate-500">
-              {device.numberofboots} redémarrages depuis l'origine
+              {t("home.boots", { count: device.numberofboots })}
             </p>
           )}
         </StatCard>
 
-        <StatCard label="Système" icon={<Cpu size={13} />}>
+        <StatCard label={t("home.system")} icon={<Cpu size={13} />}>
           {device ? (
             <div className="flex flex-col gap-1">
-              <p className="text-sm text-slate-200">Firmware {device.running.version}</p>
+              <p className="text-sm text-slate-200">
+                {t("home.firmware")} {device.running.version}
+              </p>
               <p className="text-xs text-slate-500">
-                {new Date(device.running.date).toLocaleDateString("fr-FR", {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
+                {new Date(device.running.date).toLocaleDateString(
+                  i18n.language === "fr" ? "fr-FR" : "en-GB",
+                  {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  }
+                )}
               </p>
             </div>
           ) : (
@@ -191,7 +198,7 @@ export default function Home() {
       {/* WAN stats */}
       <div className="grid grid-cols-2 gap-4">
         <StatCard
-          label="Débit descendant"
+          label={t("home.downstream")}
           icon={<ArrowDown size={13} className="text-green-400" />}
         >
           {stats ? (
@@ -205,11 +212,14 @@ export default function Home() {
                 color="bg-green-500"
               />
               <div className="flex justify-between text-xs text-slate-500">
-                <span>{stats.rx.occupation}% utilisé</span>
-                <span>max {formatBandwidth(stats.rx.contractualBandwidth / 1000)}</span>
+                <span>{t("home.used", { pct: stats.rx.occupation })}</span>
+                <span>
+                  {t("home.max", { bw: formatBandwidth(stats.rx.contractualBandwidth / 1000) })}
+                </span>
               </div>
               <p className="text-xs text-slate-500 pt-1 border-t border-slate-700">
-                Total reçu : <span className="text-slate-300">{formatBytes(stats.rx.bytes)}</span>
+                {t("home.totalReceived")}{" "}
+                <span className="text-slate-300">{formatBytes(stats.rx.bytes)}</span>
               </p>
             </div>
           ) : (
@@ -217,7 +227,7 @@ export default function Home() {
           )}
         </StatCard>
 
-        <StatCard label="Débit montant" icon={<ArrowUp size={13} className="text-blue-400" />}>
+        <StatCard label={t("home.upstream")} icon={<ArrowUp size={13} className="text-blue-400" />}>
           {stats ? (
             <div className="flex flex-col gap-2">
               <p className="text-2xl font-semibold text-slate-100 tabular-nums">
@@ -229,11 +239,14 @@ export default function Home() {
                 color="bg-blue-500"
               />
               <div className="flex justify-between text-xs text-slate-500">
-                <span>{stats.tx.occupation}% utilisé</span>
-                <span>max {formatBandwidth(stats.tx.contractualBandwidth / 1000)}</span>
+                <span>{t("home.used", { pct: stats.tx.occupation })}</span>
+                <span>
+                  {t("home.max", { bw: formatBandwidth(stats.tx.contractualBandwidth / 1000) })}
+                </span>
               </div>
               <p className="text-xs text-slate-500 pt-1 border-t border-slate-700">
-                Total envoyé : <span className="text-slate-300">{formatBytes(stats.tx.bytes)}</span>
+                {t("home.totalSent")}{" "}
+                <span className="text-slate-300">{formatBytes(stats.tx.bytes)}</span>
               </p>
             </div>
           ) : (

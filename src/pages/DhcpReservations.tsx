@@ -1,13 +1,15 @@
+import { AlertTriangle, Check, Download, Pencil, Plus, Trash2, X } from "lucide-react";
 import { useState } from "react";
-import { Plus, Trash2, Pencil, Check, X, AlertTriangle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
-  useDhcpClients,
   useCreateDhcpClient,
-  useUpdateDhcpClient,
   useDeleteDhcpClient,
+  useDhcpClients,
   useIpCheck,
+  useUpdateDhcpClient,
 } from "../hooks/useBbox";
 import type { DhcpClient } from "../lib/bbox/types";
+import { exportCsv } from "../lib/exportCsv";
 
 // The BBox API may return clients in several shapes — normalise them all.
 function normaliseClients(raw: unknown): DhcpClient[] | null {
@@ -42,6 +44,7 @@ function ClientRow({
   onSave: (c: DhcpClient) => void;
   onDelete: (id: number) => void;
 }) {
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<DhcpClient>(client);
 
@@ -87,15 +90,15 @@ function ClientRow({
             value={draft.enable}
             onChange={(e) => setDraft({ ...draft, enable: Number(e.target.value) })}
           >
-            <option value={1}>Actif</option>
-            <option value={0}>Inactif</option>
+            <option value={1}>{t("dhcpReservations.active")}</option>
+            <option value={0}>{t("dhcpReservations.inactive")}</option>
           </select>
         </td>
         <td className="px-4 py-2 flex gap-1.5">
-          <ActionBtn onClick={handleSave} title="Sauvegarder">
+          <ActionBtn onClick={handleSave} title={t("common.save")}>
             <Check size={14} />
           </ActionBtn>
-          <ActionBtn onClick={handleCancel} title="Annuler" variant="neutral">
+          <ActionBtn onClick={handleCancel} title={t("common.cancel")} variant="neutral">
             <X size={14} />
           </ActionBtn>
         </td>
@@ -114,14 +117,14 @@ function ClientRow({
             client.enable ? "bg-green-500/15 text-green-400" : "bg-slate-700 text-slate-500"
           }`}
         >
-          {client.enable ? "Actif" : "Inactif"}
+          {client.enable ? t("dhcpReservations.active") : t("dhcpReservations.inactive")}
         </span>
       </td>
       <td className="px-4 py-2.5 flex gap-1.5">
-        <ActionBtn onClick={() => setEditing(true)} title="Modifier" variant="neutral">
+        <ActionBtn onClick={() => setEditing(true)} title={t("common.edit")} variant="neutral">
           <Pencil size={14} />
         </ActionBtn>
-        <ActionBtn onClick={() => onDelete(client.id)} title="Supprimer" variant="danger">
+        <ActionBtn onClick={() => onDelete(client.id)} title={t("common.delete")} variant="danger">
           <Trash2 size={14} />
         </ActionBtn>
       </td>
@@ -130,6 +133,7 @@ function ClientRow({
 }
 
 function AddRow({ onAdd }: { onAdd: (c: Omit<DhcpClient, "id">) => void }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Omit<DhcpClient, "id">>(EMPTY);
   const { checking, conflict, clearConflict, check } = useIpCheck();
@@ -152,7 +156,7 @@ function AddRow({ onAdd }: { onAdd: (c: Omit<DhcpClient, "id">) => void }) {
             className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition-colors"
           >
             <Plus size={14} />
-            Ajouter une réservation
+            {t("dhcpReservations.addReservation")}
           </button>
         </td>
       </tr>
@@ -165,7 +169,7 @@ function AddRow({ onAdd }: { onAdd: (c: Omit<DhcpClient, "id">) => void }) {
         <td className="px-4 py-2">
           <input
             className="input-cell"
-            placeholder="Nom d'hôte"
+            placeholder={t("common.hostname")}
             value={draft.hostname}
             onChange={(e) => setDraft({ ...draft, hostname: e.target.value })}
           />
@@ -175,7 +179,10 @@ function AddRow({ onAdd }: { onAdd: (c: Omit<DhcpClient, "id">) => void }) {
             className="input-cell font-mono"
             placeholder="aa:bb:cc:dd:ee:ff"
             value={draft.macaddress}
-            onChange={(e) => { setDraft({ ...draft, macaddress: e.target.value }); clearConflict(); }}
+            onChange={(e) => {
+              setDraft({ ...draft, macaddress: e.target.value });
+              clearConflict();
+            }}
           />
         </td>
         <td className="px-4 py-2">
@@ -183,7 +190,10 @@ function AddRow({ onAdd }: { onAdd: (c: Omit<DhcpClient, "id">) => void }) {
             className="input-cell font-mono"
             placeholder="192.168.1.x"
             value={draft.ipaddress}
-            onChange={(e) => { setDraft({ ...draft, ipaddress: e.target.value }); clearConflict(); }}
+            onChange={(e) => {
+              setDraft({ ...draft, ipaddress: e.target.value });
+              clearConflict();
+            }}
           />
         </td>
         <td className="px-4 py-2">
@@ -192,20 +202,27 @@ function AddRow({ onAdd }: { onAdd: (c: Omit<DhcpClient, "id">) => void }) {
             value={draft.enable}
             onChange={(e) => setDraft({ ...draft, enable: Number(e.target.value) })}
           >
-            <option value={1}>Actif</option>
-            <option value={0}>Inactif</option>
+            <option value={1}>{t("dhcpReservations.active")}</option>
+            <option value={0}>{t("dhcpReservations.inactive")}</option>
           </select>
         </td>
         <td className="px-4 py-2 flex gap-1.5 items-center">
           <ActionBtn
             onClick={handleAdd}
-            title={conflict ? "Forcer malgré le conflit" : "Ajouter"}
+            title={conflict ? t("common.forceConflict") : t("common.add")}
             disabled={!draft.macaddress || !draft.ipaddress || checking}
             variant={conflict ? "danger" : "primary"}
           >
             {conflict ? <AlertTriangle size={14} /> : <Check size={14} />}
           </ActionBtn>
-          <ActionBtn onClick={() => { setOpen(false); clearConflict(); }} title="Annuler" variant="neutral">
+          <ActionBtn
+            onClick={() => {
+              setOpen(false);
+              clearConflict();
+            }}
+            title={t("common.cancel")}
+            variant="neutral"
+          >
             <X size={14} />
           </ActionBtn>
         </td>
@@ -214,7 +231,8 @@ function AddRow({ onAdd }: { onAdd: (c: Omit<DhcpClient, "id">) => void }) {
         <tr className="bg-amber-500/10 border-t border-amber-500/20">
           <td colSpan={5} className="px-4 py-1.5 text-xs text-amber-400 flex items-center gap-1.5">
             <AlertTriangle size={12} />
-            {conflict} — cliquer à nouveau pour forcer
+            {conflict}
+            {t("common.clickAgainToForce")}
           </td>
         </tr>
       )}
@@ -254,6 +272,7 @@ function ActionBtn({
 }
 
 export default function DhcpReservations() {
+  const { t } = useTranslation();
   const { data: rawData, isLoading, error } = useDhcpClients();
   const create = useCreateDhcpClient();
   const update = useUpdateDhcpClient();
@@ -273,11 +292,11 @@ export default function DhcpReservations() {
   if (error) {
     return (
       <div className="p-6 flex flex-col gap-3">
-        <p className="text-red-400 text-sm font-medium">Erreur de récupération</p>
+        <p className="text-red-400 text-sm font-medium">{t("dhcpReservations.fetchError")}</p>
         <pre className="text-xs text-red-300 bg-slate-800 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap">
           {error instanceof Error ? error.message : JSON.stringify(error, null, 2)}
         </pre>
-        <p className="text-xs text-slate-500">Vérifiez la console pour la réponse brute.</p>
+        <p className="text-xs text-slate-500">{t("dhcpReservations.checkConsole")}</p>
       </div>
     );
   }
@@ -286,28 +305,56 @@ export default function DhcpReservations() {
   if (!clients && rawData !== undefined) {
     return (
       <div className="p-6 flex flex-col gap-3">
-        <p className="text-amber-400 text-sm font-medium">Format de réponse inattendu</p>
+        <p className="text-amber-400 text-sm font-medium">
+          {t("dhcpReservations.unexpectedFormat")}
+        </p>
         <pre className="text-xs text-slate-300 bg-slate-800 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap">
           {JSON.stringify(rawData, null, 2)}
         </pre>
-        <p className="text-xs text-slate-500">Partage cette réponse pour adapter le parseur.</p>
+        <p className="text-xs text-slate-500">{t("dhcpReservations.unexpectedFormatHint")}</p>
       </div>
     );
   }
 
   return (
     <div className="p-6 flex flex-col gap-4 overflow-auto">
-      <h1 className="text-lg font-semibold text-slate-100">Réservations DHCP</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold text-slate-100">{t("dhcpReservations.title")}</h1>
+        <button
+          type="button"
+          onClick={() =>
+            exportCsv(
+              "reservations-dhcp.csv",
+              [
+                t("dhcpReservations.colHost"),
+                t("dhcpReservations.colMac"),
+                t("dhcpReservations.colIp"),
+                t("dhcpReservations.colStatus"),
+              ],
+              (clients ?? []).map((c) => [
+                c.hostname,
+                c.macaddress,
+                c.ipaddress,
+                c.enable ? t("dhcpReservations.active") : t("dhcpReservations.inactive"),
+              ])
+            )
+          }
+          className="p-1.5 text-slate-400 hover:text-slate-200 transition-colors"
+          title={t("common.exportCsv")}
+        >
+          <Download size={14} />
+        </button>
+      </div>
 
       <div className="bg-slate-800/60 rounded-xl border border-slate-700 overflow-x-auto">
         <table className="w-full text-left">
           <thead>
             <tr className="text-xs uppercase tracking-wider text-slate-500">
-              <th className="px-4 py-3 font-medium">Hôte</th>
-              <th className="px-4 py-3 font-medium">MAC</th>
-              <th className="px-4 py-3 font-medium">IP</th>
-              <th className="px-4 py-3 font-medium">État</th>
-              <th className="px-4 py-3 font-medium">Actions</th>
+              <th className="px-4 py-3 font-medium">{t("dhcpReservations.colHost")}</th>
+              <th className="px-4 py-3 font-medium">{t("dhcpReservations.colMac")}</th>
+              <th className="px-4 py-3 font-medium">{t("dhcpReservations.colIp")}</th>
+              <th className="px-4 py-3 font-medium">{t("dhcpReservations.colStatus")}</th>
+              <th className="px-4 py-3 font-medium">{t("dhcpReservations.colActions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -326,7 +373,7 @@ export default function DhcpReservations() {
 
       {(create.error || update.error || remove.error) && (
         <p className="text-xs text-red-400">
-          Erreur : {((create.error ?? update.error ?? remove.error) as Error)?.message}
+          {t("common.error")} : {((create.error ?? update.error ?? remove.error) as Error)?.message}
         </p>
       )}
     </div>
