@@ -9,12 +9,13 @@ import {
   useUpdateDhcpConfig,
   useUpdateDhcpOption,
 } from "../hooks/useBbox";
-import type {
-  DhcpOption,
-  DhcpOptionCapability,
-  DhcpOptionsResponse,
-  DhcpResponse,
-} from "../lib/bbox/types";
+import type { components } from "../lib/api/schema.d.ts";
+
+type DhcpOption = components["schemas"]["DhcpOption"];
+type DhcpOptionCapability = components["schemas"]["DhcpOptionCapability"];
+type DhcpOptionsResponse = components["schemas"]["DhcpOptionsResponse"];
+type DhcpResponse = components["schemas"]["DhcpResponse"];
+
 import { exportCsv } from "../lib/exportCsv";
 
 function parseDhcpOptions(raw: unknown): DhcpOptionsResponse["dhcp"] | null {

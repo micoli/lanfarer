@@ -11,7 +11,10 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useCreateDhcpClient, useDhcpClients, useDhcpConfig, useIpCheck } from "../hooks/useBbox";
-import type { DhcpClient } from "../lib/bbox/types";
+import type { components } from "../lib/api/schema.d.ts";
+
+type DhcpClient = components["schemas"]["DhcpClient"];
+
 import { exportCsv } from "../lib/exportCsv";
 
 interface PingStats {

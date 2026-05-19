@@ -1,0 +1,539 @@
+openapi: "3.1.0"
+info:
+  title: fast5688b-gui server API
+  version: "1.0.0"
+  description: |
+    API exposée par le serveur Node.js fast5688b.
+    Comprend les routes propres du serveur (health, scan réseau, check-ip)
+    et les routes proxy vers le routeur BBox (préfix /bbox-api/).
+
+servers:
+  - url: http://localhost:5176
+
+paths:
+
+  # ── Routes propres du serveur ──────────────────────────────────────────────
+
+  /__health:
+    get:
+      operationId: getHealth
+      summary: État du serveur et de la session BBox
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /__check-ip:
+    get:
+      operationId: checkIp
+      summary: Vérifie si une IP est joignable et résout son adresse MAC
+      parameters:
+        - name: ip
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: '^\d{1,3}(\.\d{1,3}){3}$'
+            example: "192.168.1.10"
+      responses:
+        "200":
+          description: Résultat du ping et de l'ARP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckIpResponse"
+        "400":
+          description: Format d'IP invalide
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string
+
+  /__scan:
+    get:
+      operationId: scanNetwork
+      summary: Flux SSE de scan réseau
+      description: |
+        Retourne un flux Server-Sent Events. Événements émis :
+        - `progress` — avancement du scan
+        - `host` — hôte découvert (ping + MAC + vendor)
+        - `host-detail` — détails d'un hôte (ports, ping stats, mDNS, SMB)
+        - `done` — fin du scan
+        - `error` — erreur fatale
+      parameters:
+        - name: subnet
+          in: query
+          required: false
+          description: CIDR à scanner (ex. 192.168.1.0/24). Détecté automatiquement si absent.
+          schema:
+            type: string
+            example: "192.168.1.0/24"
+      responses:
+        "200":
+          description: Flux SSE
+          content:
+            text/event-stream:
+              schema:
+                type: string
+              x-sse-events:
+                progress:
+                  schema:
+                    $ref: "#/components/schemas/ScanProgress"
+                host:
+                  schema:
+                    $ref: "#/components/schemas/ScanHost"
+                host-detail:
+                  schema:
+                    $ref: "#/components/schemas/HostDetail"
+                done:
+                  schema:
+                    type: object
+                error:
+                  schema:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+
+  # ── Routes proxy BBox ──────────────────────────────────────────────────────
+
+  /bbox-api/api/v1/device:
+    get:
+      operationId: getDevice
+      summary: Informations sur le routeur (modèle, firmware, uptime…)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AnyObject"
+
+  /bbox-api/api/v1/wan/ip/stats:
+    get:
+      operationId: getWanStats
+      summary: Statistiques de trafic WAN (débit, octets)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AnyObject"
+
+  /bbox-api/api/v1/wireless:
+    get:
+      operationId: getWireless
+      summary: Configuration Wi-Fi (SSID, canal, sécurité…)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AnyObject"
+
+  /bbox-api/api/v1/hosts:
+    get:
+      operationId: getHosts
+      summary: Appareils connectés au réseau local
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AnyObject"
+
+  /bbox-api/api/v1/dhcp:
+    get:
+      operationId: getDhcp
+      summary: Configuration du serveur DHCP
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DhcpResponse"
+    put:
+      operationId: updateDhcp
+      summary: Met à jour la configuration DHCP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DhcpConfigUpdate"
+      responses:
+        "200":
+          description: OK
+
+  /bbox-api/api/v1/dhcp/clients:
+    get:
+      operationId: getDhcpClients
+      summary: Liste des réservations DHCP statiques
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DhcpClient"
+    post:
+      operationId: createDhcpClient
+      summary: Crée une réservation DHCP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DhcpClientCreate"
+      responses:
+        "200":
+          description: Créé
+
+  /bbox-api/api/v1/dhcp/clients/{id}:
+    put:
+      operationId: updateDhcpClient
+      summary: Met à jour une réservation DHCP
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DhcpClientCreate"
+      responses:
+        "200":
+          description: OK
+    delete:
+      operationId: deleteDhcpClient
+      summary: Supprime une réservation DHCP
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Supprimé
+
+  /bbox-api/api/v1/dhcp/options:
+    get:
+      operationId: getDhcpOptions
+      summary: Liste des options DHCP configurées et disponibles
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DhcpOptionsResponse"
+
+  /bbox-api/api/v1/dhcp/option:
+    post:
+      operationId: createDhcpOption
+      summary: Crée une option DHCP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DhcpOptionCreate"
+      responses:
+        "200":
+          description: Créé
+
+  /bbox-api/api/v1/dhcp/options/{id}:
+    put:
+      operationId: updateDhcpOption
+      summary: Met à jour une option DHCP
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DhcpOptionUpdate"
+      responses:
+        "200":
+          description: OK
+    delete:
+      operationId: deleteDhcpOption
+      summary: Supprime une option DHCP
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Supprimé
+
+components:
+  schemas:
+
+    # ── Routes propres ─────────────────────────────────────────────────────────
+
+    HealthResponse:
+      type: object
+      required: [ok, hasSession, target]
+      properties:
+        ok:
+          type: boolean
+        hasSession:
+          type: boolean
+        target:
+          type: string
+          example: "https://mabbox.bytel.fr"
+
+    CheckIpResponse:
+      type: object
+      required: [reachable, mac]
+      properties:
+        reachable:
+          type: boolean
+        mac:
+          type: ["string", "null"]
+
+    ScanProgress:
+      type: object
+      required: [done, total]
+      properties:
+        done:
+          type: integer
+        total:
+          type: integer
+
+    ScanHost:
+      type: object
+      required: [ip, mac, hostname, vendor, ping]
+      properties:
+        ip:
+          type: string
+        mac:
+          type: string
+        hostname:
+          type: string
+        vendor:
+          type: string
+        ping:
+          type: boolean
+
+    HostDetail:
+      type: object
+      required: [ip, openPorts, mdnsName, smbName, smbDomain]
+      properties:
+        ip:
+          type: string
+        pingStats:
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [min, avg, max]
+              properties:
+                min:
+                  type: number
+                avg:
+                  type: number
+                max:
+                  type: number
+        openPorts:
+          type: array
+          items:
+            type: integer
+        mdnsName:
+          type: string
+        smbName:
+          type: string
+        smbDomain:
+          type: string
+
+    # ── BBox proxy ─────────────────────────────────────────────────────────────
+
+    AnyObject:
+      type: object
+      additionalProperties: true
+
+    DhcpClient:
+      type: object
+      required: [id, enable, hostname, macaddress, ipaddress, ip6address]
+      properties:
+        id:
+          type: integer
+        enable:
+          type: integer
+        hostname:
+          type: string
+        macaddress:
+          type: string
+        ipaddress:
+          type: string
+        ip6address:
+          type: string
+
+    DhcpClientCreate:
+      type: object
+      required: [enable, device, ipaddress, ip6address, macaddress, hostname]
+      properties:
+        enable:
+          type: integer
+        device:
+          type: string
+          description: Alias du champ macaddress pour la création (contrainte API BBox)
+        ipaddress:
+          type: string
+        ip6address:
+          type: string
+        macaddress:
+          type: string
+        hostname:
+          type: string
+
+    DhcpConfig:
+      type: object
+      required: [enable, minaddress, maxaddress, leasetime]
+      properties:
+        enable:
+          type: integer
+        minaddress:
+          type: string
+        maxaddress:
+          type: string
+        leasetime:
+          type: integer
+
+    DhcpConfigUpdate:
+      type: object
+      properties:
+        enable:
+          type: integer
+        minaddress:
+          type: string
+        maxaddress:
+          type: string
+        leasetime:
+          type: integer
+
+    DhcpResponse:
+      type: object
+      required: [dhcp]
+      properties:
+        dhcp:
+          type: object
+          required: [state, enable, minaddress, maxaddress, leasetime]
+          properties:
+            state:
+              type: integer
+            enable:
+              type: integer
+            minaddress:
+              type: string
+            maxaddress:
+              type: string
+            leasetime:
+              type: integer
+
+    DhcpOption:
+      type: object
+      required: [id, option, value]
+      properties:
+        id:
+          type: integer
+        option:
+          type: integer
+        value:
+          type: string
+
+    DhcpOptionCreate:
+      type: object
+      required: [option, value]
+      properties:
+        option:
+          type: integer
+        value:
+          type: string
+
+    DhcpOptionUpdate:
+      type: object
+      required: [enable, name, format, value]
+      properties:
+        enable:
+          type: integer
+        name:
+          type: integer
+        format:
+          type: string
+        value:
+          type: string
+
+    DhcpOptionsResponse:
+      type: object
+      required: [dhcp]
+      properties:
+        dhcp:
+          type: object
+          required: [options, optionsstatic, optionscount, optionscapabilities]
+          properties:
+            options:
+              type: array
+              items:
+                $ref: "#/components/schemas/DhcpOption"
+            optionsstatic:
+              type: array
+              items:
+                $ref: "#/components/schemas/DhcpOption"
+            optionscount:
+              type: integer
+            optionscapabilities:
+              type: array
+              items:
+                $ref: "#/components/schemas/DhcpOptionCapability"
+
+    DhcpOptionCapability:
+      type: object
+      required: [id, type, description, rfc]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [INT, IP, STRING, BOOL]
+        description:
+          type: string
+        rfc:
+          type: string

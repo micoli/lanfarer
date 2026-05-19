@@ -1,7 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { bboxApi } from "../lib/bbox/api";
-import type { DhcpClient } from "../lib/bbox/types";
+import { bboxApi } from "../lib/api/bbox.ts";
+import type { components } from "../lib/api/schema.d.ts";
+import { serverApi } from "../lib/api/server.ts";
+
+type DhcpClient = components["schemas"]["DhcpClient"];
 
 export function useIpCheck() {
   const [checking, setChecking] = useState(false);
@@ -16,8 +19,7 @@ export function useIpCheck() {
     }
     setChecking(true);
     try {
-      const res = await fetch(`/__check-ip?ip=${encodeURIComponent(ip)}`);
-      const data = (await res.json()) as { reachable: boolean; mac: string | null };
+      const data = await serverApi.checkIp(ip);
       if (data.reachable && data.mac && data.mac !== ownMac.toLowerCase()) {
         setConflict(`IP déjà utilisée par ${data.mac}`);
         setChecking(false);
