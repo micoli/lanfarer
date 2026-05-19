@@ -1,10 +1,11 @@
 import { Outlet, NavLink } from "react-router-dom";
-import { Home, Network, Settings2, Wifi, Radio } from "lucide-react";
+import { Home, Network, Settings2, Wifi, Radio, ScanLine } from "lucide-react";
 import { ErrorBoundary } from "./ErrorBoundary";
 
 const NAV = [
   { to: "/", icon: Home, label: "Accueil", end: true },
   { to: "/hosts", icon: Wifi, label: "Appareils", end: false },
+  { to: "/scan", icon: ScanLine, label: "Scan réseau", end: false },
   { to: "/wifi", icon: Radio, label: "Wi-Fi", end: false },
   { to: "/dhcp/options", icon: Settings2, label: "Options DHCP", end: false },
   { to: "/dhcp/reservations", icon: Network, label: "Réservations DHCP", end: false },

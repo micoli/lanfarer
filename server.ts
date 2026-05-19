@@ -3,6 +3,9 @@ import https from "node:https";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import os from "node:os";
+import dns from "node:dns/promises";
+import net from "node:net";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -379,6 +382,228 @@ async function dispatchProxy(
   res.end(responseBody);
 }
 
+// ── MAC Vendor Database ───────────────────────────────────────────────────────
+
+const MAC_VENDOR_CACHE = "/tmp/fast5688b-mac-vendor-cache.json";
+const MAC_VENDOR_TTL   = 24 * 60 * 60 * 1000;
+
+interface MacEntry { macPrefix: string; vendorName: string }
+let vendorMap   = new Map<string, string>();
+let vendorLoadedAt = 0;
+
+function normaliseOui(mac: string): string {
+  return mac.replace(/[:\-.]/g, "").toUpperCase().slice(0, 6);
+}
+
+function buildVendorMap(entries: MacEntry[]): Map<string, string> {
+  const m = new Map<string, string>();
+  for (const e of entries) m.set(normaliseOui(e.macPrefix), e.vendorName);
+  return m;
+}
+
+async function loadVendorDb(): Promise<void> {
+  if (vendorMap.size && Date.now() - vendorLoadedAt < MAC_VENDOR_TTL) return;
+
+  let loaded = false;
+  try {
+    const res = await fetch("https://maclookup.app/downloads/json-database/get-db", {
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (res.ok) {
+      const data = (await res.json()) as MacEntry[];
+      fs.writeFileSync(MAC_VENDOR_CACHE, JSON.stringify(data));
+      vendorMap = buildVendorMap(data);
+      vendorLoadedAt = Date.now();
+      loaded = true;
+      console.log(`[mac-vendor] DB téléchargée : ${vendorMap.size} entrées`);
+    }
+  } catch { /* réseau indisponible */ }
+
+  if (!loaded) {
+    try {
+      const data = JSON.parse(fs.readFileSync(MAC_VENDOR_CACHE, "utf8")) as MacEntry[];
+      vendorMap = buildVendorMap(data);
+      vendorLoadedAt = Date.now();
+      console.log(`[mac-vendor] DB chargée depuis le cache : ${vendorMap.size} entrées`);
+    } catch { /* pas de cache */ }
+  }
+}
+
+function lookupVendor(mac: string): string {
+  return vendorMap.get(normaliseOui(mac)) ?? "";
+}
+
+// ── Network Scan ──────────────────────────────────────────────────────────────
+
+function detectSubnet(): string {
+  for (const ifaces of Object.values(os.networkInterfaces())) {
+    for (const addr of ifaces ?? []) {
+      if (addr.family === "IPv4" && !addr.internal) {
+        const p = addr.address.split(".");
+        return `${p[0]}.${p[1]}.${p[2]}.0/24`;
+      }
+    }
+  }
+  return "192.168.1.0/24";
+}
+
+function cidrToIps(cidr: string): string[] {
+  const [base] = cidr.split("/");
+  const p = base.split(".").map(Number);
+  return Array.from({ length: 254 }, (_, i) => `${p[0]}.${p[1]}.${p[2]}.${i + 1}`);
+}
+
+async function scanIp(ip: string): Promise<{ mac: string; hostname: string } | null> {
+  try {
+    await execAsync(`ping -c 1 "${ip}"`, { timeout: 2000 });
+  } catch {
+    return null;
+  }
+  let mac = "";
+  try {
+    const { stdout } = await execAsync(`arp -n "${ip}"`);
+    const m = stdout.match(/([0-9a-f]{1,2}(?::[0-9a-f]{1,2}){5})/i);
+    if (m) mac = m[1].toLowerCase();
+  } catch {}
+  let hostname = "";
+  try {
+    const names = await dns.reverse(ip);
+    hostname = names[0] ?? "";
+  } catch {}
+  return { mac, hostname };
+}
+
+async function runScan(
+  subnet: string,
+  send: (event: string, data: string) => void,
+  signal: AbortSignal,
+): Promise<void> {
+  await loadVendorDb();
+  const ips = cidrToIps(subnet);
+  const total = ips.length;
+  let done = 0;
+  const detailPromises: Promise<void>[] = [];
+
+  await Promise.all(
+    Array.from({ length: 10 }, async (_, worker) => {
+      for (let i = worker; i < ips.length; i += 10) {
+        if (signal.aborted) return;
+        const ip = ips[i];
+        const result = await scanIp(ip);
+        done++;
+        send("progress", JSON.stringify({ done, total }));
+        if (result !== null) {
+          send("host", JSON.stringify({
+            ip,
+            mac: result.mac,
+            hostname: result.hostname,
+            vendor: result.mac ? lookupVendor(result.mac) : "",
+            ping: true,
+          }));
+          detailPromises.push(
+            probeHostDetails(ip, result.hostname)
+              .then((detail) => { if (!signal.aborted) send("host-detail", JSON.stringify(detail)); })
+              .catch(() => {}),
+          );
+        }
+      }
+    }),
+  );
+
+  await Promise.all(detailPromises);
+}
+
+// ── Host Detail Probing ───────────────────────────────────────────────────────
+
+const COMMON_PORTS: Record<number, string> = {
+  21: "FTP", 22: "SSH", 23: "Telnet", 25: "SMTP",
+  80: "HTTP", 443: "HTTPS", 445: "SMB", 3389: "RDP",
+  5900: "VNC", 8080: "HTTP-alt", 8443: "HTTPS-alt",
+};
+
+function checkPort(ip: string, port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const s = new net.Socket();
+    const t = setTimeout(() => { s.destroy(); resolve(false); }, 800);
+    s.connect(port, ip, () => { clearTimeout(t); s.destroy(); resolve(true); });
+    s.on("error", () => { clearTimeout(t); resolve(false); });
+  });
+}
+
+async function scanPorts(ip: string): Promise<number[]> {
+  const results = await Promise.all(
+    Object.keys(COMMON_PORTS).map(async (p) => {
+      const port = Number(p);
+      return (await checkPort(ip, port)) ? port : null;
+    }),
+  );
+  return results.filter((p): p is number => p !== null).sort((a, b) => a - b);
+}
+
+async function getPingStats(ip: string): Promise<{ min: number; avg: number; max: number } | null> {
+  try {
+    const { stdout } = await execAsync(`ping -c 3 -i 0.2 "${ip}"`, { timeout: 5000 });
+    const m = stdout.match(/(?:round-trip|rtt) min\/avg\/max\/\S+ = ([\d.]+)\/([\d.]+)\/([\d.]+)/);
+    if (m) return { min: parseFloat(m[1]), avg: parseFloat(m[2]), max: parseFloat(m[3]) };
+  } catch {}
+  return null;
+}
+
+async function getMdnsName(ip: string, hostname: string): Promise<string> {
+  if (hostname.toLowerCase().endsWith(".local")) return hostname;
+  try {
+    const { stdout } = await execAsync(`avahi-resolve-address "${ip}"`, { timeout: 2000 });
+    const m = stdout.match(/\S+\s+(\S+)/);
+    if (m?.[1]) return m[1].replace(/\.$/, "");
+  } catch {}
+  return "";
+}
+
+async function getSmbInfo(ip: string): Promise<{ name: string; domain: string } | null> {
+  try {
+    const { stdout } = await execAsync(`smbutil status "${ip}"`, { timeout: 3000 });
+    const name   = stdout.match(/Server:\s*(.+)/i)?.[1]?.trim() ?? "";
+    const domain = stdout.match(/Workgroup:\s*(.+)/i)?.[1]?.trim() ?? "";
+    if (name) return { name, domain };
+  } catch {}
+  try {
+    const { stdout } = await execAsync(`nmblookup -A "${ip}"`, { timeout: 3000 });
+    let name = ""; let domain = "";
+    for (const line of stdout.split("\n")) {
+      const m = line.match(/\s+(\S+)\s+<([0-9a-f]{2})>/i);
+      if (!m) continue;
+      if (m[2] === "00" && !name) name = m[1].trim();
+      if ((m[2] === "1e" || m[2] === "00") && !domain) domain = m[1].trim();
+    }
+    if (name) return { name, domain };
+  } catch {}
+  return null;
+}
+
+interface HostDetail {
+  ip: string;
+  pingStats: { min: number; avg: number; max: number } | null;
+  openPorts: number[];
+  mdnsName: string;
+  smbName: string;
+  smbDomain: string;
+}
+
+async function probeHostDetails(ip: string, hostname: string): Promise<HostDetail> {
+  const [pingStats, openPorts, mdnsName, smbInfo] = await Promise.all([
+    getPingStats(ip),
+    scanPorts(ip),
+    getMdnsName(ip, hostname),
+    getSmbInfo(ip),
+  ]);
+  return {
+    ip, pingStats, openPorts,
+    mdnsName,
+    smbName:   smbInfo?.name   ?? "",
+    smbDomain: smbInfo?.domain ?? "",
+  };
+}
+
 // ── Static file server (production) ──────────────────────────────────────────
 
 const MIME: Record<string, string> = {
@@ -449,6 +674,30 @@ async function main() {
     if (url === "/__health") {
       res.writeHead(200, { "content-type": "application/json" });
       res.end(JSON.stringify({ ok: true, hasSession: session !== null, target: BBOX_TARGET }));
+      return;
+    }
+
+    if (url.startsWith("/__scan")) {
+      const params = new URL(url, "http://localhost").searchParams;
+      const subnet = params.get("subnet") ?? detectSubnet();
+      const ac = new AbortController();
+
+      res.writeHead(200, {
+        "content-type":  "text/event-stream",
+        "cache-control": "no-cache",
+        connection:      "keep-alive",
+      });
+
+      const send = (event: string, data: string) => {
+        if (!res.writableEnded) res.write(`event: ${event}\ndata: ${data}\n\n`);
+      };
+
+      req.on("close", () => ac.abort());
+
+      runScan(subnet, send, ac.signal)
+        .then(() => send("done", "{}"))
+        .catch((err) => send("error", JSON.stringify({ message: (err as Error).message })))
+        .finally(() => res.end());
       return;
     }
 

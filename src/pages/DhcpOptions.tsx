@@ -379,6 +379,8 @@ export default function DhcpOptions() {
         </button>
       </form>
 
+      <hr className="border-slate-700 my-6" />
+
       <DhcpOptionsTable raw={rawDhcpOptions} />
     </div>
   );

@@ -5,6 +5,7 @@ import DhcpReservations from "./pages/DhcpReservations";
 import DhcpOptions from "./pages/DhcpOptions";
 import Hosts from "./pages/Hosts";
 import WifiPage from "./pages/Wifi";
+import NetworkScan from "./pages/NetworkScan";
 import NotFound from "./pages/NotFound";
 
 export default function App() {
@@ -16,6 +17,7 @@ export default function App() {
           <Route path="/hosts" element={<Hosts />} />
           <Route path="/wifi" element={<WifiPage />} />
           <Route path="/dhcp/reservations" element={<DhcpReservations />} />
+          <Route path="/scan" element={<NetworkScan />} />
           <Route path="/dhcp/options" element={<DhcpOptions />} />
           <Route path="*" element={<NotFound />} />
         </Route>
