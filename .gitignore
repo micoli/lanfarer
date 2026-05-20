@@ -5,6 +5,6 @@ node_modules
 .env.local
 
 .claude/settings.local.json
-users.json
 sessions.json
-routers.yaml
+config.yaml
+TODO.md

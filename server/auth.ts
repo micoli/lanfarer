@@ -1,8 +1,7 @@
 import fs from "node:fs";
 import crypto from "node:crypto";
-
-const USERS_FILE = process.env.USERS_FILE ?? "users.json";
-const SESSIONS_FILE = process.env.SESSIONS_FILE ?? "sessions.json";
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import { CONFIG_FILE, SESSIONS_FILE } from "./config.ts";
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 
 interface User {
@@ -33,16 +32,23 @@ function saveSessions(map: Map<string, Session>): void {
 
 const sessions = loadSessions();
 
-function loadUsers(): User[] {
+function loadConfig(): Record<string, unknown> {
   try {
-    return JSON.parse(fs.readFileSync(USERS_FILE, "utf8")) as User[];
+    return (parseYaml(fs.readFileSync(CONFIG_FILE, "utf8")) as Record<string, unknown>) ?? {};
   } catch {
-    return [];
+    return {};
   }
 }
 
+function loadUsers(): User[] {
+  const data = loadConfig();
+  return (data.users as User[]) ?? [];
+}
+
 export function saveUsers(users: User[]): void {
-  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2) + "\n");
+  const data = loadConfig();
+  data.users = users;
+  fs.writeFileSync(CONFIG_FILE, stringifyYaml(data));
 }
 
 export function isAuthEnabled(): boolean {

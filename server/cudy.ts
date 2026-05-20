@@ -1,12 +1,12 @@
 import fs from "node:fs";
 import { parse as parseYaml } from "yaml";
-
-const CONFIG_FILE = process.env.CUDY_CONFIG ?? "routers.yaml";
+import { CONFIG_FILE } from "./config.ts";
 const TIMEOUT_MS = 5000;
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
 export interface CudyRouterConfig {
+  type: "cudy";
   name: string;
   ip: string;
   password: string;
@@ -17,7 +17,7 @@ export function loadCudyConfig(): CudyRouterConfig[] {
   try {
     const raw = fs.readFileSync(CONFIG_FILE, "utf8");
     const data = parseYaml(raw) as { routers: CudyRouterConfig[] };
-    return (data.routers ?? []).filter((r) => r.enabled !== false);
+    return (data.routers ?? []).filter((r) => r.type === "cudy" && r.enabled !== false);
   } catch {
     return [];
   }
