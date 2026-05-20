@@ -6,4 +6,5 @@ node_modules
 
 .claude/settings.local.json
 users.json
+sessions.json
 routers.yaml

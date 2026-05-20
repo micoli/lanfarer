@@ -2,6 +2,7 @@ import fs from "node:fs";
 import crypto from "node:crypto";
 
 const USERS_FILE = process.env.USERS_FILE ?? "users.json";
+const SESSIONS_FILE = process.env.SESSIONS_FILE ?? "sessions.json";
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 
 interface User {
@@ -14,7 +15,23 @@ interface Session {
   expiresAt: number;
 }
 
-const sessions = new Map<string, Session>();
+function loadSessions(): Map<string, Session> {
+  try {
+    const entries = JSON.parse(fs.readFileSync(SESSIONS_FILE, "utf8")) as [string, Session][];
+    const now = Date.now();
+    return new Map(entries.filter(([, s]) => s.expiresAt > now));
+  } catch {
+    return new Map();
+  }
+}
+
+function saveSessions(map: Map<string, Session>): void {
+  try {
+    fs.writeFileSync(SESSIONS_FILE, JSON.stringify([...map]) + "\n");
+  } catch { /* non-fatal */ }
+}
+
+const sessions = loadSessions();
 
 function loadUsers(): User[] {
   try {
@@ -74,6 +91,7 @@ export async function login(username: string, password: string): Promise<string 
   if (!ok) return null;
   const token = crypto.randomBytes(32).toString("hex");
   sessions.set(token, { username, expiresAt: Date.now() + SESSION_TTL_MS });
+  saveSessions(sessions);
   return token;
 }
 
@@ -82,6 +100,7 @@ export function getSession(token: string): Session | null {
   if (!session) return null;
   if (Date.now() > session.expiresAt) {
     sessions.delete(token);
+    saveSessions(sessions);
     return null;
   }
   return session;
@@ -89,6 +108,7 @@ export function getSession(token: string): Session | null {
 
 export function deleteSession(token: string): void {
   sessions.delete(token);
+  saveSessions(sessions);
 }
 
 export function parseSessionCookie(cookieHeader: string | undefined): string | null {
