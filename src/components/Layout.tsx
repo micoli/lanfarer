@@ -1,4 +1,4 @@
-import { Home, LogOut, Network, Radio, Router, ScanLine, Settings2, Wifi } from "lucide-react";
+import { Home, LogOut, Map, Network, Radio, Router, ScanLine, Settings2, Wifi } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { NavLink, Outlet } from "react-router-dom";
 import { ErrorBoundary } from "./ErrorBoundary";
@@ -39,6 +39,7 @@ export default function Layout({ auth }: { auth: AuthProps }) {
     { to: "/hosts", icon: Wifi, label: t("nav.hosts"), end: false },
     { to: "/scan", icon: ScanLine, label: t("nav.scan"), end: false },
     { to: "/cudy", icon: Router, label: t("nav.cudy"), end: false },
+    { to: "/map", icon: Map, label: t("nav.map"), end: false },
     { to: "/wifi", icon: Radio, label: t("nav.wifi"), end: false },
     { to: "/dhcp/options", icon: Settings2, label: t("nav.dhcpOptions"), end: false },
     { to: "/dhcp/reservations", icon: Network, label: t("nav.dhcpReservations"), end: false },

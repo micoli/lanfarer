@@ -6,6 +6,7 @@ import DhcpOptions from "./pages/DhcpOptions";
 import DhcpReservations from "./pages/DhcpReservations";
 import Home from "./pages/Home";
 import Hosts from "./pages/Hosts";
+import MapPage from "./pages/Map";
 import NetworkScan from "./pages/NetworkScan";
 import NotFound from "./pages/NotFound";
 import WifiPage from "./pages/Wifi";
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/dhcp/reservations" element={<DhcpReservations />} />
           <Route path="/scan" element={<NetworkScan />} />
           <Route path="/cudy" element={<CudyClients />} />
+          <Route path="/map" element={<MapPage />} />
           <Route path="/dhcp/options" element={<DhcpOptions />} />
           <Route path="*" element={<NotFound />} />
         </Route>

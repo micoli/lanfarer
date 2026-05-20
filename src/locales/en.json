@@ -5,6 +5,7 @@
     "scan": "Network Scan",
     "wifi": "Wi-Fi",
     "cudy": "Hotspots",
+    "map": "Map",
     "dhcpOptions": "DHCP Options",
     "dhcpReservations": "DHCP Reservations"
   },
@@ -181,6 +182,15 @@
     "colSsid": "SSID",
     "colTx": "TX",
     "colRx": "RX"
+  },
+  "map": {
+    "title": "Network Map",
+    "legendBbox": "Bbox (router)",
+    "legendBboxWifi": "Bbox Wi-Fi",
+    "legendHotspot": "Hotspot (online)",
+    "legendOffline": "Hotspot (offline)",
+    "legendSignal": "Signal strength",
+    "hint": "drag to rotate · scroll to zoom"
   },
   "auth": {
     "title": "Sign in",
