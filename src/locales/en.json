@@ -4,6 +4,7 @@
     "hosts": "Devices",
     "scan": "Network Scan",
     "wifi": "Wi-Fi",
+    "cudy": "Hotspots",
     "dhcpOptions": "DHCP Options",
     "dhcpReservations": "DHCP Reservations"
   },
@@ -163,5 +164,31 @@
   "notFound": {
     "message": "Page not found",
     "backHome": "Back to home"
+  },
+  "cudy": {
+    "title": "Hotspots",
+    "online": "online",
+    "offline": "offline",
+    "clientCount": "{{count}} client",
+    "clientCount_other": "{{count}} clients",
+    "totalClients": "{{count}} client total",
+    "totalClients_other": "{{count}} clients total",
+    "noClients": "No connected clients",
+    "notConfigured": "No routers configured in cudy-routers.yaml",
+    "colHost": "Host",
+    "colSignal": "Signal",
+    "colBand": "Band",
+    "colSsid": "SSID",
+    "colTx": "TX",
+    "colRx": "RX"
+  },
+  "auth": {
+    "title": "Sign in",
+    "username": "Username",
+    "password": "Password",
+    "login": "Sign in",
+    "loggingIn": "Signing in…",
+    "logout": "Sign out",
+    "invalidCredentials": "Invalid credentials"
   }
 }

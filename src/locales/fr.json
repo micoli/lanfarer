@@ -4,6 +4,7 @@
     "hosts": "Appareils",
     "scan": "Scan réseau",
     "wifi": "Wi-Fi",
+    "cudy": "Hotspots",
     "dhcpOptions": "Options DHCP",
     "dhcpReservations": "Réservations DHCP"
   },
@@ -163,5 +164,31 @@
   "notFound": {
     "message": "Page introuvable",
     "backHome": "Retour à l'accueil"
+  },
+  "cudy": {
+    "title": "Hotspots",
+    "online": "en ligne",
+    "offline": "hors ligne",
+    "clientCount": "{{count}} client",
+    "clientCount_other": "{{count}} clients",
+    "totalClients": "{{count}} client au total",
+    "totalClients_other": "{{count}} clients au total",
+    "noClients": "Aucun client connecté",
+    "notConfigured": "Aucun routeur configuré dans cudy-routers.yaml",
+    "colHost": "Hôte",
+    "colSignal": "Signal",
+    "colBand": "Bande",
+    "colSsid": "SSID",
+    "colTx": "TX",
+    "colRx": "RX"
+  },
+  "auth": {
+    "title": "Connexion",
+    "username": "Nom d'utilisateur",
+    "password": "Mot de passe",
+    "login": "Se connecter",
+    "loggingIn": "Connexion…",
+    "logout": "Déconnexion",
+    "invalidCredentials": "Identifiants incorrects"
   }
 }

@@ -6,6 +6,8 @@ import { proxyRequest } from "./proxy.ts";
 import { handleHealth } from "./routes/health.ts";
 import { handleScan } from "./routes/scan.ts";
 import { handleCheckIp } from "./routes/check-ip.ts";
+import { handleAuthRoute, requireAuth } from "./routes/auth.ts";
+import { handleCudy } from "./routes/cudy.ts";
 import { serveStatic } from "./static.ts";
 
 async function main() {
@@ -23,7 +25,10 @@ async function main() {
   const server = http.createServer(async (req, res) => {
     const url = req.url ?? "/";
 
+    if (await handleAuthRoute(req, res)) return;
+
     if (url.startsWith("/bbox-api")) {
+      if (!requireAuth(req, res)) return;
       await proxyRequest(req, res);
       return;
     }
@@ -34,12 +39,20 @@ async function main() {
     }
 
     if (url.startsWith("/__scan")) {
+      if (!requireAuth(req, res)) return;
       await handleScan(req, res);
       return;
     }
 
     if (url.startsWith("/__check-ip")) {
+      if (!requireAuth(req, res)) return;
       await handleCheckIp(req, res);
+      return;
+    }
+
+    if (url.startsWith("/__cudy")) {
+      if (!requireAuth(req, res)) return;
+      await handleCudy(req, res);
       return;
     }
 

@@ -5,3 +5,5 @@ node_modules
 .env.local
 
 .claude/settings.local.json
+users.json
+routers.yaml

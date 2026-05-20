@@ -1,7 +1,13 @@
-import { Home, Network, Radio, ScanLine, Settings2, Wifi } from "lucide-react";
+import { Home, LogOut, Network, Radio, Router, ScanLine, Settings2, Wifi } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { NavLink, Outlet } from "react-router-dom";
 import { ErrorBoundary } from "./ErrorBoundary";
+
+interface AuthProps {
+  authEnabled: boolean;
+  username: string | null;
+  logout: () => Promise<void>;
+}
 
 function LangSwitcher() {
   const { i18n: i18nHook } = useTranslation();
@@ -25,13 +31,14 @@ function LangSwitcher() {
   );
 }
 
-export default function Layout() {
+export default function Layout({ auth }: { auth: AuthProps }) {
   const { t } = useTranslation();
 
   const NAV = [
     { to: "/", icon: Home, label: t("nav.home"), end: true },
     { to: "/hosts", icon: Wifi, label: t("nav.hosts"), end: false },
     { to: "/scan", icon: ScanLine, label: t("nav.scan"), end: false },
+    { to: "/cudy", icon: Router, label: t("nav.cudy"), end: false },
     { to: "/wifi", icon: Radio, label: t("nav.wifi"), end: false },
     { to: "/dhcp/options", icon: Settings2, label: t("nav.dhcpOptions"), end: false },
     { to: "/dhcp/reservations", icon: Network, label: t("nav.dhcpReservations"), end: false },
@@ -69,6 +76,17 @@ export default function Layout() {
         </nav>
 
         <LangSwitcher />
+        {auth.authEnabled && auth.username && (
+          <button
+            type="button"
+            onClick={() => { void auth.logout(); }}
+            className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 transition-colors mt-2 px-1"
+            title={t("auth.logout")}
+          >
+            <LogOut size={13} />
+            {auth.username}
+          </button>
+        )}
       </aside>
 
       {/* Main */}

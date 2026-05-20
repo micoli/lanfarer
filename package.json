@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node --import=tsx --watch-path=./server --watch-path=./openapi.yaml server/index.ts",
+    "add-user": "tsx server/add-user.ts",
     "serve": "NODE_ENV=production tsx server/index.ts",
     "build": "tsc -b && vite build",
     "codegen": "openapi-typescript openapi.yaml -o src/lib/api/schema.d.ts",
@@ -24,7 +25,8 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-i18next": "^17.0.3",
-    "react-router-dom": "^6.28.0"
+    "react-router-dom": "^6.28.0",
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.14",
