@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { basePath } from "../lib/basePath.ts";
 
 export interface CudyClient {
   mac: string;
@@ -29,7 +30,7 @@ export interface CudyRouter {
 }
 
 async function fetchCudyClients(): Promise<{ routers: CudyRouter[] }> {
-  const res = await fetch("/__cudy/clients");
+  const res = await fetch(`${basePath()}/__cudy/clients`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json() as Promise<{ routers: CudyRouter[] }>;
 }

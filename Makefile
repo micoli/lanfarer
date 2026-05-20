@@ -16,4 +16,7 @@ rebuild:
 	docker compose --env-file $(ENV_FILE) build --no-cache
 	docker compose --env-file $(ENV_FILE) up -d
 
-.PHONY: dev up down logs rebuild
+addon-build:
+	docker build -f ha-addon/Dockerfile -t fast5688b-gui-addon .
+
+.PHONY: dev up down logs rebuild addon-build

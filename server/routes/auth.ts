@@ -57,7 +57,7 @@ export async function handleAuthRoute(
   }
 
   if (url === "/__auth/me" && req.method === "GET") {
-    if (!isAuthEnabled()) {
+    if (!isAuthEnabled() || isHassIngress(req)) {
       json(res, 200, { username: null, authEnabled: false });
       return true;
     }
@@ -74,8 +74,12 @@ export async function handleAuthRoute(
   return false;
 }
 
+function isHassIngress(req: http.IncomingMessage): boolean {
+  return !!req.headers["x-hass-user-id"];
+}
+
 export function requireAuth(req: http.IncomingMessage, res: http.ServerResponse): boolean {
-  if (!isAuthEnabled()) return true;
+  if (!isAuthEnabled() || isHassIngress(req)) return true;
   const token = parseSessionCookie(req.headers.cookie);
   const session = token ? getSession(token) : null;
   if (!session) {

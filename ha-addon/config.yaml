@@ -1,0 +1,35 @@
+name: Bbox & Cudy Router GUI
+version: "1.0.35"
+slug: fast5688b-gui
+description: Web GUI for managing Bbox and Cudy routers on your local network
+url: https://github.com/micoli/fast5688b-gui
+arch:
+  - aarch64
+  - amd64
+startup: application
+boot: auto
+
+ingress: true
+ingress_port: 5176
+panel_icon: mdi:router-network
+
+host_network: true
+
+ports:
+  "5176/tcp": 5176
+ports_description:
+  "5176/tcp": Web interface
+
+options:
+  bbox_target: "https://mabbox.bytel.fr"
+  bbox_host: "mabbox.bytel.fr"
+  verbose: false
+  router_config: ""
+
+schema:
+  bbox_target: url?
+  bbox_host: str?
+  verbose: bool
+  router_config: str
+
+watchdog: http://[HOST]:[PORT:5176]/__health

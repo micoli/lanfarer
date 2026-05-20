@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import http from "node:http";
-import { BBOX_PASSWORD, BBOX_HOST, targetUrl, isHttps } from "./config.ts";
+import { BBOX_PASSWORD, BBOX_HOST, BBOX_CONNECT_HOST, targetUrl, isHttps } from "./config.ts";
 import { type Captured, makeRequestAsync } from "./http-client.ts";
 
 export interface Session { bboxId: string; btoken: string }
@@ -30,7 +30,7 @@ async function tryLogin(password: string, captured: Captured): Promise<number> {
 
   const { statusCode, headers: loginResponseHeaders, body: responseBody } = await makeRequestAsync(
     {
-      hostname: targetUrl.hostname,
+      hostname: BBOX_CONNECT_HOST,
       port: targetUrl.port ? Number(targetUrl.port) : isHttps ? 443 : 80,
       path: "/api/v1/login",
       method: "POST",
@@ -65,7 +65,7 @@ async function fetchBToken(bboxId: string): Promise<string> {
   const captured: Captured = { bboxId, btoken: "" };
   const { statusCode, body } = await makeRequestAsync(
     {
-      hostname: targetUrl.hostname,
+      hostname: BBOX_CONNECT_HOST,
       port: targetUrl.port ? Number(targetUrl.port) : isHttps ? 443 : 80,
       path: "/api/v1/device/token",
       method: "GET",

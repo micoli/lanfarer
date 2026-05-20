@@ -1,4 +1,5 @@
 import os from "node:os";
+import net from "node:net";
 import dns from "node:dns/promises";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
@@ -6,6 +7,41 @@ import { loadVendorDb, lookupVendor } from "./mac-vendor.ts";
 import { probeHostDetails } from "./host-probe.ts";
 
 const execAsync = promisify(exec);
+
+// Whether ping failed due to missing CAP_NET_RAW (Docker without raw socket capability).
+let pingPermissionDenied = false;
+
+function tcpProbe(ip: string, port: number, timeoutMs = 800): Promise<boolean> {
+  return new Promise((resolve) => {
+    const s = new net.Socket();
+    const t = setTimeout(() => { s.destroy(); resolve(false); }, timeoutMs);
+    s.connect(port, ip, () => { clearTimeout(t); s.destroy(); resolve(true); });
+    s.on("error", () => { clearTimeout(t); resolve(false); });
+  });
+}
+
+// Returns true if the host responds to ping or, in Docker (no CAP_NET_RAW), to any TCP probe.
+async function isAlive(ip: string): Promise<boolean> {
+  if (!pingPermissionDenied) {
+    try {
+      await execAsync(`ping -c 1 -W 1 "${ip}"`, { timeout: 2000 });
+      return true;
+    } catch (err) {
+      const msg = String((err as { stderr?: string }).stderr ?? err);
+      if (msg.includes("Operation not permitted") || msg.includes("permission")) {
+        if (!pingPermissionDenied) {
+          console.warn("[scan] ping: Operation not permitted — falling back to TCP probing (no CAP_NET_RAW in this container)");
+          pingPermissionDenied = true;
+        }
+      } else {
+        return false;
+      }
+    }
+  }
+  // TCP fallback: try a handful of common ports
+  const results = await Promise.all([80, 443, 22, 8080, 445].map((p) => tcpProbe(ip, p)));
+  return results.some(Boolean);
+}
 
 export function detectSubnet(): string {
   for (const ifaces of Object.values(os.networkInterfaces())) {
@@ -26,17 +62,16 @@ export function cidrToIps(cidr: string): string[] {
 }
 
 async function scanIp(ip: string): Promise<{ mac: string; hostname: string } | null> {
-  try {
-    await execAsync(`ping -c 1 "${ip}"`, { timeout: 2000 });
-  } catch {
-    return null;
-  }
+  if (!(await isAlive(ip))) return null;
+
   let mac = "";
   try {
     const { stdout } = await execAsync(`arp -n "${ip}"`);
     const m = stdout.match(/([0-9a-f]{1,2}(?::[0-9a-f]{1,2}){5})/i);
     if (m) mac = m[1].toLowerCase();
-  } catch {}
+  } catch (err) {
+    console.debug(`[scan] arp ${ip}: ${(err as Error).message}`);
+  }
   let hostname = "";
   try {
     const names = await dns.reverse(ip);

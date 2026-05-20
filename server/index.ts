@@ -1,5 +1,5 @@
 import http from "node:http";
-import { PORT, isDev, BBOX_PASSWORD } from "./config.ts";
+import { PORT, isDev, BBOX_PASSWORD, BASE_PATH, BBOX_TARGET, BBOX_HOST, BBOX_OVERRIDE_IP, VERBOSE } from "./config.ts";
 import { runCodegen } from "./codegen.ts";
 import { ensureSession } from "./session.ts";
 import { proxyRequest } from "./proxy.ts";
@@ -13,6 +13,8 @@ import { serveStatic } from "./static.ts";
 async function main() {
   if (isDev) await runCodegen();
 
+  console.log(`[config] BBOX_TARGET=${BBOX_TARGET} BBOX_HOST=${BBOX_HOST} BBOX_OVERRIDE_IP=${BBOX_OVERRIDE_IP ?? "(none)"} PASSWORD=${BBOX_PASSWORD ? "set" : "MISSING"}`);
+
   if (!BBOX_PASSWORD) {
     console.warn("[server] AVERTISSEMENT : BBOX_PASSWORD non défini — les requêtes /bbox-api ne seront pas authentifiées");
   }
@@ -22,7 +24,14 @@ async function main() {
   let appMiddleware: (req: http.IncomingMessage, res: http.ServerResponse, next?: () => void) => void =
     (_req, res) => { res.writeHead(503); res.end("Server not ready"); };
 
+  console.log(`[server] BASE_PATH=${BASE_PATH}`);
+
   const server = http.createServer(async (req, res) => {
+    const ingressPath = (req.headers["x-ingress-path"] as string | undefined) ?? BASE_PATH;
+    if (VERBOSE) console.log(`[req] ${req.method} ${req.url} x-ingress-path=${req.headers["x-ingress-path"] ?? "-"} base=${ingressPath}`);
+    if (ingressPath && req.url?.startsWith(ingressPath)) {
+      req.url = req.url.slice(ingressPath.length) || "/";
+    }
     const url = req.url ?? "/";
 
     if (await handleAuthRoute(req, res)) return;

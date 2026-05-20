@@ -18,27 +18,48 @@ export function loadEnvLocal(): void {
   }
 }
 
-function loadBboxPasswordFromConfig(): string {
+interface BboxRouter {
+  type?: string;
+  ip?: string;
+  password?: string;
+  enabled?: boolean;
+}
+
+function loadBboxFromConfig(): BboxRouter {
   try {
-    const raw = fs.readFileSync(process.env.CUDY_CONFIG ?? "config.yaml", "utf8"); // CONFIG_FILE not yet defined
-    const data = parseYaml(raw) as { routers?: { type?: string; password?: string; enabled?: boolean }[] };
-    const bbox = (data.routers ?? []).find((r) => r.type === "bbox" && r.enabled !== false);
-    return bbox?.password ?? "";
+    const raw = fs.readFileSync(process.env.CUDY_CONFIG ?? "config.yaml", "utf8");
+    const data = parseYaml(raw) as { routers?: BboxRouter[] };
+    return (data.routers ?? []).find((r) => r.type === "bbox" && r.enabled !== false) ?? {};
   } catch {
-    return "";
+    return {};
   }
+}
+
+const bboxFromConfig = loadBboxFromConfig();
+
+function loadBboxPasswordFromConfig(): string {
+  return bboxFromConfig.password ?? "";
+}
+
+function loadBboxTargetFromConfig(): string {
+  return "https://mabbox.bytel.fr";
 }
 
 loadEnvLocal();
 
 export const CONFIG_FILE   = process.env.CUDY_CONFIG   ?? "config.yaml";
 export const SESSIONS_FILE = process.env.SESSIONS_FILE ?? "sessions.json";
-export const BBOX_TARGET   = process.env.BBOX_TARGET   ?? "https://mabbox.bytel.fr";
+export const BBOX_TARGET   = process.env.BBOX_TARGET   ?? loadBboxTargetFromConfig();
 export const BBOX_HOST     = process.env.BBOX_HOST     ?? "mabbox.bytel.fr";
 export const BBOX_PASSWORD = process.env.BBOX_PASSWORD ?? loadBboxPasswordFromConfig();
 export const PORT          = parseInt(process.env.PORT ?? "5176", 10);
+export const BASE_PATH     = process.env.BASE_PATH ?? "";
 export const isDev         = process.env.NODE_ENV !== "production";
 export const VERBOSE       = !!process.env.BBOX_VERBOSE;
 
-export const targetUrl = new URL(BBOX_TARGET);
-export const isHttps   = targetUrl.protocol === "https:";
+export const targetUrl        = new URL(BBOX_TARGET);
+export const isHttps          = targetUrl.protocol === "https:";
+// When a bbox IP is available in config, connect directly to it (bypasses DNS).
+// BBOX_HOST is still used as Host header and TLS SNI so the Bbox accepts the request.
+export const BBOX_OVERRIDE_IP = bboxFromConfig.ip ?? null;
+export const BBOX_CONNECT_HOST = BBOX_OVERRIDE_IP ?? targetUrl.hostname;

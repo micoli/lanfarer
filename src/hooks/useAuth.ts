@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { basePath } from "../lib/basePath.ts";
 
 interface AuthState {
   loading: boolean;
@@ -16,7 +17,7 @@ export function useAuth(): UseAuth {
 
   const check = useCallback(async () => {
     try {
-      const res = await fetch("/__auth/me");
+      const res = await fetch(`${basePath()}/__auth/me`);
       if (res.ok) {
         const data = (await res.json()) as { username: string | null; authEnabled: boolean };
         setState({ loading: false, authEnabled: data.authEnabled, username: data.username });
@@ -31,7 +32,7 @@ export function useAuth(): UseAuth {
   useEffect(() => { void check(); }, [check]);
 
   const login = useCallback(async (username: string, password: string): Promise<string | null> => {
-    const res = await fetch("/__auth/login", {
+    const res = await fetch(`${basePath()}/__auth/login`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ username, password }),
@@ -45,7 +46,7 @@ export function useAuth(): UseAuth {
   }, []);
 
   const logout = useCallback(async () => {
-    await fetch("/__auth/logout", { method: "POST" });
+    await fetch(`${basePath()}/__auth/logout`, { method: "POST" });
     setState({ loading: false, authEnabled: true, username: null });
   }, []);
 

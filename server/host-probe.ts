@@ -43,7 +43,14 @@ async function getPingStats(ip: string): Promise<{ min: number; avg: number; max
     const { stdout } = await execAsync(`ping -c 3 -i 0.2 "${ip}"`, { timeout: 5000 });
     const m = stdout.match(/(?:round-trip|rtt) min\/avg\/max\/\S+ = ([\d.]+)\/([\d.]+)\/([\d.]+)/);
     if (m) return { min: parseFloat(m[1]), avg: parseFloat(m[2]), max: parseFloat(m[3]) };
-  } catch {}
+  } catch (err) {
+    const msg = String((err as { stderr?: string }).stderr ?? err);
+    if (msg.includes("Operation not permitted") || msg.includes("permission")) {
+      console.debug(`[probe] ping stats ${ip}: no CAP_NET_RAW, skipped`);
+    } else {
+      console.debug(`[probe] ping stats ${ip}: ${msg.split("\n")[0]}`);
+    }
+  }
   return null;
 }
 
@@ -53,7 +60,13 @@ async function getMdnsName(ip: string, hostname: string): Promise<string> {
     const { stdout } = await execAsync(`avahi-resolve-address "${ip}"`, { timeout: 2000 });
     const m = stdout.match(/\S+\s+(\S+)/);
     if (m?.[1]) return m[1].replace(/\.$/, "");
-  } catch {}
+  } catch (err) {
+    const msg = String((err as { stderr?: string }).stderr ?? (err as Error).message ?? err);
+    // avahi not installed or mDNS not routed in Docker — not an actionable error
+    if (!msg.includes("not found") && !msg.includes("No such file") && !msg.includes("Failed to resolve")) {
+      console.debug(`[probe] mDNS ${ip}: ${msg.split("\n")[0]}`);
+    }
+  }
   return "";
 }
 

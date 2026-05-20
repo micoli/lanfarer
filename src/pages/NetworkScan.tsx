@@ -16,6 +16,7 @@ import type { components } from "../lib/api/schema.d.ts";
 type DhcpClient = components["schemas"]["DhcpClient"];
 
 import { exportCsv } from "../lib/exportCsv";
+import { basePath } from "../lib/basePath.ts";
 
 interface PingStats {
   min: number;
@@ -290,7 +291,7 @@ export default function NetworkScan() {
     setError(null);
     setScanning(true);
 
-    const url = `/__scan${subnet.trim() ? `?subnet=${encodeURIComponent(subnet.trim())}` : ""}`;
+    const url = `${basePath()}/__scan${subnet.trim() ? `?subnet=${encodeURIComponent(subnet.trim())}` : ""}`;
     const es = new EventSource(url);
     esRef.current = es;
 

@@ -1,5 +1,5 @@
 import http from "node:http";
-import { BBOX_HOST, targetUrl, isHttps } from "./config.ts";
+import { BBOX_HOST, BBOX_CONNECT_HOST, targetUrl, isHttps } from "./config.ts";
 import { type Captured, makeRequestAsync } from "./http-client.ts";
 import { ensureSession, getSession, clearSession, type Session } from "./session.ts";
 
@@ -73,13 +73,14 @@ async function dispatchProxy(
   try {
     ({ statusCode, headers: responseHeaders, body: responseBody } = await makeRequestAsync(
       {
-        hostname: targetUrl.hostname,
+        hostname: BBOX_CONNECT_HOST,
         port: targetUrl.port ? Number(targetUrl.port) : isHttps ? 443 : 80,
         path: reqPath,
         method,
         headers,
         protocol: targetUrl.protocol,
         rejectUnauthorized: false,
+        servername: BBOX_HOST,
       },
       body,
       captured,

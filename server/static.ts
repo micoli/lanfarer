@@ -1,6 +1,7 @@
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
+import { BASE_PATH } from "./config.ts";
 
 const MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -39,7 +40,14 @@ export function serveStatic(distDir: string): (req: http.IncomingMessage, res: h
       res.end("dist/index.html not found — run npm run build first");
       return;
     }
+
+    // X-Ingress-Path is set by HA ingress proxy (e.g. /api/hassio_ingress/TOKEN).
+    // Fall back to BASE_PATH env var (derived from HOSTNAME in run.sh).
+    const ingressPath = (req.headers["x-ingress-path"] as string | undefined) ?? BASE_PATH;
+    const base = ingressPath ? `${ingressPath}/` : "/";
+    const raw = fs.readFileSync(index, "utf8");
+    const html = raw.replace(/<head>/i, `<head><base href="${base}">`);
     res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache" });
-    fs.createReadStream(index).pipe(res);
+    res.end(html);
   };
 }

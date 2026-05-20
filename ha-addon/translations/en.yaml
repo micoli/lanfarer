@@ -1,0 +1,22 @@
+configuration:
+  bbox_target:
+    name: Bbox target URL
+    description: >-
+      Base URL of the Bbox router API. Leave empty to use the default
+      (https://mabbox.bytel.fr).
+  bbox_host:
+    name: Bbox host header
+    description: >-
+      Host header sent to the router. Leave empty to use the default
+      (mabbox.bytel.fr).
+  verbose:
+    name: Verbose logging
+    description: Enable verbose proxy logging in the add-on log.
+  router_config:
+    name: Router configuration (config.yaml)
+    description: >-
+      Full content of config.yaml (users and routers list). Paste the YAML
+      as-is. Overrides any file previously written to the add-on config folder.
+
+network:
+  5176/tcp: Web interface
