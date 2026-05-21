@@ -103,7 +103,7 @@ async function doLogin(): Promise<void> {
   }
 
   if (status === 401 || !captured.bboxId) {
-    console.error("[server] Authentification Bbox échouée — vérifiez BBOX_PASSWORD");
+    console.error("[server] Authentification Bbox échouée — vérifiez le mot de passe dans config.yaml");
     session = null;
     return;
   }

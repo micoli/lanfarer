@@ -5,8 +5,9 @@ services:
     ports:
       - "3000:5176"
     environment:
-      BBOX_PASSWORD: ${BBOX_PASSWORD}
       BBOX_TARGET:   ${BBOX_TARGET:-https://mabbox.bytel.fr}
       BBOX_HOST:     ${BBOX_HOST:-mabbox.bytel.fr}
       NODE_ENV:      production
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
     restart: unless-stopped

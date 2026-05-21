@@ -13,11 +13,8 @@ import { serveStatic } from "./static.ts";
 async function main() {
   if (isDev) await runCodegen();
 
-  console.log(`[config] BBOX_TARGET=${BBOX_TARGET} BBOX_HOST=${BBOX_HOST} BBOX_OVERRIDE_IP=${BBOX_OVERRIDE_IP ?? "(none)"} PASSWORD=${BBOX_PASSWORD ? "set" : "MISSING"}`);
+  console.log(`[config] BBOX_TARGET=${BBOX_TARGET} BBOX_HOST=${BBOX_HOST} BBOX_OVERRIDE_IP=${BBOX_OVERRIDE_IP ?? "(none)"} PASSWORD=${BBOX_PASSWORD ? "set" : "MISSING (vérifiez config.yaml)"}`);
 
-  if (!BBOX_PASSWORD) {
-    console.warn("[server] AVERTISSEMENT : BBOX_PASSWORD non défini — les requêtes /bbox-api ne seront pas authentifiées");
-  }
 
   await ensureSession();
 

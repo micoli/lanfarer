@@ -35,20 +35,17 @@ No test suite exists in this project.
 
 ## Environment
 
-`.env.local` (not committed, auto-loaded by the server) must define:
-- `BBOX_PASSWORD` — admin password for the Bbox router (required; server logs in on startup)
-- `BBOX_TARGET` — optional, proxy target (default: `https://mabbox.bytel.fr`)
-- `BBOX_HOST` — optional, Host header sent to router (default: `mabbox.bytel.fr`)
-- `BBOX_VERBOSE` — optional, enables verbose proxy logging
-
-Actual environment variables take precedence over `.env.local`.
+Router credentials are configured in `config.yaml` (not committed). Optional env overrides in `.env.local` (not committed):
+- `BBOX_TARGET` — proxy target (default: `https://mabbox.bytel.fr`)
+- `BBOX_HOST` — Host header sent to router (default: `mabbox.bytel.fr`)
+- `BBOX_VERBOSE` — enables verbose proxy logging
 
 ## Architecture
 
 ### Server (`server.ts`)
 
 A standalone Node.js server that replaces both the Vite dev server and nginx in production:
-- Maintains a Bbox session (BBOX_ID + btoken) in memory using `BBOX_PASSWORD`
+- Maintains a Bbox session (BBOX_ID + btoken) in memory using the password from `config.yaml`
 - Auto-logs in on startup, re-authenticates transparently on 401/403
 - Proxies `/bbox-api/*` to the Bbox router with cookies injected server-side
 - Appends `?btoken=...` automatically on POST/PUT/DELETE (CSRF requirement)

@@ -29,16 +29,17 @@ The Node.js server handles authentication against the Bbox router transparently:
 
 ### Docker
 
+Create a `config.yaml` (see [Configuration](#configuration) below), then:
+
 ```bash
-cp .env.local.example .env.local   # fill in BBOX_PASSWORD
-make up                             # build + start on port 3000
+make up   # build + start on port 3000
 ```
 
 Or directly:
 
 ```bash
 docker run -p 3000:5176 \
-  -e BBOX_PASSWORD=your_router_password \
+  -v $(pwd)/config.yaml:/app/config.yaml:ro \
   ghcr.io/micoli/fast5688b-gui-amd64:latest
 ```
 
@@ -46,32 +47,15 @@ docker run -p 3000:5176 \
 
 ```bash
 npm install
-cp .env.local.example .env.local   # fill in BBOX_PASSWORD
-npm run dev                         # Vite HMR + server on :5176
+# create config.yaml with your router credentials (see Configuration below)
+npm run dev   # Vite HMR + server on :5176
 ```
 
 ## Configuration
 
-### Environment variables
+All credentials and router settings live in `config.yaml` at the project root (never committed — already in `.gitignore`).
 
-| Variable | Default | Description |
-|---|---|---|
-| `BBOX_PASSWORD` | — | **Required.** Bbox admin password |
-| `BBOX_TARGET` | `https://mabbox.bytel.fr` | Bbox router URL |
-| `BBOX_HOST` | `mabbox.bytel.fr` | Host header sent to the router |
-| `BBOX_VERBOSE` | — | Enable verbose request logging |
-| `PORT` | `5176` | Server port |
-
-Create a `.env.local` file (never committed) for local overrides:
-
-```ini
-BBOX_PASSWORD=your_password_here
-# BBOX_TARGET=https://192.168.1.1   # optional: bypass DNS
-```
-
-### Multi-router config (`config.yaml`)
-
-To manage Cudy access points or connect to the Bbox by IP, create a `config.yaml` at the project root (also never committed):
+### `config.yaml`
 
 ```yaml
 users:
@@ -81,7 +65,7 @@ users:
 routers:
   - name: bbox
     type: bbox
-    ip: 192.168.1.1      # optional: connect directly by IP
+    ip: 192.168.1.1            # optional: connect directly by IP instead of DNS
     password: your_bbox_password
     enabled: true
 
@@ -92,11 +76,24 @@ routers:
     enabled: true
 ```
 
-Generate password hashes:
+Generate a password hash for a GUI user:
 
 ```bash
 npx tsx server/add-user.ts <username> <password>
 ```
+
+### Environment variables
+
+Only optional tunables — no credentials:
+
+| Variable | Default | Description |
+|---|---|---|
+| `BBOX_TARGET` | `https://mabbox.bytel.fr` | Bbox router URL |
+| `BBOX_HOST` | `mabbox.bytel.fr` | Host header sent to the router |
+| `BBOX_VERBOSE` | — | Enable verbose request logging |
+| `PORT` | `5176` | Server port |
+
+Copy `.env.local.example` to `.env.local` for local overrides (never committed).
 
 ## Home Assistant addon
 
@@ -111,9 +108,7 @@ The addon uses a pre-built image from `ghcr.io` — no build step on the HA side
 | `bbox_target` | `https://mabbox.bytel.fr` | Bbox URL |
 | `bbox_host` | `mabbox.bytel.fr` | Host header |
 | `verbose` | `false` | Enable verbose logging |
-| `router_config` | — | Inline YAML for multi-router setup (Cudy APs) |
-
-The `router_config` option accepts the same YAML format as `config.yaml` above.
+| `router_config` | — | Inline YAML (same format as `config.yaml`) |
 
 ## Development commands
 
@@ -128,9 +123,9 @@ npm run format   # Biome format only
 Docker:
 
 ```bash
-make up       # production build + start (detached)
-make down     # stop
-make logs     # follow logs
+make up           # production build + start (detached)
+make down         # stop
+make logs         # follow logs
 make addon-build  # build the HA addon image locally
 ```
 
