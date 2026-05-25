@@ -10,7 +10,12 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useCreateDhcpClient, useDhcpClients, useDhcpConfig, useIpCheck } from "../../plugins/bbox/frontend/hooks/useBbox";
+import {
+  useCreateDhcpClient,
+  useDhcpClients,
+  useDhcpConfig,
+  useIpCheck,
+} from "../../plugins/bbox/frontend/hooks/useBbox";
 import { useDhcpRouterId } from "../hooks/useUiConfig.ts";
 import type { components } from "../lib/api/schema.d.ts";
 

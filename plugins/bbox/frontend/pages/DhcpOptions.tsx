@@ -10,21 +10,9 @@ import {
   useUpdateDhcpConfig,
   useUpdateDhcpOption,
 } from "../hooks/useBbox";
-import type { components } from "../../../../src/lib/api/schema.d.ts";
-
-type DhcpOption = components["schemas"]["DhcpOption"];
-type DhcpOptionCapability = components["schemas"]["DhcpOptionCapability"];
-type DhcpOptionsResponse = components["schemas"]["DhcpOptionsResponse"];
-type DhcpResponse = components["schemas"]["DhcpResponse"];
+import type { DhcpOption, DhcpOptionCapability, DhcpOptionsData } from "../../../contracts.ts";
 
 import { exportCsv } from "../../../../src/lib/exportCsv";
-
-function parseDhcpOptions(raw: unknown): DhcpOptionsResponse["dhcp"] | null {
-  if (!raw) return null;
-  if (Array.isArray(raw) && raw[0]?.dhcp) return raw[0].dhcp as DhcpOptionsResponse["dhcp"];
-  if (raw && typeof raw === "object" && "dhcp" in raw) return (raw as DhcpOptionsResponse).dhcp;
-  return null;
-}
 
 function OptionRow({
   opt,
@@ -110,9 +98,14 @@ function OptionRow({
   );
 }
 
-function DhcpOptionsTable({ raw, routerId }: { raw: unknown; routerId: string | null }) {
+function DhcpOptionsTable({
+  data,
+  routerId,
+}: {
+  data: DhcpOptionsData | undefined;
+  routerId: string | null;
+}) {
   const { t } = useTranslation();
-  const parsed = parseDhcpOptions(raw);
   const [addOpen, setAddOpen] = useState(false);
   const [newOption, setNewOption] = useState<number>(6);
   const [newValue, setNewValue] = useState("");
@@ -120,10 +113,10 @@ function DhcpOptionsTable({ raw, routerId }: { raw: unknown; routerId: string | 
   const update = useUpdateDhcpOption(routerId);
   const remove = useDeleteDhcpOption(routerId);
 
-  if (!parsed) return null;
+  if (!data) return null;
 
-  const { options, optionsstatic, optionscapabilities } = parsed;
-  const capMap = new Map(optionscapabilities.map((c) => [c.id, c]));
+  const { options, optionsstatic, capabilities } = data;
+  const capMap = new Map(capabilities.map((c) => [c.id, c]));
 
   return (
     <div className="flex flex-col gap-3 p-4 bg-slate-800/60 rounded-xl border border-slate-700">
@@ -211,7 +204,7 @@ function DhcpOptionsTable({ raw, routerId }: { raw: unknown; routerId: string | 
                     value={newOption}
                     onChange={(e) => setNewOption(Number(e.target.value))}
                   >
-                    {optionscapabilities.map((c) => (
+                    {capabilities.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.id} — {c.description}
                       </option>
@@ -277,13 +270,6 @@ function DhcpOptionsTable({ raw, routerId }: { raw: unknown; routerId: string | 
   );
 }
 
-function parseDhcp(raw: unknown): DhcpResponse["dhcp"] | null {
-  if (!raw) return null;
-  if (Array.isArray(raw) && raw[0]?.dhcp) return raw[0].dhcp as DhcpResponse["dhcp"];
-  if (raw && typeof raw === "object" && "dhcp" in raw) return (raw as DhcpResponse).dhcp;
-  return null;
-}
-
 function Field({
   label,
   value,
@@ -319,11 +305,11 @@ export default function DhcpOptions() {
   const { routerId: routerIdParam } = useParams<{ routerId: string }>();
   const routerId = routerIdParam ?? null;
   const { t } = useTranslation();
-  const { data: rawDhcp, isLoading: loadingDhcp, error: errorDhcp } = useDhcpConfig(routerId);
-  const { data: rawDhcpOptions, isLoading: loadingOptions } = useDhcpOptions(routerId);
+  const { data: dhcpConfigData, isLoading: loadingDhcp, error: errorDhcp } = useDhcpConfig(routerId);
+  const { data: dhcpOptionsData, isLoading: loadingOptions } = useDhcpOptions(routerId);
   const updateDhcp = useUpdateDhcpConfig(routerId);
 
-  const dhcp = parseDhcp(rawDhcp);
+  const dhcp = dhcpConfigData?.config;
 
   const [enable, setEnable] = useState(1);
   const [minaddress, setMinaddress] = useState("");
@@ -429,7 +415,7 @@ export default function DhcpOptions() {
 
       <hr className="border-slate-700 my-6" />
 
-      <DhcpOptionsTable raw={rawDhcpOptions} routerId={routerId} />
+      <DhcpOptionsTable data={dhcpOptionsData} routerId={routerId} />
     </div>
   );
 }

@@ -1,11 +1,11 @@
 openapi: "3.1.0"
 info:
   title: fast5688b-gui server API
-  version: "1.0.0"
+  version: "2.0.0"
   description: |
     API exposée par le serveur Node.js fast5688b.
-    Comprend les routes propres du serveur (health, scan réseau, check-ip)
-    et les routes proxy vers le routeur BBox (préfix /devices/api-proxy/bbox-proxy/bbox/).
+    Toutes les routes plugin suivent le schéma :
+      /devices/api-proxy/{type}-proxy/{routerId}/{resource}
 
 servers:
   - url: http://localhost:5176
@@ -102,12 +102,10 @@ paths:
                       message:
                         type: string
 
-  # ── Routes proxy BBox ──────────────────────────────────────────────────────
-
-  /devices/api-proxy/bbox-proxy/bbox/api/v1/device:
+  /__config/routers:
     get:
-      operationId: getDevice
-      summary: Informations sur le routeur (modèle, firmware, uptime…)
+      operationId: getConfigRouters
+      summary: Liste tous les routeurs configurés (tous types)
       responses:
         "200":
           description: OK
@@ -116,66 +114,164 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/AnyObject"
+                  $ref: "#/components/schemas/RouterEntry"
 
-  /devices/api-proxy/bbox-proxy/bbox/api/v1/wan/ip/stats:
+  # ── Cudy plugin ────────────────────────────────────────────────────────────
+
+  /devices/api-proxy/cudy-proxy/status:
     get:
-      operationId: getWanStats
-      summary: Statistiques de trafic WAN (débit, octets)
+      operationId: getCudyStatus
+      summary: Liste des routeurs Cudy configurés
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/AnyObject"
+                type: object
+                required: [configured, routers]
+                properties:
+                  configured:
+                    type: integer
+                  routers:
+                    type: array
+                    items:
+                      type: object
+                      required: [name, ip]
+                      properties:
+                        name: { type: string }
+                        ip: { type: string }
 
-  /devices/api-proxy/bbox-proxy/bbox/api/v1/wireless:
+  /devices/api-proxy/cudy-proxy/{routerId}/wireless:
     get:
-      operationId: getWireless
-      summary: Configuration Wi-Fi (SSID, canal, sécurité…)
+      operationId: getCudyWireless
+      summary: Clients Wi-Fi connectés à un AP Cudy (contrat commun WirelessData)
+      parameters:
+        - $ref: "#/components/parameters/routerId"
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/AnyObject"
+                $ref: "#/components/schemas/WirelessData"
+        "404":
+          description: Routeur introuvable
 
-  /devices/api-proxy/bbox-proxy/bbox/api/v1/hosts:
+  /devices/api-proxy/cudy-proxy/{routerId}/bandwidth:
+    get:
+      operationId: getCudyBandwidth
+      summary: Débit Wi-Fi des interfaces ra0 (2.4 GHz) et rai0 (5 GHz)
+      description: |
+        Calcule les débits instantanés par dérivation des volumes cumulatifs
+        retournés par LuCI (/admin/status/bandwidth).
+        Valeurs en kbps.
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CudyBandwidthData"
+        "404":
+          description: Routeur introuvable
+
+  # ── BBox plugin ────────────────────────────────────────────────────────────
+
+  /devices/api-proxy/bbox-proxy/{routerId}/wireless:
+    get:
+      operationId: getBboxWireless
+      summary: Clients Wi-Fi connectés à la BBox (contrat commun WirelessData)
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WirelessData"
+
+  /devices/api-proxy/bbox-proxy/{routerId}/hosts:
     get:
       operationId: getHosts
       summary: Appareils connectés au réseau local
+      parameters:
+        - $ref: "#/components/parameters/routerId"
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/AnyObject"
+                $ref: "#/components/schemas/HostsData"
 
-  /devices/api-proxy/bbox-proxy/bbox/api/v1/dhcp:
+  /devices/api-proxy/bbox-proxy/{routerId}/device:
     get:
-      operationId: getDhcp
-      summary: Configuration du serveur DHCP
+      operationId: getDevice
+      summary: Informations sur le routeur (modèle, firmware, uptime…)
+      parameters:
+        - $ref: "#/components/parameters/routerId"
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/DhcpResponse"
+                $ref: "#/components/schemas/DeviceData"
+
+  /devices/api-proxy/bbox-proxy/{routerId}/wan/stats:
+    get:
+      operationId: getWanStats
+      summary: Statistiques de trafic WAN instantanées (débit, octets cumulés)
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WanStatsData"
+
+  /devices/api-proxy/bbox-proxy/{routerId}/wan/graphs:
+    get:
+      operationId: getWanGraphs
+      summary: Historique de débit WAN sur la dernière heure
+      description: |
+        Agrège les endpoints Bbox /api/v1/graphs/wan/downstream/hour et upstream/hour.
+        Chaque point contient un timestamp Unix (secondes) et une valeur en kbps.
+        Le premier point de chaque série est le plus ancien.
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WanGraphsData"
+
+  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/config:
+    get:
+      operationId: getDhcpConfig
+      summary: Configuration du serveur DHCP
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DhcpConfigData"
     put:
-      operationId: updateDhcp
+      operationId: updateDhcpConfig
       summary: Met à jour la configuration DHCP
+      parameters:
+        - $ref: "#/components/parameters/routerId"
       requestBody:
         required: true
         content:
@@ -183,40 +279,43 @@ paths:
             schema:
               $ref: "#/components/schemas/DhcpConfigUpdate"
       responses:
-        "200":
+        "204":
           description: OK
 
-  /devices/api-proxy/bbox-proxy/bbox/api/v1/dhcp/clients:
+  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/clients:
     get:
       operationId: getDhcpClients
       summary: Liste des réservations DHCP statiques
+      parameters:
+        - $ref: "#/components/parameters/routerId"
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/DhcpClient"
+                $ref: "#/components/schemas/DhcpClientsData"
     post:
       operationId: createDhcpClient
       summary: Crée une réservation DHCP
+      parameters:
+        - $ref: "#/components/parameters/routerId"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/DhcpClientCreate"
+              $ref: "#/components/schemas/DhcpClientWrite"
       responses:
-        "200":
+        "204":
           description: Créé
 
-  /devices/api-proxy/bbox-proxy/bbox/api/v1/dhcp/clients/{id}:
+  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/clients/{id}:
     put:
       operationId: updateDhcpClient
       summary: Met à jour une réservation DHCP
       parameters:
+        - $ref: "#/components/parameters/routerId"
         - name: id
           in: path
           required: true
@@ -227,56 +326,58 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/DhcpClientCreate"
+              $ref: "#/components/schemas/DhcpClientWrite"
       responses:
-        "200":
+        "204":
           description: OK
     delete:
       operationId: deleteDhcpClient
       summary: Supprime une réservation DHCP
       parameters:
+        - $ref: "#/components/parameters/routerId"
         - name: id
           in: path
           required: true
           schema:
             type: integer
       responses:
-        "200":
+        "204":
           description: Supprimé
 
-  /devices/api-proxy/bbox-proxy/bbox/api/v1/dhcp/options:
+  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/options:
     get:
       operationId: getDhcpOptions
-      summary: Liste des options DHCP configurées et disponibles
+      summary: Options DHCP configurées et disponibles
+      parameters:
+        - $ref: "#/components/parameters/routerId"
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/DhcpOptionsResponse"
-
-  /devices/api-proxy/bbox-proxy/bbox/api/v1/dhcp/option:
+                $ref: "#/components/schemas/DhcpOptionsData"
     post:
       operationId: createDhcpOption
       summary: Crée une option DHCP
+      parameters:
+        - $ref: "#/components/parameters/routerId"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/DhcpOptionCreate"
+              $ref: "#/components/schemas/DhcpOptionWrite"
       responses:
-        "200":
+        "204":
           description: Créé
 
-  /devices/api-proxy/bbox-proxy/bbox/api/v1/dhcp/options/{id}:
+  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/options/{id}:
     put:
       operationId: updateDhcpOption
       summary: Met à jour une option DHCP
       parameters:
+        - $ref: "#/components/parameters/routerId"
         - name: id
           in: path
           required: true
@@ -287,25 +388,48 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/DhcpOptionUpdate"
+              $ref: "#/components/schemas/DhcpOptionWrite"
       responses:
-        "200":
+        "204":
           description: OK
     delete:
       operationId: deleteDhcpOption
       summary: Supprime une option DHCP
       parameters:
+        - $ref: "#/components/parameters/routerId"
         - name: id
           in: path
           required: true
           schema:
             type: integer
       responses:
-        "200":
+        "204":
           description: Supprimé
 
 components:
+  parameters:
+    routerId:
+      name: routerId
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "bbox-main"
+
   schemas:
+
+    # ── Config ────────────────────────────────────────────────────────────────
+
+    RouterEntry:
+      type: object
+      required: [name, type]
+      properties:
+        name:
+          type: string
+          example: "bbox-main"
+        type:
+          type: string
+          enum: [bbox, cudy]
 
     # ── Routes propres ─────────────────────────────────────────────────────────
 
@@ -383,11 +507,184 @@ components:
         smbDomain:
           type: string
 
-    # ── BBox proxy ─────────────────────────────────────────────────────────────
+    # ── Cross-plugin: wireless ─────────────────────────────────────────────────
 
-    AnyObject:
+    WirelessClient:
       type: object
-      additionalProperties: true
+      required: [mac, signal_dbm, tx_kbps, rx_kbps, inactive_ms]
+      properties:
+        mac:
+          type: string
+        signal_dbm:
+          type: integer
+          description: Signal strength in dBm (negative)
+        tx_kbps:
+          type: number
+          description: Transmit rate in kbps
+        rx_kbps:
+          type: number
+          description: Receive rate in kbps
+        inactive_ms:
+          type: integer
+          description: Time since last activity in milliseconds
+
+    AccessPoint:
+      type: object
+      required: [ssid, band, channel, clients]
+      properties:
+        ssid:
+          type: string
+        band:
+          type: string
+          enum: ["2.4G", "5G"]
+        channel:
+          type: integer
+        clients:
+          type: array
+          items:
+            $ref: "#/components/schemas/WirelessClient"
+
+    WirelessData:
+      type: object
+      required: [online, accessPoints]
+      properties:
+        online:
+          type: boolean
+        accessPoints:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccessPoint"
+
+    # ── Cross-plugin: host list ────────────────────────────────────────────────
+
+    Host:
+      type: object
+      required: [mac, ip, hostname, active]
+      properties:
+        mac:
+          type: string
+        ip:
+          type: string
+        ip6:
+          type: string
+        hostname:
+          type: string
+        active:
+          type: boolean
+        type:
+          type: string
+        lastseen:
+          type: integer
+          description: Unix timestamp (seconds)
+
+    HostsData:
+      type: object
+      required: [hosts]
+      properties:
+        hosts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Host"
+
+    # ── BBox device / WAN ──────────────────────────────────────────────────────
+
+    DeviceData:
+      type: object
+      required: [modelname, serialnumber, firmware, firmwareDate, uptime, boots, using]
+      properties:
+        modelname:
+          type: string
+        serialnumber:
+          type: string
+        firmware:
+          type: string
+        firmwareDate:
+          type: string
+        uptime:
+          type: integer
+          description: Uptime in seconds
+        boots:
+          type: integer
+        using:
+          type: object
+          required: [ipv4, ipv6, ftth]
+          properties:
+            ipv4: { type: boolean }
+            ipv6: { type: boolean }
+            ftth: { type: boolean }
+
+    WanGraphPoint:
+      type: object
+      required: [ts, value]
+      properties:
+        ts:
+          type: integer
+          description: Unix timestamp (secondes)
+        value:
+          type: number
+          description: Débit en kbps
+
+    WanGraphsData:
+      type: object
+      required: [down, up]
+      properties:
+        down:
+          type: array
+          items:
+            $ref: "#/components/schemas/WanGraphPoint"
+        up:
+          type: array
+          items:
+            $ref: "#/components/schemas/WanGraphPoint"
+
+    CudyBandwidthPoint:
+      type: object
+      required: [ts, up, down]
+      properties:
+        ts:
+          type: integer
+          description: Unix timestamp (secondes)
+        up:
+          type: number
+          description: Débit montant en kbps
+        down:
+          type: number
+          description: Débit descendant en kbps
+
+    CudyBandwidthData:
+      type: object
+      required: [ra0, rai0]
+      properties:
+        ra0:
+          description: Interface 2.4 GHz
+          type: array
+          items:
+            $ref: "#/components/schemas/CudyBandwidthPoint"
+        rai0:
+          description: Interface 5 GHz
+          type: array
+          items:
+            $ref: "#/components/schemas/CudyBandwidthPoint"
+
+    WanStatsSide:
+      type: object
+      required: [bytes, bandwidth, contractualBandwidth, occupation]
+      properties:
+        bytes: { type: integer }
+        bandwidth: { type: number }
+        contractualBandwidth: { type: number }
+        occupation: { type: number }
+
+    WanStatsData:
+      type: object
+      required: [rx, tx]
+      properties:
+        rx:
+          $ref: "#/components/schemas/WanStatsSide"
+        tx:
+          $ref: "#/components/schemas/WanStatsSide"
+
+    # ── BBox DHCP ──────────────────────────────────────────────────────────────
 
     DhcpClient:
       type: object
@@ -406,20 +703,17 @@ components:
         ip6address:
           type: string
 
-    DhcpClientCreate:
+    DhcpClientWrite:
       type: object
-      required: [enable, device, ipaddress, ip6address, macaddress, hostname]
+      required: [enable, macaddress, ipaddress, ip6address, hostname]
       properties:
         enable:
           type: integer
-        device:
+        macaddress:
           type: string
-          description: Alias du champ macaddress pour la création (contrainte API BBox)
         ipaddress:
           type: string
         ip6address:
-          type: string
-        macaddress:
           type: string
         hostname:
           type: string
@@ -449,24 +743,21 @@ components:
         leasetime:
           type: integer
 
-    DhcpResponse:
+    DhcpClientsData:
       type: object
-      required: [dhcp]
+      required: [clients]
       properties:
-        dhcp:
-          type: object
-          required: [state, enable, minaddress, maxaddress, leasetime]
-          properties:
-            state:
-              type: integer
-            enable:
-              type: integer
-            minaddress:
-              type: string
-            maxaddress:
-              type: string
-            leasetime:
-              type: integer
+        clients:
+          type: array
+          items:
+            $ref: "#/components/schemas/DhcpClient"
+
+    DhcpConfigData:
+      type: object
+      required: [config]
+      properties:
+        config:
+          $ref: "#/components/schemas/DhcpConfig"
 
     DhcpOption:
       type: object
@@ -479,7 +770,7 @@ components:
         value:
           type: string
 
-    DhcpOptionCreate:
+    DhcpOptionWrite:
       type: object
       required: [option, value]
       properties:
@@ -488,45 +779,9 @@ components:
         value:
           type: string
 
-    DhcpOptionUpdate:
-      type: object
-      required: [enable, name, format, value]
-      properties:
-        enable:
-          type: integer
-        name:
-          type: integer
-        format:
-          type: string
-        value:
-          type: string
-
-    DhcpOptionsResponse:
-      type: object
-      required: [dhcp]
-      properties:
-        dhcp:
-          type: object
-          required: [options, optionsstatic, optionscount, optionscapabilities]
-          properties:
-            options:
-              type: array
-              items:
-                $ref: "#/components/schemas/DhcpOption"
-            optionsstatic:
-              type: array
-              items:
-                $ref: "#/components/schemas/DhcpOption"
-            optionscount:
-              type: integer
-            optionscapabilities:
-              type: array
-              items:
-                $ref: "#/components/schemas/DhcpOptionCapability"
-
     DhcpOptionCapability:
       type: object
-      required: [id, type, description, rfc]
+      required: [id, type, description]
       properties:
         id:
           type: integer
@@ -535,5 +790,20 @@ components:
           enum: [INT, IP, STRING, BOOL]
         description:
           type: string
-        rfc:
-          type: string
+
+    DhcpOptionsData:
+      type: object
+      required: [options, optionsstatic, capabilities]
+      properties:
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/DhcpOption"
+        optionsstatic:
+          type: array
+          items:
+            $ref: "#/components/schemas/DhcpOption"
+        capabilities:
+          type: array
+          items:
+            $ref: "#/components/schemas/DhcpOptionCapability"

@@ -1,8 +1,9 @@
 import { Eye, EyeOff, Shield, Wifi, WifiOff } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useWireless } from "../hooks/useBbox";
-import { type CudyRouter, useCudyClients } from "../../../cudy/frontend/hooks/useCudy.ts";
+import { useWifiSettings } from "../hooks/useBbox";
+import { type CudyRouterWireless, useCudyClients } from "../../../cudy/frontend/hooks/useCudy.ts";
+import type { AccessPoint } from "../../../contracts.ts";
 import { useRouterForPage } from "../../../../src/hooks/useUiConfig.ts";
 
 interface RadioBand {
@@ -202,53 +203,50 @@ function Row({
   );
 }
 
-function CudyInterfaceCard({
-  iface,
-}: {
-  iface: { ssid: string; band: string; channel: number; bitrate: number; clients: unknown[] };
-}) {
+function CudyAccessPointCard({ ap }: { ap: AccessPoint }) {
   return (
     <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-5 flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Wifi size={16} className="text-green-400" />
-          <span className="font-semibold text-slate-100">{iface.band}</span>
+          <span className="font-semibold text-slate-100">{ap.band}</span>
         </div>
         <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/10 text-green-400">
           active
         </span>
       </div>
       <div className="flex flex-col gap-2">
-        <Row label="SSID" value={iface.ssid} mono />
-        <Row label="Canal" value={String(iface.channel)} />
-        <Row label="Débit" value={`${iface.bitrate} Mb/s`} />
-        <Row label="Clients" value={String(iface.clients.length)} />
+        <Row label="SSID" value={ap.ssid} mono />
+        <Row label="Canal" value={String(ap.channel)} />
+        <Row label="Clients" value={String(ap.clients.length)} />
       </div>
     </div>
   );
 }
 
-function CudyRouterSection({ router }: { router: CudyRouter }) {
+function CudyRouterSection({ router }: { router: CudyRouterWireless }) {
+  const online = router.wireless.online;
+  const aps = router.wireless.accessPoints;
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <h2 className="text-sm font-semibold text-slate-200">{router.name}</h2>
         <span className="text-xs text-slate-500">{router.ip}</span>
         <span
-          className={`text-xs px-2 py-0.5 rounded-full ${router.online ? "bg-green-500/10 text-green-400" : "bg-slate-700 text-slate-500"}`}
+          className={`text-xs px-2 py-0.5 rounded-full ${online ? "bg-green-500/10 text-green-400" : "bg-slate-700 text-slate-500"}`}
         >
-          {router.online ? "en ligne" : "hors ligne"}
+          {online ? "en ligne" : "hors ligne"}
         </span>
       </div>
-      {router.online && router.interfaces.length > 0 ? (
+      {online && aps.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {router.interfaces.map((iface) => (
-            <CudyInterfaceCard key={iface.ifname} iface={iface} />
+          {aps.map((ap, i) => (
+            <CudyAccessPointCard key={`${ap.ssid}-${i}`} ap={ap} />
           ))}
         </div>
       ) : (
         <p className="text-xs text-slate-500">
-          {router.online ? "Aucune interface Wi-Fi détectée" : "Routeur injoignable"}
+          {online ? "Aucune interface Wi-Fi détectée" : "Routeur injoignable"}
         </p>
       )}
     </div>
@@ -258,9 +256,19 @@ function CudyRouterSection({ router }: { router: CudyRouter }) {
 export default function WifiPage() {
   const { t } = useTranslation();
   const wifiRouterId = useRouterForPage("wifi");
-  const { data: raw, isLoading, error } = useWireless(wifiRouterId);
+  const { data: raw, isLoading, error } = useWifiSettings(wifiRouterId);
   const { data: cudyData } = useCudyClients();
   const w = parseWireless(raw);
+
+  if (!wifiRouterId) {
+    return (
+      <div className="p-6">
+        <p className="text-slate-500 text-sm">
+          Aucun routeur configuré pour cette page. Ajoutez <code className="text-slate-300">router: &lt;nom&gt;</code> sur l'item <code className="text-slate-300">wifi</code> dans <code className="text-slate-300">config.yaml</code>.
+        </p>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

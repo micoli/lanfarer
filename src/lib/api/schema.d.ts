@@ -63,15 +63,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/bbox/api/v1/device": {
+    "/__config/routers": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Informations sur le routeur (modèle, firmware, uptime…) */
-        get: operations["getDevice"];
+        /** Liste tous les routeurs configurés (tous types) */
+        get: operations["getConfigRouters"];
         put?: never;
         post?: never;
         delete?: never;
@@ -80,15 +80,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/bbox/api/v1/wan/ip/stats": {
+    "/devices/api-proxy/cudy-proxy/status": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Statistiques de trafic WAN (débit, octets) */
-        get: operations["getWanStats"];
+        /** Liste des routeurs Cudy configurés */
+        get: operations["getCudyStatus"];
         put?: never;
         post?: never;
         delete?: never;
@@ -97,15 +97,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/bbox/api/v1/wireless": {
+    "/devices/api-proxy/cudy-proxy/{routerId}/wireless": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Configuration Wi-Fi (SSID, canal, sécurité…) */
-        get: operations["getWireless"];
+        /** Clients Wi-Fi connectés à un AP Cudy (contrat commun WirelessData) */
+        get: operations["getCudyWireless"];
         put?: never;
         post?: never;
         delete?: never;
@@ -114,7 +114,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/bbox/api/v1/hosts": {
+    "/devices/api-proxy/cudy-proxy/{routerId}/bandwidth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Débit Wi-Fi des interfaces ra0 (2.4 GHz) et rai0 (5 GHz)
+         * @description Calcule les débits instantanés par dérivation des volumes cumulatifs
+         *     retournés par LuCI (/admin/status/bandwidth).
+         *     Valeurs en kbps.
+         */
+        get: operations["getCudyBandwidth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/devices/api-proxy/bbox-proxy/{routerId}/wireless": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Clients Wi-Fi connectés à la BBox (contrat commun WirelessData) */
+        get: operations["getBboxWireless"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/devices/api-proxy/bbox-proxy/{routerId}/hosts": {
         parameters: {
             query?: never;
             header?: never;
@@ -131,17 +170,16 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/bbox/api/v1/dhcp": {
+    "/devices/api-proxy/bbox-proxy/{routerId}/device": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Configuration du serveur DHCP */
-        get: operations["getDhcp"];
-        /** Met à jour la configuration DHCP */
-        put: operations["updateDhcp"];
+        /** Informations sur le routeur (modèle, firmware, uptime…) */
+        get: operations["getDevice"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -149,7 +187,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/bbox/api/v1/dhcp/clients": {
+    "/devices/api-proxy/bbox-proxy/{routerId}/wan/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Statistiques de trafic WAN instantanées (débit, octets cumulés) */
+        get: operations["getWanStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/devices/api-proxy/bbox-proxy/{routerId}/wan/graphs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Historique de débit WAN sur la dernière heure
+         * @description Agrège les endpoints Bbox /api/v1/graphs/wan/downstream/hour et upstream/hour.
+         *     Chaque point contient un timestamp Unix (secondes) et une valeur en kbps.
+         *     Le premier point de chaque série est le plus ancien.
+         */
+        get: operations["getWanGraphs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/devices/api-proxy/bbox-proxy/{routerId}/dhcp/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Configuration du serveur DHCP */
+        get: operations["getDhcpConfig"];
+        /** Met à jour la configuration DHCP */
+        put: operations["updateDhcpConfig"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/devices/api-proxy/bbox-proxy/{routerId}/dhcp/clients": {
         parameters: {
             query?: never;
             header?: never;
@@ -167,7 +262,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/bbox/api/v1/dhcp/clients/{id}": {
+    "/devices/api-proxy/bbox-proxy/{routerId}/dhcp/clients/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -185,31 +280,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/bbox/api/v1/dhcp/options": {
+    "/devices/api-proxy/bbox-proxy/{routerId}/dhcp/options": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Liste des options DHCP configurées et disponibles */
+        /** Options DHCP configurées et disponibles */
         get: operations["getDhcpOptions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/devices/api-proxy/bbox-proxy/bbox/api/v1/dhcp/option": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
         put?: never;
         /** Crée une option DHCP */
         post: operations["createDhcpOption"];
@@ -219,7 +298,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/bbox/api/v1/dhcp/options/{id}": {
+    "/devices/api-proxy/bbox-proxy/{routerId}/dhcp/options/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -241,6 +320,12 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        RouterEntry: {
+            /** @example bbox-main */
+            name: string;
+            /** @enum {string} */
+            type: "bbox" | "cudy";
+        };
         HealthResponse: {
             ok: boolean;
             hasSession: boolean;
@@ -274,8 +359,88 @@ export interface components {
             smbName: string;
             smbDomain: string;
         };
-        AnyObject: {
-            [key: string]: unknown;
+        WirelessClient: {
+            mac: string;
+            /** @description Signal strength in dBm (negative) */
+            signal_dbm: number;
+            /** @description Transmit rate in kbps */
+            tx_kbps: number;
+            /** @description Receive rate in kbps */
+            rx_kbps: number;
+            /** @description Time since last activity in milliseconds */
+            inactive_ms: number;
+        };
+        AccessPoint: {
+            ssid: string;
+            /** @enum {string} */
+            band: "2.4G" | "5G";
+            channel: number;
+            clients: components["schemas"]["WirelessClient"][];
+        };
+        WirelessData: {
+            online: boolean;
+            accessPoints: components["schemas"]["AccessPoint"][];
+        };
+        Host: {
+            mac: string;
+            ip: string;
+            ip6?: string;
+            hostname: string;
+            active: boolean;
+            type?: string;
+            /** @description Unix timestamp (seconds) */
+            lastseen?: number;
+        };
+        HostsData: {
+            hosts: components["schemas"]["Host"][];
+        };
+        DeviceData: {
+            modelname: string;
+            serialnumber: string;
+            firmware: string;
+            firmwareDate: string;
+            /** @description Uptime in seconds */
+            uptime: number;
+            boots: number;
+            using: {
+                ipv4: boolean;
+                ipv6: boolean;
+                ftth: boolean;
+            };
+        };
+        WanGraphPoint: {
+            /** @description Unix timestamp (secondes) */
+            ts: number;
+            /** @description Débit en kbps */
+            value: number;
+        };
+        WanGraphsData: {
+            down: components["schemas"]["WanGraphPoint"][];
+            up: components["schemas"]["WanGraphPoint"][];
+        };
+        CudyBandwidthPoint: {
+            /** @description Unix timestamp (secondes) */
+            ts: number;
+            /** @description Débit montant en kbps */
+            up: number;
+            /** @description Débit descendant en kbps */
+            down: number;
+        };
+        CudyBandwidthData: {
+            /** @description Interface 2.4 GHz */
+            ra0: components["schemas"]["CudyBandwidthPoint"][];
+            /** @description Interface 5 GHz */
+            rai0: components["schemas"]["CudyBandwidthPoint"][];
+        };
+        WanStatsSide: {
+            bytes: number;
+            bandwidth: number;
+            contractualBandwidth: number;
+            occupation: number;
+        };
+        WanStatsData: {
+            rx: components["schemas"]["WanStatsSide"];
+            tx: components["schemas"]["WanStatsSide"];
         };
         DhcpClient: {
             id: number;
@@ -285,13 +450,11 @@ export interface components {
             ipaddress: string;
             ip6address: string;
         };
-        DhcpClientCreate: {
+        DhcpClientWrite: {
             enable: number;
-            /** @description Alias du champ macaddress pour la création (contrainte API BBox) */
-            device: string;
+            macaddress: string;
             ipaddress: string;
             ip6address: string;
-            macaddress: string;
             hostname: string;
         };
         DhcpConfig: {
@@ -306,48 +469,37 @@ export interface components {
             maxaddress?: string;
             leasetime?: number;
         };
-        DhcpResponse: {
-            dhcp: {
-                state: number;
-                enable: number;
-                minaddress: string;
-                maxaddress: string;
-                leasetime: number;
-            };
+        DhcpClientsData: {
+            clients: components["schemas"]["DhcpClient"][];
+        };
+        DhcpConfigData: {
+            config: components["schemas"]["DhcpConfig"];
         };
         DhcpOption: {
             id: number;
             option: number;
             value: string;
         };
-        DhcpOptionCreate: {
+        DhcpOptionWrite: {
             option: number;
             value: string;
-        };
-        DhcpOptionUpdate: {
-            enable: number;
-            name: number;
-            format: string;
-            value: string;
-        };
-        DhcpOptionsResponse: {
-            dhcp: {
-                options: components["schemas"]["DhcpOption"][];
-                optionsstatic: components["schemas"]["DhcpOption"][];
-                optionscount: number;
-                optionscapabilities: components["schemas"]["DhcpOptionCapability"][];
-            };
         };
         DhcpOptionCapability: {
             id: number;
             /** @enum {string} */
             type: "INT" | "IP" | "STRING" | "BOOL";
             description: string;
-            rfc: string;
+        };
+        DhcpOptionsData: {
+            options: components["schemas"]["DhcpOption"][];
+            optionsstatic: components["schemas"]["DhcpOption"][];
+            capabilities: components["schemas"]["DhcpOptionCapability"][];
         };
     };
     responses: never;
-    parameters: never;
+    parameters: {
+        routerId: string;
+    };
     requestBodies: never;
     headers: never;
     pathItems: never;
@@ -430,7 +582,7 @@ export interface operations {
             };
         };
     };
-    getDevice: {
+    getConfigRouters: {
         parameters: {
             query?: never;
             header?: never;
@@ -445,12 +597,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AnyObject"][];
+                    "application/json": components["schemas"]["RouterEntry"][];
                 };
             };
         };
     };
-    getWanStats: {
+    getCudyStatus: {
         parameters: {
             query?: never;
             header?: never;
@@ -465,16 +617,24 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AnyObject"][];
+                    "application/json": {
+                        configured: number;
+                        routers: {
+                            name: string;
+                            ip: string;
+                        }[];
+                    };
                 };
             };
         };
     };
-    getWireless: {
+    getCudyWireless: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                routerId: components["parameters"]["routerId"];
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -485,7 +645,65 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AnyObject"][];
+                    "application/json": components["schemas"]["WirelessData"];
+                };
+            };
+            /** @description Routeur introuvable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getCudyBandwidth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                routerId: components["parameters"]["routerId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CudyBandwidthData"];
+                };
+            };
+            /** @description Routeur introuvable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getBboxWireless: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                routerId: components["parameters"]["routerId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WirelessData"];
                 };
             };
         };
@@ -494,7 +712,9 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                routerId: components["parameters"]["routerId"];
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -505,16 +725,18 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AnyObject"][];
+                    "application/json": components["schemas"]["HostsData"];
                 };
             };
         };
     };
-    getDhcp: {
+    getDevice: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                routerId: components["parameters"]["routerId"];
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -525,16 +747,84 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DhcpResponse"][];
+                    "application/json": components["schemas"]["DeviceData"];
                 };
             };
         };
     };
-    updateDhcp: {
+    getWanStats: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                routerId: components["parameters"]["routerId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WanStatsData"];
+                };
+            };
+        };
+    };
+    getWanGraphs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                routerId: components["parameters"]["routerId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WanGraphsData"];
+                };
+            };
+        };
+    };
+    getDhcpConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                routerId: components["parameters"]["routerId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DhcpConfigData"];
+                };
+            };
+        };
+    };
+    updateDhcpConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                routerId: components["parameters"]["routerId"];
+            };
             cookie?: never;
         };
         requestBody: {
@@ -544,7 +834,7 @@ export interface operations {
         };
         responses: {
             /** @description OK */
-            200: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -556,7 +846,9 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                routerId: components["parameters"]["routerId"];
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -567,7 +859,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DhcpClient"][];
+                    "application/json": components["schemas"]["DhcpClientsData"];
                 };
             };
         };
@@ -576,17 +868,19 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                routerId: components["parameters"]["routerId"];
+            };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DhcpClientCreate"];
+                "application/json": components["schemas"]["DhcpClientWrite"];
             };
         };
         responses: {
             /** @description Créé */
-            200: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -599,18 +893,19 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                routerId: components["parameters"]["routerId"];
                 id: number;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DhcpClientCreate"];
+                "application/json": components["schemas"]["DhcpClientWrite"];
             };
         };
         responses: {
             /** @description OK */
-            200: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -623,6 +918,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                routerId: components["parameters"]["routerId"];
                 id: number;
             };
             cookie?: never;
@@ -630,7 +926,7 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Supprimé */
-            200: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -642,7 +938,9 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                routerId: components["parameters"]["routerId"];
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -653,7 +951,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DhcpOptionsResponse"][];
+                    "application/json": components["schemas"]["DhcpOptionsData"];
                 };
             };
         };
@@ -662,17 +960,19 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                routerId: components["parameters"]["routerId"];
+            };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DhcpOptionCreate"];
+                "application/json": components["schemas"]["DhcpOptionWrite"];
             };
         };
         responses: {
             /** @description Créé */
-            200: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -685,18 +985,19 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                routerId: components["parameters"]["routerId"];
                 id: number;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DhcpOptionUpdate"];
+                "application/json": components["schemas"]["DhcpOptionWrite"];
             };
         };
         responses: {
             /** @description OK */
-            200: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -709,6 +1010,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                routerId: components["parameters"]["routerId"];
                 id: number;
             };
             cookie?: never;
@@ -716,7 +1018,7 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Supprimé */
-            200: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };

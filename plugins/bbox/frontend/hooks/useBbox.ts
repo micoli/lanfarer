@@ -1,10 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { bboxApi } from "../api/bbox.ts";
-import type { components } from "../../../../src/lib/api/schema.d.ts";
+import type {
+  DeviceData,
+  DhcpClient,
+  DhcpClientsData,
+  DhcpConfigData,
+  DhcpOptionsData,
+  HostsData,
+  WanGraphsData,
+  WanStatsData,
+  WirelessData,
+} from "../../../contracts.ts";
 import { serverApi } from "../../../../src/lib/api/server.ts";
-
-type DhcpClient = components["schemas"]["DhcpClient"];
 
 export function useIpCheck() {
   const [checking, setChecking] = useState(false);
@@ -12,7 +20,6 @@ export function useIpCheck() {
 
   async function check(ip: string, ownMac: string, onCreate: () => void) {
     if (conflict) {
-      // User confirmed despite warning — proceed
       onCreate();
       setConflict(null);
       return;
@@ -36,7 +43,7 @@ export function useIpCheck() {
 }
 
 export function useDevice(routerId: string | null) {
-  return useQuery<unknown>({
+  return useQuery<DeviceData>({
     queryKey: ["device", routerId],
     queryFn: () => bboxApi.getDevice(routerId!),
     refetchInterval: 60_000,
@@ -45,7 +52,7 @@ export function useDevice(routerId: string | null) {
 }
 
 export function useWanStats(routerId: string | null) {
-  return useQuery<unknown>({
+  return useQuery<WanStatsData>({
     queryKey: ["wan", "stats", routerId],
     queryFn: () => bboxApi.getWanStats(routerId!),
     refetchInterval: 10_000,
@@ -53,24 +60,41 @@ export function useWanStats(routerId: string | null) {
   });
 }
 
+export function useWanGraphs(routerId: string | null) {
+  return useQuery<WanGraphsData>({
+    queryKey: ["wan", "graphs", routerId],
+    queryFn: () => bboxApi.getWanGraphs(routerId!),
+    refetchInterval: 60_000,
+    enabled: routerId !== null,
+  });
+}
+
 export function useWireless(routerId: string | null) {
-  return useQuery<unknown>({
+  return useQuery<WirelessData>({
     queryKey: ["wireless", routerId],
     queryFn: () => bboxApi.getWireless(routerId!),
     enabled: routerId !== null,
   });
 }
 
-export function useDhcpConfig(routerId: string | null) {
+export function useWifiSettings(routerId: string | null) {
   return useQuery<unknown>({
+    queryKey: ["wifi-settings", routerId],
+    queryFn: () => bboxApi.getWifiSettings(routerId!),
+    enabled: routerId !== null,
+  });
+}
+
+export function useDhcpConfig(routerId: string | null) {
+  return useQuery<DhcpConfigData>({
     queryKey: ["dhcp", routerId, "config"],
-    queryFn: () => bboxApi.getDhcp(routerId!),
+    queryFn: () => bboxApi.getDhcpConfig(routerId!),
     enabled: routerId !== null,
   });
 }
 
 export function useDhcpClients(routerId: string | null) {
-  return useQuery<unknown>({
+  return useQuery<DhcpClientsData>({
     queryKey: ["dhcp", routerId, "clients"],
     queryFn: () => bboxApi.getDhcpClients(routerId!),
     enabled: routerId !== null,
@@ -120,14 +144,14 @@ export function useUpdateDhcpConfig(routerId: string | null) {
       leasetime?: number;
     }) => {
       if (!routerId) return Promise.reject(new Error("No DHCP router configured"));
-      return bboxApi.updateDhcp(routerId, config);
+      return bboxApi.updateDhcpConfig(routerId, config);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["dhcp", routerId, "config"] }),
   });
 }
 
 export function useHosts(routerId: string | null) {
-  return useQuery<unknown>({
+  return useQuery<HostsData>({
     queryKey: ["hosts", routerId],
     queryFn: () => bboxApi.getHosts(routerId!),
     refetchInterval: 30_000,
@@ -136,7 +160,7 @@ export function useHosts(routerId: string | null) {
 }
 
 export function useDhcpOptions(routerId: string | null) {
-  return useQuery<unknown>({
+  return useQuery<DhcpOptionsData>({
     queryKey: ["dhcp", routerId, "options"],
     queryFn: () => bboxApi.getDhcpOptions(routerId!),
     enabled: routerId !== null,

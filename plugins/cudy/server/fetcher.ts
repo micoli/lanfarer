@@ -166,3 +166,39 @@ export async function fetchAllCudyRouters(): Promise<CudyRouterResult[]> {
   const configs = loadCudyConfig();
   return Promise.all(configs.map(fetchCudyRouter));
 }
+
+// [[timestamp_us, bytesUp, packetsUp, bytesDown, packetsDown], ...]
+// Values are cumulative — compute rate as delta/dt between consecutive samples.
+type RawBandwidthRow = [number, number, number, number, number];
+
+function parseBandwidth(raw: unknown): import("../../contracts.ts").CudyBandwidthPoint[] {
+  if (!Array.isArray(raw)) return [];
+  const rows = (raw as RawBandwidthRow[]).filter((r) => Array.isArray(r) && r.length >= 5);
+  const points: import("../../contracts.ts").CudyBandwidthPoint[] = [];
+  for (let i = 1; i < rows.length; i++) {
+    const [ts0, up0, , down0] = rows[i - 1];
+    const [ts1, up1, , down1] = rows[i];
+    const dtSec = (ts1 - ts0) / 1_000_000;
+    if (dtSec <= 0) continue;
+    points.push({
+      ts: Math.floor(ts1 / 1_000_000),
+      up: Math.round((up1 - up0) / dtSec * 8 / 1000),
+      down: Math.round((down1 - down0) / dtSec * 8 / 1000),
+    });
+  }
+  return points;
+}
+
+export async function fetchCudyBandwidth(
+  cfg: CudyRouterConfig,
+): Promise<import("../../contracts.ts").CudyBandwidthData> {
+  const token = await luciLogin(cfg.ip, cfg.password);
+  if (!token) return { ra0: [], rai0: [] };
+
+  const [ra0Raw, rai0Raw] = await Promise.all([
+    luciGetJson(cfg.ip, token, "/admin/status/bandwidth?iface=ra0"),
+    luciGetJson(cfg.ip, token, "/admin/status/bandwidth?iface=rai0"),
+  ]);
+
+  return { ra0: parseBandwidth(ra0Raw), rai0: parseBandwidth(rai0Raw) };
+}

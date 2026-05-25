@@ -1,4 +1,5 @@
 import {
+  Activity,
   ChevronDown,
   ChevronRight,
   Home,
@@ -58,6 +59,7 @@ function isNavGroup(e: NavEntry): e is NavGroup {
 function buildAllNav(t: (key: string) => string): NavItem[] {
   return [
     { id: "home", to: "/", icon: Home, label: t("nav.home"), end: true },
+    { id: "bandwidth", to: "/bandwidth", icon: Activity, label: t("nav.bandwidth"), end: false },
     { id: "hosts", to: "/hosts", icon: Wifi, label: t("nav.hosts"), end: false },
     { id: "scan", to: "/scan", icon: ScanLine, label: t("nav.scan"), end: false },
     { id: "hotspots", to: "/hotspots", icon: Router, label: t("nav.hotspots"), end: false },
@@ -77,7 +79,7 @@ function buildAllNav(t: (key: string) => string): NavItem[] {
 function resolveMenuItem(
   item: MenuItemConfig,
   allNav: NavItem[],
-  t: (key: string) => string,
+  t: (key: string) => string
 ): NavEntry | null {
   if (item.children?.length) {
     const children = item.children
@@ -170,7 +172,7 @@ export default function Layout({ auth }: { auth: AuthProps }) {
             isNavGroup(entry) ? (
               <NavGroupSection key={entry.id} group={entry} />
             ) : (
-              <NavItemLink key={entry.to} item={entry} />
+              <NavItemLink key={entry.id} item={entry} />
             )
           )}
         </nav>
@@ -195,9 +197,9 @@ export default function Layout({ auth }: { auth: AuthProps }) {
       <div className="flex flex-col flex-1 min-w-0">
         {/* Top nav mobile — groupes aplatis */}
         <nav className="md:hidden flex border-b border-slate-800 shrink-0">
-          {flatNav.map(({ to, icon: Icon, label, end }) => (
+          {flatNav.map(({ id, to, icon: Icon, label, end }) => (
             <NavLink
-              key={to}
+              key={id}
               to={to}
               end={end}
               className={({ isActive }) =>

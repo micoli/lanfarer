@@ -9,27 +9,9 @@ import {
   useIpCheck,
   useUpdateDhcpClient,
 } from "../hooks/useBbox";
-import type { components } from "../../../../src/lib/api/schema.d.ts";
-
-type DhcpClient = components["schemas"]["DhcpClient"];
+import type { DhcpClient } from "../../../contracts.ts";
 
 import { exportCsv } from "../../../../src/lib/exportCsv";
-
-// The BBox API may return clients in several shapes — normalise them all.
-function normaliseClients(raw: unknown): DhcpClient[] | null {
-  if (!raw) return null;
-  // Direct array of clients: [{id, macaddress, ...}]
-  if (Array.isArray(raw) && raw.length > 0 && "macaddress" in raw[0]) return raw as DhcpClient[];
-  // Wrapped: [{dhcp: {clients: [...]}}]
-  if (Array.isArray(raw) && raw.length > 0 && raw[0]?.dhcp?.clients)
-    return raw[0].dhcp.clients as DhcpClient[];
-  // Wrapped: [{dhcpclients: [...]}]
-  if (Array.isArray(raw) && raw.length > 0 && raw[0]?.dhcpclients)
-    return raw[0].dhcpclients as DhcpClient[];
-  // Empty array = no reservations
-  if (Array.isArray(raw) && raw.length === 0) return [];
-  return null;
-}
 
 const EMPTY: Omit<DhcpClient, "id"> = {
   enable: 1,
@@ -279,13 +261,12 @@ export default function DhcpReservations() {
   const { routerId: routerIdParam } = useParams<{ routerId: string }>();
   const routerId = routerIdParam ?? null;
   const { t } = useTranslation();
-  const { data: rawData, isLoading, error } = useDhcpClients(routerId);
+  const { data: clientsData, isLoading, error } = useDhcpClients(routerId);
   const create = useCreateDhcpClient(routerId);
   const update = useUpdateDhcpClient(routerId);
   const remove = useDeleteDhcpClient(routerId);
 
-  // Normalise whatever the BBox API returns into a flat DhcpClient[]
-  const clients = normaliseClients(rawData);
+  const clients = clientsData?.clients ?? null;
 
   if (isLoading) {
     return (
@@ -303,21 +284,6 @@ export default function DhcpReservations() {
           {error instanceof Error ? error.message : JSON.stringify(error, null, 2)}
         </pre>
         <p className="text-xs text-slate-500">{t("dhcpReservations.checkConsole")}</p>
-      </div>
-    );
-  }
-
-  // If we got data but couldn't normalise it, show the raw response to help diagnose
-  if (!clients && rawData !== undefined) {
-    return (
-      <div className="p-6 flex flex-col gap-3">
-        <p className="text-amber-400 text-sm font-medium">
-          {t("dhcpReservations.unexpectedFormat")}
-        </p>
-        <pre className="text-xs text-slate-300 bg-slate-800 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap">
-          {JSON.stringify(rawData, null, 2)}
-        </pre>
-        <p className="text-xs text-slate-500">{t("dhcpReservations.unexpectedFormatHint")}</p>
       </div>
     );
   }

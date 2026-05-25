@@ -7,6 +7,7 @@ import { handleScan } from "./routes/scan.ts";
 import { handleCheckIp } from "./routes/check-ip.ts";
 import { handleAuthRoute, requireAuth } from "./routes/auth.ts";
 import { handleUiConfig } from "./routes/ui-config.ts";
+import { handleRouters } from "./routes/routers.ts";
 import { serveStatic } from "./static.ts";
 import fs from "node:fs";
 import path from "node:path";
@@ -84,6 +85,12 @@ async function main() {
     if (url === "/__config/ui") {
       if (!requireAuth(req, res)) return;
       handleUiConfig(req, res);
+      return;
+    }
+
+    if (url === "/__config/routers") {
+      if (!requireAuth(req, res)) return;
+      handleRouters(req, res);
       return;
     }
 

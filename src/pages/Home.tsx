@@ -1,54 +1,23 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, Clock, Cpu, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useDevice, useWanStats } from "../../plugins/bbox/frontend/hooks/useBbox";
+import { useDevice, useWanGraphs, useWanStats } from "../../plugins/bbox/frontend/hooks/useBbox";
+import { useCudyBandwidth } from "../../plugins/cudy/frontend/hooks/useCudy";
+import type {
+  CudyBandwidthData,
+  CudyBandwidthPoint,
+  DeviceData,
+  WanGraphPoint,
+  WanGraphsData,
+  WanStatsData,
+} from "../../plugins/contracts.ts";
 import { useUiConfig, type WidgetConfig } from "../hooks/useUiConfig.ts";
 
-interface WanStats {
-  rx: {
-    bytes: string | number;
-    packets: string | number;
-    bandwidth: number;
-    maxBandwidth: number;
-    contractualBandwidth: number;
-    occupation: number;
-  };
-  tx: {
-    bytes: string | number;
-    packets: string | number;
-    bandwidth: number;
-    maxBandwidth: number;
-    contractualBandwidth: number;
-    occupation: number;
-  };
-}
-
-interface DeviceInfo {
-  now: string;
-  modelname: string;
-  serialnumber: string;
-  uptime: number;
-  numberofboots: number;
-  running: { version: string; date: string };
-  using: { ipv4: number; ipv6: number; ftth: number; adsl: number; vdsl: number };
-}
-
-function parseWanStats(raw: unknown): WanStats | null {
-  const stats = (raw as { wan?: { ip?: { stats?: WanStats } } }[])?.[0]?.wan?.ip?.stats;
-  return stats ?? null;
-}
-
-function parseDevice(raw: unknown): DeviceInfo | null {
-  const d = (raw as { device?: DeviceInfo }[])?.[0]?.device;
-  return d ?? null;
-}
-
-function formatBytes(n: string | number): string {
-  const v = typeof n === "string" ? parseInt(n, 10) : n;
-  if (v >= 1e12) return `${(v / 1e12).toFixed(2)} To`;
-  if (v >= 1e9) return `${(v / 1e9).toFixed(2)} Go`;
-  if (v >= 1e6) return `${(v / 1e6).toFixed(1)} Mo`;
-  return `${(v / 1e3).toFixed(0)} Ko`;
+function formatBytes(n: number): string {
+  if (n >= 1e12) return `${(n / 1e12).toFixed(2)} To`;
+  if (n >= 1e9) return `${(n / 1e9).toFixed(2)} Go`;
+  if (n >= 1e6) return `${(n / 1e6).toFixed(1)} Mo`;
+  return `${(n / 1e3).toFixed(0)} Ko`;
 }
 
 function formatBandwidth(kbps: number): string {
@@ -98,9 +67,7 @@ function Skeleton() {
   return <div className="h-8 bg-slate-700/50 rounded animate-pulse w-2/3" />;
 }
 
-// ── Widgets ────────────────────────────────────────────────────────────────────
-
-function BboxUptimeWidget({ device }: { device: DeviceInfo | null }) {
+function BboxUptimeWidget({ device }: { device: DeviceData | undefined }) {
   const { t } = useTranslation();
   return (
     <StatCard label={t("home.uptime")} icon={<Clock size={13} />}>
@@ -112,23 +79,23 @@ function BboxUptimeWidget({ device }: { device: DeviceInfo | null }) {
         <Skeleton />
       )}
       {device && (
-        <p className="text-xs text-slate-500">{t("home.boots", { count: device.numberofboots })}</p>
+        <p className="text-xs text-slate-500">{t("home.boots", { count: device.boots })}</p>
       )}
     </StatCard>
   );
 }
 
-function BboxFirmwareWidget({ device }: { device: DeviceInfo | null }) {
+function BboxFirmwareWidget({ device }: { device: DeviceData | undefined }) {
   const { t, i18n } = useTranslation();
   return (
     <StatCard label={t("home.system")} icon={<Cpu size={13} />}>
       {device ? (
         <div className="flex flex-col gap-1">
           <p className="text-sm text-slate-200">
-            {t("home.firmware")} {device.running.version}
+            {t("home.firmware")} {device.firmware}
           </p>
           <p className="text-xs text-slate-500">
-            {new Date(device.running.date).toLocaleDateString(
+            {new Date(device.firmwareDate).toLocaleDateString(
               i18n.language === "fr" ? "fr-FR" : "en-GB",
               { day: "numeric", month: "long", year: "numeric" }
             )}
@@ -141,7 +108,7 @@ function BboxFirmwareWidget({ device }: { device: DeviceInfo | null }) {
   );
 }
 
-function BboxDownstreamWidget({ stats }: { stats: WanStats | null }) {
+function BboxDownstreamWidget({ stats }: { stats: WanStatsData | undefined }) {
   const { t } = useTranslation();
   return (
     <StatCard
@@ -176,7 +143,7 @@ function BboxDownstreamWidget({ stats }: { stats: WanStats | null }) {
   );
 }
 
-function BboxUpstreamWidget({ stats }: { stats: WanStats | null }) {
+function BboxUpstreamWidget({ stats }: { stats: WanStatsData | undefined }) {
   const { t } = useTranslation();
   return (
     <StatCard label={t("home.upstream")} icon={<ArrowUp size={13} className="text-blue-400" />}>
@@ -208,6 +175,259 @@ function BboxUpstreamWidget({ stats }: { stats: WanStats | null }) {
   );
 }
 
+function fmtTime(ts: number): string {
+  const d = new Date(ts * 1000);
+  const hh = d.getHours().toString().padStart(2, "0");
+  const mm = d.getMinutes().toString().padStart(2, "0");
+  const ss = d.getSeconds().toString().padStart(2, "0");
+  return `${hh}:${mm}:${ss}`;
+}
+
+function WanSparkline({
+  points,
+  color,
+}: {
+  points: WanGraphPoint[];
+  color: string;
+}) {
+  if (points.length < 2) return <div className="h-12 bg-slate-700/30 rounded animate-pulse" />;
+
+  const W = 300;
+  const AXIS_H = 14;
+  const H = 52;
+  const padX = 2;
+  const padY = 2;
+  const max = Math.max(...points.map((p) => p.value), 1);
+  const minTs = points[0].ts;
+  const maxTs = points[points.length - 1].ts;
+  const rangeTs = maxTs - minTs || 1;
+
+  // X ticks: ~4 evenly spaced
+  const xTickCount = 4;
+  const xTicks: number[] = Array.from({ length: xTickCount + 1 }, (_, i) =>
+    minTs + Math.round((i / xTickCount) * (maxTs - minTs)),
+  );
+
+  // Y ticks: 0, 50%, 100%
+  const yTickValues = [0, max * 0.5, max];
+  const PAD_LEFT = 36;
+
+  const xScaled = (ts: number) => PAD_LEFT + padX + ((ts - minTs) / rangeTs) * (W - PAD_LEFT - padX * 2);
+  const yScaled = (v: number) => padY + (1 - v / max) * (H - padY * 2);
+
+  const fillScaled = [
+    ...points.map((p) => `${xScaled(p.ts).toFixed(1)},${yScaled(p.value).toFixed(1)}`),
+    `${xScaled(maxTs).toFixed(1)},${H}`,
+    `${xScaled(minTs).toFixed(1)},${H}`,
+  ].join(" ");
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H + AXIS_H}`} className="w-full" preserveAspectRatio="none">
+      {/* Y gridlines + labels */}
+      {yTickValues.map((v) => (
+        <g key={v}>
+          <line
+            x1={PAD_LEFT}
+            x2={W}
+            y1={yScaled(v).toFixed(1)}
+            y2={yScaled(v).toFixed(1)}
+            stroke="#334155"
+            strokeWidth="0.5"
+          />
+          <text
+            x={PAD_LEFT - 3}
+            y={yScaled(v) + 2.5}
+            textAnchor="end"
+            fontSize="6.5"
+            fill="#475569"
+          >
+            {formatKbps(v)}
+          </text>
+        </g>
+      ))}
+      <polygon points={fillScaled} opacity="0.15" fill={color} />
+      <polyline
+        points={points.map((p) => `${xScaled(p.ts).toFixed(1)},${yScaled(p.value).toFixed(1)}`).join(" ")}
+        fill="none"
+        stroke={color}
+        strokeWidth="0.8"
+        strokeLinejoin="round"
+      />
+      {/* X axis labels */}
+      {xTicks.map((ts) => (
+        <text
+          key={ts}
+          x={xScaled(ts).toFixed(1)}
+          y={H + AXIS_H - 1}
+          textAnchor="middle"
+          fontSize="7"
+          fill="#64748b"
+        >
+          {fmtTime(ts)}
+        </text>
+      ))}
+    </svg>
+  );
+}
+
+function formatKbps(kbps: number): string {
+  if (kbps >= 1000) return `${(kbps / 1000).toFixed(1)} Mb/s`;
+  return `${kbps.toFixed(0)} Kb/s`;
+}
+
+function BboxWanGraphsWidget({ graphs }: { graphs: WanGraphsData | undefined }) {
+  const { t } = useTranslation();
+  const lastDown = graphs?.down[graphs.down.length - 1]?.value ?? 0;
+  const lastUp = graphs?.up[graphs.up.length - 1]?.value ?? 0;
+  const maxDown = graphs ? Math.max(...graphs.down.map((p) => p.value), 1) : 1;
+  const maxUp = graphs ? Math.max(...graphs.up.map((p) => p.value), 1) : 1;
+
+  return (
+    <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-5 flex flex-col gap-3 col-span-2">
+      <div className="flex items-center gap-2 text-slate-400 text-xs uppercase tracking-wider font-medium">
+        <ArrowDown size={13} className="text-green-400" />
+        <ArrowUp size={13} className="text-blue-400" />
+        {t("home.wanGraphs", "Débit WAN — dernière heure")}
+      </div>
+      {graphs ? (
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1">
+            <div className="flex justify-between text-xs text-slate-400">
+              <span className="flex items-center gap-1 text-green-400">
+                <ArrowDown size={11} /> {t("home.downstream", "Downstream")}
+              </span>
+              <span className="tabular-nums text-slate-300">
+                {formatKbps(lastDown)}{" "}
+                <span className="text-slate-500">/ max {formatKbps(maxDown)}</span>
+              </span>
+            </div>
+            <WanSparkline points={graphs.down} color="#22c55e" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <div className="flex justify-between text-xs text-slate-400">
+              <span className="flex items-center gap-1 text-blue-400">
+                <ArrowUp size={11} /> {t("home.upstream", "Upstream")}
+              </span>
+              <span className="tabular-nums text-slate-300">
+                {formatKbps(lastUp)}{" "}
+                <span className="text-slate-500">/ max {formatKbps(maxUp)}</span>
+              </span>
+            </div>
+            <WanSparkline points={graphs.up} color="#3b82f6" />
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <div className="h-12 bg-slate-700/30 rounded animate-pulse" />
+          <div className="h-12 bg-slate-700/30 rounded animate-pulse" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CudySparkline({ points, color }: { points: CudyBandwidthPoint[]; dir: "up" | "down"; color: string }) {
+  if (points.length < 2) return <div className="h-12 bg-slate-700/30 rounded animate-pulse" />;
+
+  const W = 300;
+  const AXIS_H = 14;
+  const H = 52;
+  const padX = 2;
+  const padY = 2;
+  const PAD_LEFT = 36;
+  const values = points.map((p) => p.down);
+  const max = Math.max(...values, 1);
+  const minTs = points[0].ts;
+  const maxTs = points[points.length - 1].ts;
+  const rangeTs = maxTs - minTs || 1;
+
+  const xS = (ts: number) => PAD_LEFT + padX + ((ts - minTs) / rangeTs) * (W - PAD_LEFT - padX * 2);
+  const yS = (v: number) => padY + (1 - v / max) * (H - padY * 2);
+
+  const fillPts = [
+    ...points.map((p) => `${xS(p.ts).toFixed(1)},${yS(p.down).toFixed(1)}`),
+    `${xS(maxTs).toFixed(1)},${H}`,
+    `${xS(minTs).toFixed(1)},${H}`,
+  ].join(" ");
+
+  const xTickCount = 4;
+  const xTicks = Array.from({ length: xTickCount + 1 }, (_, i) =>
+    minTs + Math.round((i / xTickCount) * (maxTs - minTs)),
+  );
+  const yTicks = [0, max * 0.5, max];
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H + AXIS_H}`} className="w-full" preserveAspectRatio="none">
+      {yTicks.map((v) => (
+        <g key={v}>
+          <line x1={PAD_LEFT} x2={W} y1={yS(v).toFixed(1)} y2={yS(v).toFixed(1)} stroke="#334155" strokeWidth="0.5" />
+          <text x={PAD_LEFT - 3} y={yS(v) + 2.5} textAnchor="end" fontSize="6.5" fill="#475569">
+            {formatKbps(v)}
+          </text>
+        </g>
+      ))}
+      <polygon points={fillPts} opacity="0.15" fill={color} />
+      <polyline
+        points={points.map((p) => `${xS(p.ts).toFixed(1)},${yS(p.down).toFixed(1)}`).join(" ")}
+        fill="none"
+        stroke={color}
+        strokeWidth="0.8"
+        strokeLinejoin="round"
+      />
+      {xTicks.map((ts) => (
+        <text key={ts} x={xS(ts).toFixed(1)} y={H + AXIS_H - 1} textAnchor="middle" fontSize="7" fill="#64748b">
+          {fmtTime(ts)}
+        </text>
+      ))}
+    </svg>
+  );
+}
+
+function BboxCudyBandwidthWidget({ routerName, data }: { routerName: string; data: CudyBandwidthData | undefined }) {
+  const lastRa0 = data?.ra0[data.ra0.length - 1]?.down ?? 0;
+  const lastRai0 = data?.rai0[data.rai0.length - 1]?.down ?? 0;
+  const maxRa0 = data ? Math.max(...data.ra0.map((p) => p.down), 1) : 1;
+  const maxRai0 = data ? Math.max(...data.rai0.map((p) => p.down), 1) : 1;
+
+  return (
+    <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-5 flex flex-col gap-3 col-span-2">
+      <div className="flex items-center gap-2 text-slate-400 text-xs uppercase tracking-wider font-medium">
+        <ArrowDown size={13} className="text-purple-400" />
+        {routerName} — Bande passante
+      </div>
+      {data ? (
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1">
+            <div className="flex justify-between text-xs text-slate-400">
+              <span className="text-amber-400">2.4 GHz (ra0)</span>
+              <span className="tabular-nums text-slate-300">
+                {formatKbps(lastRa0)}{" "}
+                <span className="text-slate-500">/ max {formatKbps(maxRa0)}</span>
+              </span>
+            </div>
+            <CudySparkline points={data.ra0} dir="down" color="#f59e0b" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <div className="flex justify-between text-xs text-slate-400">
+              <span className="text-purple-400">5 GHz (rai0)</span>
+              <span className="tabular-nums text-slate-300">
+                {formatKbps(lastRai0)}{" "}
+                <span className="text-slate-500">/ max {formatKbps(maxRai0)}</span>
+              </span>
+            </div>
+            <CudySparkline points={data.rai0} dir="down" color="#a855f7" />
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <div className="h-12 bg-slate-700/30 rounded animate-pulse" />
+          <div className="h-12 bg-slate-700/30 rounded animate-pulse" />
+        </div>
+      )}
+    </div>
+  );
+}
+
 const DEFAULT_WIDGETS: WidgetConfig[] = [];
 
 export default function Home() {
@@ -218,24 +438,28 @@ export default function Home() {
     widgets.find((w) => w.type === "bbox-uptime" || w.type === "bbox-firmware")?.id ?? null;
   const statsRouterId =
     widgets.find((w) => w.type === "bbox-downstream" || w.type === "bbox-upstream")?.id ?? null;
+  const graphsRouterId =
+    widgets.find((w) => w.type === "bbox-wan-graphs")?.id ?? null;
+  const cudyBandwidthRouterId =
+    widgets.find((w) => w.type === "cudy-bandwidth")?.id ?? null;
 
-  const { data: rawDevice, isLoading: loadingDevice } = useDevice(deviceRouterId);
-  const { data: rawStats, isLoading: loadingStats } = useWanStats(statsRouterId);
+  const { data: device, isLoading: loadingDevice } = useDevice(deviceRouterId);
+  const { data: stats, isLoading: loadingStats } = useWanStats(statsRouterId);
+  const { data: graphs, isLoading: loadingGraphs } = useWanGraphs(graphsRouterId);
+  const { data: cudyBandwidth, isLoading: loadingCudyBandwidth } = useCudyBandwidth(cudyBandwidthRouterId);
   const qc = useQueryClient();
 
-  const device = parseDevice(rawDevice);
-  const stats = parseWanStats(rawStats);
-
-  const loading = loadingDevice || loadingStats;
+  const loading = loadingDevice || loadingStats || loadingGraphs || loadingCudyBandwidth;
 
   function refresh() {
     qc.invalidateQueries({ queryKey: ["device"] });
     qc.invalidateQueries({ queryKey: ["wan", "stats"] });
+    qc.invalidateQueries({ queryKey: ["wan", "graphs"] });
+    qc.invalidateQueries({ queryKey: ["cudy", "bandwidth"] });
   }
 
   return (
     <div className="p-6 flex flex-col gap-6 overflow-auto">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold text-slate-100">{device?.modelname ?? "BBox"}</h1>
@@ -244,28 +468,28 @@ export default function Home() {
           )}
         </div>
         <div className="flex items-center gap-3">
-          {device?.running?.version && (
+          {device?.firmware && (
             <span className="text-xs text-slate-500 bg-slate-800 px-2 py-0.5 rounded-full">
-              v{device.running.version}
+              v{device.firmware}
             </span>
           )}
           {device?.using && (
             <div className="flex gap-1">
-              {device.using.ftth ? (
+              {device.using.ftth && (
                 <span className="text-xs text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full">
                   FTTH
                 </span>
-              ) : null}
-              {device.using.ipv4 ? (
+              )}
+              {device.using.ipv4 && (
                 <span className="text-xs text-slate-400 bg-slate-700/50 px-2 py-0.5 rounded-full">
                   IPv4
                 </span>
-              ) : null}
-              {device.using.ipv6 ? (
+              )}
+              {device.using.ipv6 && (
                 <span className="text-xs text-slate-400 bg-slate-700/50 px-2 py-0.5 rounded-full">
                   IPv6
                 </span>
-              ) : null}
+              )}
             </div>
           )}
           <button
@@ -279,7 +503,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Widgets grid */}
       <div className="grid grid-cols-2 gap-4">
         {widgets.map((w, i) => {
           if (w.type === "bbox-uptime")
@@ -290,6 +513,10 @@ export default function Home() {
             return <BboxDownstreamWidget key={`${w.type}-${w.id}-${i}`} stats={stats} />;
           if (w.type === "bbox-upstream")
             return <BboxUpstreamWidget key={`${w.type}-${w.id}-${i}`} stats={stats} />;
+          if (w.type === "bbox-wan-graphs")
+            return <BboxWanGraphsWidget key={`${w.type}-${w.id}-${i}`} graphs={graphs} />;
+          if (w.type === "cudy-bandwidth")
+            return <BboxCudyBandwidthWidget key={`${w.type}-${w.id}-${i}`} routerName={w.id} data={cudyBandwidth} />;
           return null;
         })}
       </div>

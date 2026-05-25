@@ -51,6 +51,8 @@ A standalone Node.js server that replaces both the Vite dev server and nginx in 
 - In dev mode: integrates Vite via its JS API (`createServer` with `middlewareMode: true`) for HMR
 - In production: serves `dist/` as static files with SPA fallback
 - Health endpoint: `GET /__health` → `{ ok, hasSession, target }`
+- Router list: `GET /__config/routers` → `[{ name, type }]` — all enabled routers from config.yaml
+- UI config: `GET /__config/ui` → menu and widget configuration
 
 ### Plugin system (`plugins/`)
 
@@ -76,7 +78,7 @@ interface RouterPlugin {
 
 **Frontend auto-discovery**: `plugins/hostListProviders.ts` uses `import.meta.glob` to collect all `hostListProvider` exports at build time — no manual registration needed.
 
-Current plugins: `bbox` (Bbox router proxy + DHCP/Wi-Fi API), `cudy` (Cudy AP LuCI clients).
+Current plugins: `bbox` (Bbox router proxy + DHCP/Wi-Fi/graphs API), `cudy` (Cudy AP LuCI clients + bandwidth).
 
 ### Bbox API layer (`plugins/bbox/frontend/`)
 
@@ -84,13 +86,16 @@ Current plugins: `bbox` (Bbox router proxy + DHCP/Wi-Fi API), `cudy` (Cudy AP Lu
 - **`hooks/useBbox.ts`** — TanStack Query hooks. No components call `bboxApi` directly.
 
 Query key conventions:
-- `['dhcp']` — DHCP config
-- `['dhcp', 'clients']` — static DHCP reservations
-- `['dhcp', 'options']` — DHCP options
-- `['hosts']` — connected devices
-- `['device']` — router device info
-- `['wan', 'stats']` — WAN traffic stats
-- `['wireless']` — Wi-Fi settings
+- `['dhcp', routerId, 'config']` — DHCP config
+- `['dhcp', routerId, 'clients']` — static DHCP reservations
+- `['dhcp', routerId, 'options']` — DHCP options
+- `['hosts', routerId]` — connected devices
+- `['device', routerId]` — router device info
+- `['wan', 'stats', routerId]` — WAN traffic stats instantanées
+- `['wan', 'graphs', routerId]` — historique débit WAN (dernière heure, kbps)
+- `['wireless', routerId]` — Wi-Fi settings
+- `['cudy', 'bandwidth', routerId]` — débit Wi-Fi Cudy par interface (kbps, dérivé des volumes cumulatifs)
+- `['config', 'routers']` — liste de tous les routeurs configurés
 
 ### Routing (`src/App.tsx`)
 

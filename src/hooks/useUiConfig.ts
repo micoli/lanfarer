@@ -55,6 +55,7 @@ export function useRouterForPage(pageId: string): string | null {
 export function useDhcpRouterId(): string | null {
   const config = useUiConfig();
   if (!config.menu) return null;
-  const item = findInMenu(config.menu, "dhcp-options") ?? findInMenu(config.menu, "dhcp-reservations");
+  const item =
+    findInMenu(config.menu, "dhcp-options") ?? findInMenu(config.menu, "dhcp-reservations");
   return item?.router ?? null;
 }

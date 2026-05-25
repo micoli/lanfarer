@@ -1,17 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { RefreshCw, Router, Wifi, WifiOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import {
-  type BboxStation,
-  type BboxWirelessHost,
-  useBboxWirelessHosts,
-} from "../../plugins/bbox/frontend/hooks/useBboxWireless";
-import { type CudyClient, type CudyRouter, useCudyClients } from "../../plugins/cudy/frontend/hooks/useCudy";
+import { useBboxWireless } from "../../plugins/bbox/frontend/hooks/useBboxWireless";
 import { useMacHostnames } from "../../plugins/bbox/frontend/hooks/useMacHostnames";
 import { useMacIps } from "../../plugins/bbox/frontend/hooks/useMacIps";
+import type { AccessPoint, WirelessClient } from "../../plugins/contracts.ts";
+import { useCudyClients } from "../../plugins/cudy/frontend/hooks/useCudy";
 import { useRouterForPage } from "../hooks/useUiConfig.ts";
-
-// ── Signal helpers ────────────────────────────────────────────────────────────
 
 function signalBars(dbm: number): string {
   const abs = Math.abs(dbm);
@@ -34,8 +29,6 @@ function formatRate(kbps: number): string {
   if (kbps >= 1000) return `${(kbps / 1000).toFixed(0)} Mbps`;
   return `${kbps} Kbps`;
 }
-
-// ── Shared table structure ────────────────────────────────────────────────────
 
 function HostTable({ headers, children }: { headers: string[]; children: React.ReactNode }) {
   return (
@@ -91,14 +84,16 @@ function CardHeader({
   );
 }
 
-// ── Cudy section ──────────────────────────────────────────────────────────────
-
-function CudyClientRow({
+function ClientRow({
   client,
+  ssid,
+  band,
   hostname,
   ip,
 }: {
-  client: CudyClient;
+  client: WirelessClient;
+  ssid: string;
+  band: string;
   hostname?: string;
   ip?: string;
 }) {
@@ -117,37 +112,43 @@ function CudyClientRow({
         <span className="mr-1.5 tracking-tight">{signalBars(client.signal_dbm)}</span>
         {client.signal_dbm} dBm
       </td>
-      <td className="px-4 py-2.5 text-xs text-slate-400">{client.band}</td>
-      <td className="px-4 py-2.5 text-xs text-slate-400">{client.ssid || "—"}</td>
+      <td className="px-4 py-2.5 text-xs text-slate-400">{band}</td>
+      <td className="px-4 py-2.5 text-xs text-slate-400">{ssid || "—"}</td>
       <td className="px-4 py-2.5 font-mono text-xs text-slate-400">{ip || "—"}</td>
-      <td className="px-4 py-2.5 text-xs text-slate-500">{formatRate(client.tx_rate)}</td>
-      <td className="px-4 py-2.5 text-xs text-slate-500">{formatRate(client.rx_rate)}</td>
+      <td className="px-4 py-2.5 text-xs text-slate-500">{formatRate(client.tx_kbps)}</td>
+      <td className="px-4 py-2.5 text-xs text-slate-500">{formatRate(client.rx_kbps)}</td>
     </tr>
   );
 }
 
-function HotspotCard({
-  router,
+function AccessPointCard({
+  ap,
+  routerName,
+  routerSubtitle,
+  routerOnline,
   hostnames,
   ips,
 }: {
-  router: CudyRouter;
+  ap: AccessPoint;
+  routerName: string;
+  routerSubtitle?: string;
+  routerOnline: boolean;
   hostnames: (mac: string) => string | undefined;
   ips: (mac: string) => string | undefined;
 }) {
   const { t } = useTranslation();
-  const allClients = router.interfaces.flatMap((i) => i.clients);
+  const sorted = [...ap.clients].sort((a, b) => a.signal_dbm - b.signal_dbm);
 
   return (
     <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
       <CardHeader
-        online={router.online}
-        name={router.name}
-        subtitle={router.ip}
-        badge={router.online ? undefined : t("cudy.offline")}
-        count={allClients.length}
+        online={routerOnline}
+        name={routerName}
+        subtitle={routerSubtitle}
+        badge={!routerOnline ? t("cudy.offline") : undefined}
+        count={ap.clients.length}
       />
-      {router.online && allClients.length > 0 && (
+      {routerOnline && ap.clients.length > 0 && (
         <HostTable
           headers={[
             t("cudy.colHost"),
@@ -159,121 +160,44 @@ function HotspotCard({
             t("cudy.colRx"),
           ]}
         >
-          {allClients
-            .sort((a, b) => a.signal_dbm - b.signal_dbm)
-            .map((c) => (
-              <CudyClientRow key={c.mac} client={c} hostname={hostnames(c.mac)} ip={ips(c.mac)} />
-            ))}
+          {sorted.map((c) => (
+            <ClientRow
+              key={c.mac}
+              client={c}
+              ssid={ap.ssid}
+              band={ap.band}
+              hostname={hostnames(c.mac)}
+              ip={ips(c.mac)}
+            />
+          ))}
         </HostTable>
       )}
-      {router.online && allClients.length === 0 && (
+      {routerOnline && ap.clients.length === 0 && (
         <p className="px-4 py-4 text-xs text-slate-500">{t("cudy.noClients")}</p>
       )}
     </div>
   );
 }
 
-// ── Bbox wireless section ─────────────────────────────────────────────────────
-
-function formatRateMbps(rate: number | string | undefined): string {
-  const n = Number(rate);
-  return n > 0 ? `${n} Mbps` : "—";
-}
-
-function BboxStationRow({
-  station,
-  hostname,
-  ip,
-  ssid,
-}: {
-  station: BboxStation;
-  hostname?: string;
-  ip?: string;
-  ssid?: string;
-}) {
-  const { t } = useTranslation();
-  const dbm = Number(station.rssi) || 0;
-  return (
-    <tr className="border-t border-slate-800 hover:bg-slate-800/40 transition-colors">
-      <td className="px-4 py-2.5">
-        {hostname ? (
-          <span className="text-xs text-slate-100">{hostname}</span>
-        ) : (
-          <span className="text-xs text-slate-500 italic">{t("hosts.noName")}</span>
-        )}
-        <div className="font-mono text-xs text-slate-500 mt-0.5">{station.macaddress}</div>
-      </td>
-      <td className={`px-4 py-2.5 text-xs font-mono ${signalColor(dbm)}`}>
-        <span className="mr-1.5 tracking-tight">{signalBars(dbm)}</span>
-        {dbm} dBm
-      </td>
-      <td className="px-4 py-2.5 text-xs text-slate-400">{station.frequency ?? "—"}</td>
-      <td className="px-4 py-2.5 text-xs text-slate-400">{ssid || "—"}</td>
-      <td className="px-4 py-2.5 font-mono text-xs text-slate-400">{ip || "—"}</td>
-      <td className="px-4 py-2.5 text-xs text-slate-500">{formatRateMbps(station.txRate)}</td>
-      <td className="px-4 py-2.5 text-xs text-slate-500">{formatRateMbps(station.rxRate)}</td>
-    </tr>
-  );
-}
-
-function BboxWirelessCard({
-  entry,
-  hostnames,
-  ips,
-}: {
-  entry: BboxWirelessHost;
-  hostnames: (mac: string) => string | undefined;
-  ips: (mac: string) => string | undefined;
-}) {
-  const { t } = useTranslation();
-
-  return (
-    <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-      <CardHeader online name={"Bbox"} count={entry.stations.length} />
-      <HostTable
-        headers={[
-          t("cudy.colHost"),
-          t("cudy.colSignal"),
-          t("cudy.colBand"),
-          t("cudy.colSsid"),
-          "IP",
-          t("cudy.colTx"),
-          t("cudy.colRx"),
-        ]}
-      >
-        {entry.stations
-          .slice()
-          .sort((a, b) => (Number(a.rssi) || 0) - (Number(b.rssi) || 0))
-          .map((s) => (
-            <BboxStationRow
-              key={s.macaddress}
-              station={s}
-              hostname={hostnames(s.macaddress)}
-              ip={ips(s.macaddress)}
-              ssid={entry.ssid}
-            />
-          ))}
-      </HostTable>
-    </div>
-  );
-}
-
-// ── Page ──────────────────────────────────────────────────────────────────────
-
 export default function HotspotsPage() {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const routerId = useRouterForPage("hotspots");
   const { data: cudyData, isLoading: cudyLoading } = useCudyClients();
-  const bboxWireless = useBboxWirelessHosts(routerId);
+  const { data: bboxWireless, isLoading: bboxLoading } = useBboxWireless(routerId);
   const hostnames = useMacHostnames(routerId);
   const ips = useMacIps(routerId);
 
-  const isLoading = cudyLoading;
+  const isLoading = cudyLoading || bboxLoading;
 
-  const totalClients =
-    (cudyData?.routers.flatMap((r) => r.interfaces.flatMap((i) => i.clients)).length ?? 0) +
-    bboxWireless.reduce((s, e) => s + e.stations.length, 0);
+  const bboxClientCount =
+    bboxWireless?.accessPoints.reduce((s, ap) => s + ap.clients.length, 0) ?? 0;
+  const cudyClientCount =
+    cudyData?.routers.reduce(
+      (s, r) => s + r.wireless.accessPoints.reduce((ss, ap) => ss + ap.clients.length, 0),
+      0
+    ) ?? 0;
+  const totalClients = bboxClientCount + cudyClientCount;
 
   return (
     <div className="p-4 md:p-6 max-w-5xl mx-auto flex flex-col gap-4">
@@ -287,7 +211,7 @@ export default function HotspotsPage() {
           type="button"
           onClick={() => {
             void qc.invalidateQueries({ queryKey: ["cudy"] });
-            void qc.invalidateQueries({ queryKey: ["hosts"] });
+            void qc.invalidateQueries({ queryKey: ["wireless"] });
           }}
           className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 transition-colors px-2 py-1 rounded-md hover:bg-slate-800"
         >
@@ -303,15 +227,32 @@ export default function HotspotsPage() {
         </div>
       )}
 
-      {bboxWireless.map((entry, i) => (
-        <BboxWirelessCard key={entry.ifname ?? i} entry={entry} hostnames={hostnames} ips={ips} />
+      {bboxWireless?.accessPoints.map((ap, i) => (
+        <AccessPointCard
+          key={`bbox-${ap.ssid}-${i}`}
+          ap={ap}
+          routerName={`Bbox — ${ap.ssid}`}
+          routerOnline={bboxWireless.online}
+          hostnames={hostnames}
+          ips={ips}
+        />
       ))}
 
-      {cudyData?.routers.map((r) => (
-        <HotspotCard key={r.ip} router={r} hostnames={hostnames} ips={ips} />
-      ))}
+      {cudyData?.routers.map((router) =>
+        router.wireless.accessPoints.map((ap, i) => (
+          <AccessPointCard
+            key={`${router.name}-${ap.ssid}-${i}`}
+            ap={ap}
+            routerName={router.name}
+            routerSubtitle={router.ip}
+            routerOnline={router.wireless.online}
+            hostnames={hostnames}
+            ips={ips}
+          />
+        ))
+      )}
 
-      {!isLoading && bboxWireless.length === 0 && (cudyData?.routers.length ?? 0) === 0 && (
+      {!isLoading && totalClients === 0 && (
         <p className="text-sm text-slate-500 text-center py-8">{t("cudy.notConfigured")}</p>
       )}
     </div>

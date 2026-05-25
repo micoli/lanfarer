@@ -15,40 +15,21 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useCreateDhcpClient, useDhcpClients, useHosts, useIpCheck } from "../../plugins/bbox/frontend/hooks/useBbox";
+import {
+  useCreateDhcpClient,
+  useDhcpClients,
+  useHosts,
+  useIpCheck,
+} from "../../plugins/bbox/frontend/hooks/useBbox";
+import type { DhcpClient, Host } from "../../plugins/contracts.ts";
 import { useDhcpRouterId, useRouterForPage } from "../hooks/useUiConfig.ts";
-import type { components } from "../lib/api/schema.d.ts";
-
-type DhcpClient = components["schemas"]["DhcpClient"];
 
 import { exportCsv } from "../lib/exportCsv";
 
-interface Host {
-  id?: number;
-  hostname?: string;
-  macaddress?: string;
-  ipaddress?: string;
-  type?: string;
-  active?: number;
-  firstseen?: number;
-  lastseen?: number;
-  link?: { intf?: string; speed?: number };
-  [k: string]: unknown;
-}
-
-type SortKey = "hostname" | "ipaddress" | "lastseen" | "active";
+type SortKey = "hostname" | "ip" | "lastseen" | "active";
 type SortDir = "asc" | "desc";
 
-function parseHosts(raw: unknown): Host[] | null {
-  if (!raw) return null;
-  if (Array.isArray(raw) && raw[0]?.hosts?.list) return raw[0].hosts.list as Host[];
-  if (Array.isArray(raw) && raw[0]?.hosts && Array.isArray(raw[0].hosts))
-    return raw[0].hosts as Host[];
-  if (Array.isArray(raw) && raw.length > 0 && typeof raw[0] === "object") return raw as Host[];
-  return null;
-}
-
-function Badge({ active }: { active?: number }) {
+function Badge({ active }: { active: boolean }) {
   const { t } = useTranslation();
   return active ? (
     <span className="flex items-center gap-1 text-xs text-green-400 bg-green-500/10 px-2 py-0.5 rounded-full">
@@ -137,8 +118,8 @@ function HostRow({
     setDraft({
       enable: 1,
       hostname: host.hostname ?? "",
-      macaddress: host.macaddress ?? "",
-      ipaddress: host.ipaddress ?? "",
+      macaddress: host.mac ?? "",
+      ipaddress: host.ip ?? "",
       ip6address: "",
     });
     setAdding(true);
@@ -229,7 +210,7 @@ function HostRow({
 
   return (
     <tr
-      key={host.macaddress ?? host.id ?? i}
+      key={host.mac ?? i}
       className="border-t border-slate-700/50 hover:bg-slate-800/40 transition-colors"
     >
       <td className="px-4 py-2.5">
@@ -238,8 +219,8 @@ function HostRow({
       <td className="px-4 py-2.5 text-sm text-slate-200">
         {host.hostname || <span className="text-slate-500 italic">{t("hosts.noName")}</span>}
       </td>
-      <td className="px-4 py-2.5 text-sm font-mono text-slate-300">{host.ipaddress ?? "—"}</td>
-      <td className="px-4 py-2.5 text-xs font-mono text-slate-400">{host.macaddress ?? "—"}</td>
+      <td className="px-4 py-2.5 text-sm font-mono text-slate-300">{host.ip ?? "—"}</td>
+      <td className="px-4 py-2.5 text-xs font-mono text-slate-400">{host.mac ?? "—"}</td>
       <td className="px-4 py-2.5 text-xs text-slate-500 uppercase">{host.type ?? "—"}</td>
       <td className="px-4 py-2.5 text-xs text-slate-500">
         {relativeTime(host.lastseen, t("hosts.justNow"))}
@@ -269,28 +250,22 @@ export default function Hosts() {
   const { t, i18n } = useTranslation();
   const dhcpRouterId = useDhcpRouterId();
   const hostsRouterId = useRouterForPage("hosts");
-  const { data: raw, isLoading, error, dataUpdatedAt } = useHosts(hostsRouterId);
-  const { data: rawClients } = useDhcpClients(dhcpRouterId);
+  const { data: hostsData, isLoading, error, dataUpdatedAt } = useHosts(hostsRouterId);
+  const { data: clientsData } = useDhcpClients(dhcpRouterId);
   const qc = useQueryClient();
 
   const reservedMacs = useMemo<Set<string>>(() => {
-    const clients = Array.isArray(rawClients)
-      ? rawClients.length > 0 && "macaddress" in rawClients[0]
-        ? rawClients
-        : (rawClients[0]?.dhcp?.clients ?? rawClients[0]?.dhcpclients ?? [])
-      : [];
     return new Set(
-      (clients as { macaddress?: string }[])
-        .map((c) => c.macaddress?.toLowerCase() ?? "")
-        .filter(Boolean)
+      (clientsData?.clients ?? []).map((c) => c.macaddress?.toLowerCase() ?? "").filter(Boolean)
     );
-  }, [rawClients]);
+  }, [clientsData]);
+
   const [filter, setFilter] = useState("");
   const [showActive, setShowActive] = useState<"all" | "active" | "inactive">("all");
   const [sortKey, setSortKey] = useState<SortKey>("active");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
-  const hosts = parseHosts(raw);
+  const hosts = hostsData?.hosts ?? null;
 
   const filtered = useMemo(() => {
     if (!hosts) return null;
@@ -304,8 +279,8 @@ export default function Hosts() {
       list = list.filter(
         (h) =>
           h.hostname?.toLowerCase().includes(q) ||
-          h.ipaddress?.includes(q) ||
-          h.macaddress?.toLowerCase().includes(q)
+          h.ip?.includes(q) ||
+          h.mac?.toLowerCase().includes(q)
       );
     }
 
@@ -313,12 +288,12 @@ export default function Hosts() {
       let cmp = 0;
       if (sortKey === "hostname") {
         cmp = (a.hostname ?? "").localeCompare(b.hostname ?? "");
-      } else if (sortKey === "ipaddress") {
-        cmp = ipToNum(a.ipaddress) - ipToNum(b.ipaddress);
+      } else if (sortKey === "ip") {
+        cmp = ipToNum(a.ip) - ipToNum(b.ip);
       } else if (sortKey === "lastseen") {
         cmp = (a.lastseen ?? 0) - (b.lastseen ?? 0);
       } else if (sortKey === "active") {
-        cmp = (a.active ?? 0) - (b.active ?? 0);
+        cmp = Number(a.active) - Number(b.active);
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
@@ -357,9 +332,6 @@ export default function Hosts() {
     return (
       <div className="p-6 flex flex-col gap-3">
         <p className="text-amber-400 text-sm font-medium">{t("hosts.unexpectedFormat")}</p>
-        <pre className="text-xs text-slate-300 bg-slate-800 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap">
-          {JSON.stringify(raw, null, 2)}
-        </pre>
       </div>
     );
   }
@@ -368,7 +340,6 @@ export default function Hosts() {
 
   return (
     <div className="p-6 flex flex-col gap-4 overflow-auto">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-lg font-semibold text-slate-100">{t("hosts.title")}</h1>
@@ -396,8 +367,8 @@ export default function Hosts() {
                 (filtered ?? []).map((h) => [
                   h.active ? t("hosts.connected") : t("hosts.inactive"),
                   h.hostname ?? "",
-                  h.ipaddress ?? "",
-                  h.macaddress ?? "",
+                  h.ip ?? "",
+                  h.mac ?? "",
                   h.type ?? "",
                   relativeTime(h.lastseen, t("hosts.justNow")),
                 ])
@@ -419,7 +390,6 @@ export default function Hosts() {
         </div>
       </div>
 
-      {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
         <input
           type="search"
@@ -455,7 +425,6 @@ export default function Hosts() {
         )}
       </div>
 
-      {/* Table */}
       <div className="bg-slate-800/60 rounded-xl border border-slate-700 overflow-x-auto">
         <table className="w-full text-left">
           <thead>
@@ -476,7 +445,7 @@ export default function Hosts() {
               />
               <Th
                 label={t("hosts.colIp")}
-                col="ipaddress"
+                col="ip"
                 sortKey={sortKey}
                 sortDir={sortDir}
                 onSort={handleSort}
@@ -503,10 +472,10 @@ export default function Hosts() {
             )}
             {filtered?.map((h, i) => (
               <HostRow
-                key={h.macaddress ?? h.id ?? i}
+                key={h.mac ?? i}
                 host={h}
                 i={i}
-                isReserved={reservedMacs.has(h.macaddress?.toLowerCase() ?? "")}
+                isReserved={reservedMacs.has(h.mac?.toLowerCase() ?? "")}
                 dhcpRouterId={dhcpRouterId}
               />
             ))}

@@ -1,5 +1,7 @@
+import type { HostsData } from "./contracts.ts";
+
 export interface HostListProviderResult {
-  data: unknown;
+  data: HostsData | undefined;
   isLoading: boolean;
   error: Error | null;
 }

@@ -1,16 +1,17 @@
 import { HashRouter, Route, Routes } from "react-router-dom";
+import DhcpOptions from "../plugins/bbox/frontend/pages/DhcpOptions";
+import DhcpReservations from "../plugins/bbox/frontend/pages/DhcpReservations";
+import WifiPage from "../plugins/bbox/frontend/pages/Wifi";
 import Layout from "./components/Layout";
 import LoginPage from "./components/LoginPage";
 import { useAuth } from "./hooks/useAuth";
-import DhcpOptions from "../plugins/bbox/frontend/pages/DhcpOptions";
-import DhcpReservations from "../plugins/bbox/frontend/pages/DhcpReservations";
+import Bandwidth from "./pages/Bandwidth";
 import Home from "./pages/Home";
 import Hosts from "./pages/Hosts";
 import CudyClients from "./pages/Hotspots.tsx";
 import MapPage from "./pages/Map";
 import NetworkScan from "./pages/NetworkScan";
 import NotFound from "./pages/NotFound";
-import WifiPage from "../plugins/bbox/frontend/pages/Wifi";
 
 export default function App() {
   const auth = useAuth();
@@ -26,6 +27,7 @@ export default function App() {
       <Routes>
         <Route element={<Layout auth={auth} />}>
           <Route index element={<Home />} />
+          <Route path="/bandwidth" element={<Bandwidth />} />
           <Route path="/hosts" element={<Hosts />} />
           <Route path="/wifi" element={<WifiPage />} />
           <Route path="/dhcp/:routerId/reservations" element={<DhcpReservations />} />

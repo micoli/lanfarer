@@ -4,6 +4,6 @@ import { handleCudy } from "./routes.ts";
 
 export const plugin: RouterPlugin = {
   type: "cudy",
-  matches: (url) => url.startsWith("/devices/api-proxy/cudy-proxy/") || url.startsWith("/__cudy"),
+  matches: (url) => url.startsWith("/devices/api-proxy/cudy-proxy/"),
   handle: (req: http.IncomingMessage, res: http.ServerResponse) => handleCudy(req, res),
 };

@@ -4,7 +4,8 @@ A self-hosted web interface for managing a **Bouygues Bbox** router and **Cudy**
 
 ## Features
 
-- **Dashboard** — real-time WAN bandwidth, uptime, and router info
+- **Dashboard** — real-time WAN bandwidth, uptime, and router info with configurable widgets
+- **Bandwidth** — sparkline graphs for all routers (Bbox WAN down/up + Cudy Wi-Fi per band), auto-discovered from config
 - **Connected hosts** — list of devices on the network with MAC/vendor lookup
 - **Wi-Fi** — wireless settings and connected stations per access point
 - **Hotspots** — Cudy and Bbox wireless clients grouped by access point with signal strength
@@ -82,6 +83,7 @@ routers:
 ui:
   menu:
     - id: home
+    - id: bandwidth
     - id: map
     - id: scan
     - id: hosts
@@ -104,12 +106,30 @@ ui:
         id: bbox-main
       - type: bbox-uptime
         id: bbox-main
+      - type: bbox-firmware
+        id: bbox-main
+      - type: bbox-wan-graphs
+        id: bbox-main
+      - type: cudy-bandwidth
+        id: living-room-ap
 ```
 
-**Menu item ids**: `home`, `map`, `scan`, `hosts`, `hotspots`, `wifi`, `dhcp-options`, `dhcp-reservations`.
+**Menu item ids**: `home`, `bandwidth`, `map`, `scan`, `hosts`, `hotspots`, `wifi`, `dhcp-options`, `dhcp-reservations`.
 Items that require a router (`hosts`, `hotspots`, `wifi`, `dhcp-*`) must include `router: <name>`.
+The `bandwidth` page auto-discovers all routers from config — no `router:` needed.
 Group items (with `children`) are rendered as collapsible sections in the sidebar.
 If `ui.menu` is omitted, all pages are shown in a flat list.
+
+**Home widget types**:
+
+| Type | `id` | Description |
+|---|---|---|
+| `bbox-upstream` | bbox router name | Débit montant WAN instantané |
+| `bbox-downstream` | bbox router name | Débit descendant WAN instantané |
+| `bbox-uptime` | bbox router name | Uptime du routeur |
+| `bbox-firmware` | bbox router name | Version firmware |
+| `bbox-wan-graphs` | bbox router name | Sparklines débit WAN (dernière heure) |
+| `cudy-bandwidth` | cudy router name | Sparklines Wi-Fi 2.4 GHz + 5 GHz |
 
 Generate a password hash for a GUI user:
 

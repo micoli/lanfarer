@@ -1,39 +1,18 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { basePath } from "../../../../src/lib/basePath.ts";
+import type { CudyBandwidthData, WirelessData } from "../../../contracts.ts";
 
-export interface CudyClient {
-  mac: string;
-  signal_dbm: number;
-  band: "2.4G" | "5G";
-  ssid: string;
-  tx_rate: number;
-  rx_rate: number;
-  inactive_ms: number;
-}
-
-export interface CudyInterface {
-  ifname: string;
-  ssid: string;
-  band: "2.4G" | "5G";
-  channel: number;
-  bitrate: number;
-  clients: CudyClient[];
-}
-
-export interface CudyRouter {
+export interface CudyRouterWireless {
   name: string;
   ip: string;
-  online: boolean;
-  firmware: string;
-  uptime: string;
-  interfaces: CudyInterface[];
+  wireless: WirelessData;
 }
 
 function useCudyRouterList() {
   return useQuery({
     queryKey: ["cudy", "list"],
     queryFn: async () => {
-      const res = await fetch(`${basePath()}/__cudy/status`);
+      const res = await fetch(`${basePath()}/devices/api-proxy/cudy-proxy/status`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json() as Promise<{ routers: { name: string; ip: string }[] }>;
     },
@@ -41,22 +20,40 @@ function useCudyRouterList() {
   });
 }
 
+export function useCudyBandwidth(routerName: string | null) {
+  return useQuery<CudyBandwidthData>({
+    queryKey: ["cudy", "bandwidth", routerName],
+    queryFn: async () => {
+      const res = await fetch(`${basePath()}/devices/api-proxy/cudy-proxy/${routerName}/bandwidth`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json() as Promise<CudyBandwidthData>;
+    },
+    refetchInterval: 30_000,
+    enabled: routerName !== null,
+  });
+}
+
 export function useCudyClients() {
   const { data: list } = useCudyRouterList();
-  const routerNames = list?.routers.map((r) => r.name) ?? [];
+  const routers = list?.routers ?? [];
 
   return useQueries({
-    queries: routerNames.map((name) => ({
-      queryKey: ["cudy", "clients", name],
-      queryFn: async (): Promise<CudyRouter> => {
-        const res = await fetch(`${basePath()}/devices/api-proxy/cudy-proxy/${name}/clients`);
+    queries: routers.map((router) => ({
+      queryKey: ["cudy", "wireless", router.name],
+      queryFn: async (): Promise<CudyRouterWireless> => {
+        const res = await fetch(
+          `${basePath()}/devices/api-proxy/cudy-proxy/${router.name}/wireless`
+        );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json() as Promise<CudyRouter>;
+        const wireless = (await res.json()) as WirelessData;
+        return { name: router.name, ip: router.ip, wireless };
       },
       refetchInterval: 30_000,
     })),
     combine: (results) => ({
-      data: { routers: results.map((r) => r.data).filter(Boolean) as CudyRouter[] },
+      data: {
+        routers: results.map((r) => r.data).filter(Boolean) as CudyRouterWireless[],
+      },
       isLoading: results.some((r) => r.isLoading),
       error: results.find((r) => r.error)?.error ?? null,
     }),

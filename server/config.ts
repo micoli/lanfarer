@@ -98,6 +98,23 @@ export interface UiConfig {
   home: { widgets: UiWidgetConfig[] } | null;
 }
 
+export interface RouterEntry {
+  name: string;
+  type: string;
+}
+
+export function loadAllRouters(): RouterEntry[] {
+  try {
+    const raw = fs.readFileSync(CONFIG_FILE, "utf8");
+    const data = parseYaml(raw) as { routers?: { name?: string; type?: string; enabled?: boolean }[] };
+    return (data.routers ?? [])
+      .filter((r) => r.enabled !== false && r.name && r.type)
+      .map((r) => ({ name: r.name!, type: r.type! }));
+  } catch {
+    return [];
+  }
+}
+
 export function loadUiConfig(): UiConfig {
   try {
     const raw = fs.readFileSync(CONFIG_FILE, "utf8");

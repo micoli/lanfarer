@@ -8,6 +8,7 @@
     "hotspots": "Hotspots",
     "map": "Carte",
     "dhcp": "DHCP",
+    "bandwidth": "Bande passante",
     "dhcpOptions": "Options DHCP",
     "dhcpReservations": "Réservations DHCP"
   },
@@ -187,7 +188,7 @@
   },
   "map": {
     "title": "Carte réseau",
-    "legendBbox": "Bbox (routeur)",
+    "legendBbox": "LAN",
     "legendBboxWifi": "Bbox Wi-Fi",
     "legendHotspot": "Hotspot (en ligne)",
     "legendOffline": "Hotspot (hors ligne)",

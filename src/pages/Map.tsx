@@ -5,10 +5,11 @@ import { useTranslation } from "react-i18next";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { CSS2DObject, CSS2DRenderer } from "three/addons/renderers/CSS2DRenderer.js";
-import { useBboxWirelessHosts } from "../../plugins/bbox/frontend/hooks/useBboxWireless";
-import { useCudyClients } from "../../plugins/cudy/frontend/hooks/useCudy";
+import { useQuery } from "@tanstack/react-query";
+import { useBboxWireless } from "../../plugins/bbox/frontend/hooks/useBboxWireless";
 import { useMacHostnames } from "../../plugins/bbox/frontend/hooks/useMacHostnames";
-import { useRouterForPage } from "../hooks/useUiConfig.ts";
+import { useCudyClients } from "../../plugins/cudy/frontend/hooks/useCudy";
+import { basePath } from "../lib/basePath.ts";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -65,33 +66,42 @@ interface HotspotNode {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
+function useBboxRouterId(): string | null {
+  const { data } = useQuery<{ name: string; type: string }[]>({
+    queryKey: ["config", "routers"],
+    queryFn: async () => {
+      const res = await fetch(`${basePath()}/__config/routers`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    },
+    staleTime: 60_000,
+  });
+  return data?.find((r) => r.type === "bbox")?.name ?? null;
+}
+
 export default function MapPage() {
   const { t } = useTranslation();
   const qc = useQueryClient();
-  const routerId = useRouterForPage("map");
+  const routerId = useBboxRouterId();
   const { data: cudyData, isLoading } = useCudyClients();
-  const bboxWireless = useBboxWirelessHosts(routerId);
+  const { data: bboxWireless } = useBboxWireless(routerId);
   const hostnames = useMacHostnames(routerId);
   const containerRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
 
   const hotspots: HotspotNode[] = useMemo(
     () => [
-      ...bboxWireless.map((e) => ({
-        id: e.ifname ?? e.ssid ?? "bbox-wifi",
-        label: e.ssid ? `Bbox — ${e.ssid}` : (e.ifname ?? "Bbox Wi-Fi"),
-        sublabel: e.band,
+      ...(bboxWireless?.accessPoints ?? []).map((ap, i) => ({
+        id: `bbox-${ap.ssid}-${i}`,
+        label: `Bbox — ${ap.ssid}`,
+        sublabel: ap.band,
         kind: "bbox-wifi" as const,
-        online: true,
-        clients: e.stations.map((s) => ({
-          mac: s.macaddress,
-          name: hostnames(s.macaddress),
-          signal: s.rssi,
-          tooltip: [
-            hostnames(s.macaddress) ?? s.macaddress,
-            s.ipaddress,
-            s.rssi !== undefined ? `${s.rssi} dBm` : undefined,
-          ]
+        online: bboxWireless?.online ?? true,
+        clients: ap.clients.map((c) => ({
+          mac: c.mac,
+          name: hostnames(c.mac),
+          signal: c.signal_dbm,
+          tooltip: [hostnames(c.mac) ?? c.mac, `${c.signal_dbm} dBm`, ap.band]
             .filter(Boolean)
             .join(" · "),
         })),
@@ -101,13 +111,13 @@ export default function MapPage() {
         label: r.name,
         sublabel: r.ip,
         kind: "cudy" as const,
-        online: r.online,
-        clients: r.interfaces.flatMap((i) =>
-          i.clients.map((c) => ({
+        online: r.wireless.online,
+        clients: r.wireless.accessPoints.flatMap((ap) =>
+          ap.clients.map((c) => ({
             mac: c.mac,
             name: hostnames(c.mac),
             signal: c.signal_dbm,
-            tooltip: [hostnames(c.mac) ?? c.mac, `${c.signal_dbm} dBm`, c.band]
+            tooltip: [hostnames(c.mac) ?? c.mac, `${c.signal_dbm} dBm`, ap.band]
               .filter(Boolean)
               .join(" · "),
           }))
@@ -217,11 +227,11 @@ export default function MapPage() {
     // ── Bbox ─────────────────────────────────────────────────────────────────
     const bboxMesh = new THREE.Mesh(geoBig, stdMat(0x3b82f6, 0.4));
     bboxMesh.castShadow = true;
-    bboxMesh.userData = { tooltip: "Bbox" };
+    bboxMesh.userData = { tooltip: "LAN" };
     scene.add(bboxMesh);
     targets.push(bboxMesh);
 
-    const bboxLabel = css2dLabel("Bbox");
+    const bboxLabel = css2dLabel("LAN");
     bboxLabel.position.set(0, -0.8, 0);
     bboxMesh.add(bboxLabel);
 
