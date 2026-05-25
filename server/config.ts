@@ -115,17 +115,36 @@ export function loadAllRouters(): RouterEntry[] {
   }
 }
 
+function buildDefaultUiConfig(): UiConfig {
+  const routers = loadAllRouters();
+  const firstBbox = routers.find((r) => r.type === "bbox");
+  const menu: UiMenuItemConfig[] = [
+    { id: "home" },
+    { id: "bandwidth" },
+    { id: "scan" },
+    { id: "hotspots" },
+    { id: "map" },
+  ];
+  if (firstBbox) {
+    menu.push({ id: "hosts", router: firstBbox.name });
+    menu.push({ id: "wifi", router: firstBbox.name });
+    menu.push({ id: "dhcp-options", router: firstBbox.name });
+    menu.push({ id: "dhcp-reservations", router: firstBbox.name });
+  }
+  return { menu, home: null };
+}
+
 export function loadUiConfig(): UiConfig {
   try {
     const raw = fs.readFileSync(CONFIG_FILE, "utf8");
     const data = parseYaml(raw) as { ui?: { menu?: UiMenuItemConfig[]; home?: { widgets?: UiWidgetConfig[] } } };
     const ui = data.ui;
-    if (!ui) return { menu: null, home: null };
+    if (!ui) return buildDefaultUiConfig();
     return {
       menu: ui.menu ?? null,
       home: ui.home?.widgets ? { widgets: ui.home.widgets } : null,
     };
   } catch {
-    return { menu: null, home: null };
+    return buildDefaultUiConfig();
   }
 }
