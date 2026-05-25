@@ -33,19 +33,14 @@ function makeClients(stations: RawStation[] = []): WirelessClient[] {
     }));
 }
 
-export async function handleWireless(
-  _req: http.IncomingMessage,
-  res: http.ServerResponse,
-  spec: BboxRouterSpec,
-): Promise<void> {
+export async function fetchBboxWireless(spec: BboxRouterSpec): Promise<WirelessData> {
   const [wirelessResult, hostsResult] = await Promise.all([
     bboxCall(spec, "GET", "/api/v1/wireless"),
     bboxCall(spec, "GET", "/api/v1/hosts"),
   ]);
 
   if (wirelessResult.statusCode !== 200 || hostsResult.statusCode !== 200) {
-    sendError(res, 502, "Failed to fetch wireless data from bbox");
-    return;
+    return { online: false, accessPoints: [] };
   }
 
   const hostsArr = hostsResult.data as Array<{ wirelesshosts?: RawWirelessHost[] }>;
@@ -106,6 +101,18 @@ export async function handleWireless(
     });
   }
 
-  const result: WirelessData = { online: true, accessPoints };
+  return { online: true, accessPoints };
+}
+
+export async function handleWireless(
+  _req: http.IncomingMessage,
+  res: http.ServerResponse,
+  spec: BboxRouterSpec,
+): Promise<void> {
+  const result = await fetchBboxWireless(spec);
+  if (!result.online && result.accessPoints.length === 0) {
+    sendError(res, 502, "Failed to fetch wireless data from bbox");
+    return;
+  }
   sendJson(res, 200, result);
 }

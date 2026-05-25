@@ -1,9 +1,11 @@
 import type http from "node:http";
 import type { RouterPlugin } from "../../../server/plugin.ts";
+import type { MapAccessPoint, MapClient } from "../../contracts.ts";
+import { loadAllRouters } from "../../../server/config.ts";
 import { resolveSpec } from "./client.ts";
-import { handleWireless } from "./routes/wireless.ts";
+import { handleWireless, fetchBboxWireless } from "./routes/wireless.ts";
 import { handleWifiSettings } from "./routes/wifiSettings.ts";
-import { handleHosts } from "./routes/hosts.ts";
+import { handleHosts, fetchBboxHosts } from "./routes/hosts.ts";
 import { handleDhcp } from "./routes/dhcp.ts";
 import { handleDevice } from "./routes/device.ts";
 import { handleWan } from "./routes/wan.ts";
@@ -22,8 +24,53 @@ function parseRoute(url: string): { routerId: string; subpath: string } | null {
   return { routerId, subpath };
 }
 
+function bboxRouterSpecs() {
+  return loadAllRouters()
+    .filter((r) => r.type === "bbox")
+    .flatMap((r) => {
+      const spec = resolveSpec(r.name);
+      return spec ? [{ name: r.name, spec }] : [];
+    });
+}
+
 export const plugin: RouterPlugin = {
   type: "bbox",
+
+  async fetchHostnames(): Promise<Map<string, string>> {
+    const map = new Map<string, string>();
+    const results = await Promise.all(bboxRouterSpecs().map(({ spec }) => fetchBboxHosts(spec)));
+    for (const { hosts } of results) {
+      for (const h of hosts) {
+        if (h.hostname) map.set(h.mac.toUpperCase(), h.hostname);
+      }
+    }
+    return map;
+  },
+
+  async fetchTopologySegments(hostnameMap: Map<string, string>): Promise<MapAccessPoint[]> {
+    const segments: MapAccessPoint[] = [];
+    await Promise.all(
+      bboxRouterSpecs().map(async ({ name, spec }) => {
+        const wireless = await fetchBboxWireless(spec);
+        wireless.accessPoints.forEach((ap, i) => {
+          const clients: MapClient[] = ap.clients.map((c) => ({
+            mac: c.mac,
+            hostname: hostnameMap.get(c.mac.toUpperCase()),
+            signal_dbm: c.signal_dbm,
+          }));
+          segments.push({
+            id: `bbox-${name}-${ap.ssid}-${i}`,
+            label: `Bbox — ${ap.ssid}`,
+            sublabel: ap.band,
+            kind: "bbox-wifi",
+            online: wireless.online,
+            clients,
+          });
+        });
+      }),
+    );
+    return segments;
+  },
 
   matches: (url) => url.startsWith(PREFIX),
 

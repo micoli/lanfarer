@@ -116,6 +116,21 @@ paths:
                 items:
                   $ref: "#/components/schemas/RouterEntry"
 
+  /__map/topology:
+    get:
+      operationId: getMapTopology
+      summary: Topologie réseau agrégée pour la carte
+      description: |
+        Agrège les données Wi-Fi de tous les plugins configurés (bbox, cudy, etc.)
+        et retourne une structure normalisée. Les hostnames sont résolus côté serveur.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MapTopology"
+
   # ── Cudy plugin ────────────────────────────────────────────────────────────
 
   /devices/api-proxy/cudy-proxy/status:
@@ -430,6 +445,51 @@ components:
         type:
           type: string
           enum: [bbox, cudy]
+
+    # ── Map topology ─────────────────────────────────────────────────────────
+
+    MapClient:
+      type: object
+      required: [mac]
+      properties:
+        mac:
+          type: string
+          example: "AA:BB:CC:DD:EE:FF"
+        hostname:
+          type: string
+          example: "my-device"
+        signal_dbm:
+          type: integer
+          example: -65
+
+    MapAccessPoint:
+      type: object
+      required: [id, label, kind, online, clients]
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        sublabel:
+          type: string
+        kind:
+          type: string
+          example: "bbox-wifi"
+        online:
+          type: boolean
+        clients:
+          type: array
+          items:
+            $ref: "#/components/schemas/MapClient"
+
+    MapTopology:
+      type: object
+      required: [accessPoints]
+      properties:
+        accessPoints:
+          type: array
+          items:
+            $ref: "#/components/schemas/MapAccessPoint"
 
     # ── Routes propres ─────────────────────────────────────────────────────────
 

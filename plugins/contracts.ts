@@ -127,3 +127,24 @@ export interface CudyBandwidthData {
   ra0: CudyBandwidthPoint[];
   rai0: CudyBandwidthPoint[];
 }
+
+// ── Map topology contract ─────────────────────────────────────────────────────
+
+export interface MapClient {
+  mac: string;
+  hostname?: string;
+  signal_dbm?: number;
+}
+
+export interface MapAccessPoint {
+  id: string;
+  label: string;
+  sublabel?: string;
+  kind: string;
+  online: boolean;
+  clients: MapClient[];
+}
+
+export interface MapTopology {
+  accessPoints: MapAccessPoint[];
+}

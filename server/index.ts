@@ -8,6 +8,7 @@ import { handleCheckIp } from "./routes/check-ip.ts";
 import { handleAuthRoute, requireAuth } from "./routes/auth.ts";
 import { handleUiConfig } from "./routes/ui-config.ts";
 import { handleRouters } from "./routes/routers.ts";
+import { createMapTopologyHandler } from "./routes/mapTopology.ts";
 import { serveStatic } from "./static.ts";
 import fs from "node:fs";
 import path from "node:path";
@@ -39,6 +40,7 @@ async function main() {
   console.log(`[config] BBOX_TARGET=${BBOX_TARGET} BBOX_HOST=${BBOX_HOST} BBOX_OVERRIDE_IP=${BBOX_OVERRIDE_IP ?? "(none)"} PASSWORD=${BBOX_PASSWORD ? "set" : "MISSING (vérifiez config.yaml)"}`);
 
   const routerPlugins = await loadPlugins();
+  const handleMapTopology = createMapTopologyHandler(routerPlugins);
 
   await ensureSession();
 
@@ -80,6 +82,12 @@ async function main() {
         await plugin.handle(req, res);
         return;
       }
+    }
+
+    if (url === "/__map/topology" && req.method === "GET") {
+      if (!requireAuth(req, res)) return;
+      await handleMapTopology(req, res);
+      return;
     }
 
     if (url === "/__config/ui") {

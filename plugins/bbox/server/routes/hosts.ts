@@ -26,20 +26,11 @@ function extractHosts(data: unknown): RawHost[] {
   return [];
 }
 
-export async function handleHosts(
-  _req: http.IncomingMessage,
-  res: http.ServerResponse,
-  spec: BboxRouterSpec,
-): Promise<void> {
+export async function fetchBboxHosts(spec: BboxRouterSpec): Promise<HostsData> {
   const result = await bboxCall(spec, "GET", "/api/v1/hosts");
-
-  if (result.statusCode !== 200) {
-    sendError(res, 502, "Failed to fetch hosts from bbox");
-    return;
-  }
+  if (result.statusCode !== 200) return { hosts: [] };
 
   const rawHosts = extractHosts(result.data);
-
   const hosts: Host[] = rawHosts
     .filter((h) => h.macaddress)
     .map((h) => ({
@@ -51,7 +42,18 @@ export async function handleHosts(
       type: h.type || undefined,
       lastseen: h.lastseen,
     }));
+  return { hosts };
+}
 
-  const data: HostsData = { hosts };
+export async function handleHosts(
+  _req: http.IncomingMessage,
+  res: http.ServerResponse,
+  spec: BboxRouterSpec,
+): Promise<void> {
+  const data = await fetchBboxHosts(spec);
+  if (data.hosts.length === 0) {
+    sendError(res, 502, "Failed to fetch hosts from bbox");
+    return;
+  }
   sendJson(res, 200, data);
 }

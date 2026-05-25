@@ -80,6 +80,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/__map/topology": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Topologie réseau agrégée pour la carte
+         * @description Agrège les données Wi-Fi de tous les plugins configurés (bbox, cudy, etc.)
+         *     et retourne une structure normalisée. Les hostnames sont résolus côté serveur.
+         */
+        get: operations["getMapTopology"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/devices/api-proxy/cudy-proxy/status": {
         parameters: {
             query?: never;
@@ -325,6 +346,26 @@ export interface components {
             name: string;
             /** @enum {string} */
             type: "bbox" | "cudy";
+        };
+        MapClient: {
+            /** @example AA:BB:CC:DD:EE:FF */
+            mac: string;
+            /** @example my-device */
+            hostname?: string;
+            /** @example -65 */
+            signal_dbm?: number;
+        };
+        MapAccessPoint: {
+            id: string;
+            label: string;
+            sublabel?: string;
+            /** @example bbox-wifi */
+            kind: string;
+            online: boolean;
+            clients: components["schemas"]["MapClient"][];
+        };
+        MapTopology: {
+            accessPoints: components["schemas"]["MapAccessPoint"][];
         };
         HealthResponse: {
             ok: boolean;
@@ -598,6 +639,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RouterEntry"][];
+                };
+            };
+        };
+    };
+    getMapTopology: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MapTopology"];
                 };
             };
         };

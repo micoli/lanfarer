@@ -5,23 +5,19 @@ import { useTranslation } from "react-i18next";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { CSS2DObject, CSS2DRenderer } from "three/addons/renderers/CSS2DRenderer.js";
-import { useQuery } from "@tanstack/react-query";
-import { useBboxWireless } from "../../plugins/bbox/frontend/hooks/useBboxWireless";
-import { useMacHostnames } from "../../plugins/bbox/frontend/hooks/useMacHostnames";
-import { useCudyClients } from "../../plugins/cudy/frontend/hooks/useCudy";
-import { basePath } from "../lib/basePath.ts";
+import { useMapTopology } from "../hooks/useMapTopology.ts";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const HOTSPOT_RING = 5;
 const CLIENT_SPREAD = (170 * Math.PI) / 180;
-const CLIENT_MIN_SPACING = 0.6; // min arc distance between sphere centres
-const CLIENT_MIN_ORBIT = 2.0;
+const CLIENT_ORBIT_MIN = 5.2; // strongest signal (-50 dBm)
+const CLIENT_ORBIT_MAX = 10.8; // weakest signal (-90 dBm)
 
-function clientOrbit(count: number): number {
-  if (count <= 1) return CLIENT_MIN_ORBIT;
-  // arc length needed = spacing × (count − 1), r = arcLen / spread
-  return Math.max(CLIENT_MIN_ORBIT, (CLIENT_MIN_SPACING * (count - 1)) / CLIENT_SPREAD);
+function signalOrbit(dbm: number | undefined): number {
+  if (dbm === undefined) return (CLIENT_ORBIT_MIN + CLIENT_ORBIT_MAX) / 2;
+  const a = Math.max(50, Math.min(90, Math.abs(dbm)));
+  return CLIENT_ORBIT_MIN + ((a - 50) / 40) * (CLIENT_ORBIT_MAX - CLIENT_ORBIT_MIN);
 }
 
 function signalHex(dbm: number): number {
@@ -32,19 +28,18 @@ function signalHex(dbm: number): number {
   return 0xf87171;
 }
 
-function arcXZ(
+function clientPositions(
   cx: number,
   cz: number,
-  r: number,
-  count: number,
+  signals: (number | undefined)[],
   centerAngle: number,
   spread: number
 ): { x: number; z: number }[] {
+  const count = signals.length;
   if (count === 0) return [];
-  if (count === 1)
-    return [{ x: cx + r * Math.cos(centerAngle), z: cz + r * Math.sin(centerAngle) }];
-  return Array.from({ length: count }, (_, i) => {
-    const a = centerAngle - spread / 2 + (spread * i) / (count - 1);
+  return signals.map((dbm, i) => {
+    const r = signalOrbit(dbm);
+    const a = count === 1 ? centerAngle : centerAngle - spread / 2 + (spread * i) / (count - 1);
     return { x: cx + r * Math.cos(a), z: cz + r * Math.sin(a) };
   });
 }
@@ -53,78 +48,28 @@ function clip(s: string, max: number): string {
   return s.length > max ? `${s.slice(0, max - 1)}…` : s;
 }
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface HotspotNode {
-  id: string;
-  label: string;
-  sublabel?: string;
-  kind: "bbox-wifi" | "cudy";
-  online: boolean;
-  clients: { mac: string; name?: string; signal?: number; tooltip: string }[];
-}
-
 // ── Page ──────────────────────────────────────────────────────────────────────
-
-function useBboxRouterId(): string | null {
-  const { data } = useQuery<{ name: string; type: string }[]>({
-    queryKey: ["config", "routers"],
-    queryFn: async () => {
-      const res = await fetch(`${basePath()}/__config/routers`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
-    },
-    staleTime: 60_000,
-  });
-  return data?.find((r) => r.type === "bbox")?.name ?? null;
-}
 
 export default function MapPage() {
   const { t } = useTranslation();
   const qc = useQueryClient();
-  const routerId = useBboxRouterId();
-  const { data: cudyData, isLoading } = useCudyClients();
-  const { data: bboxWireless } = useBboxWireless(routerId);
-  const hostnames = useMacHostnames(routerId);
+  const { data: topology, isLoading } = useMapTopology();
   const containerRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
 
-  const hotspots: HotspotNode[] = useMemo(
-    () => [
-      ...(bboxWireless?.accessPoints ?? []).map((ap, i) => ({
-        id: `bbox-${ap.ssid}-${i}`,
-        label: `Bbox — ${ap.ssid}`,
-        sublabel: ap.band,
-        kind: "bbox-wifi" as const,
-        online: bboxWireless?.online ?? true,
+  const hotspots = useMemo(
+    () =>
+      (topology?.accessPoints ?? []).map((ap) => ({
+        ...ap,
         clients: ap.clients.map((c) => ({
-          mac: c.mac,
-          name: hostnames(c.mac),
+          ...c,
           signal: c.signal_dbm,
-          tooltip: [hostnames(c.mac) ?? c.mac, `${c.signal_dbm} dBm`, ap.band]
+          tooltip: [c.hostname ?? c.mac, c.signal_dbm !== undefined ? `${c.signal_dbm} dBm` : undefined]
             .filter(Boolean)
             .join(" · "),
         })),
       })),
-      ...(cudyData?.routers ?? []).map((r) => ({
-        id: r.ip,
-        label: r.name,
-        sublabel: r.ip,
-        kind: "cudy" as const,
-        online: r.wireless.online,
-        clients: r.wireless.accessPoints.flatMap((ap) =>
-          ap.clients.map((c) => ({
-            mac: c.mac,
-            name: hostnames(c.mac),
-            signal: c.signal_dbm,
-            tooltip: [hostnames(c.mac) ?? c.mac, `${c.signal_dbm} dBm`, ap.band]
-              .filter(Boolean)
-              .join(" · "),
-          }))
-        ),
-      })),
-    ],
-    [bboxWireless, cudyData, hostnames]
+    [topology]
   );
 
   useEffect(() => {
@@ -248,7 +193,7 @@ export default function MapPage() {
 
     // ── Edge materials ────────────────────────────────────────────────────────
     const mainEdgeMat = new THREE.LineBasicMaterial({ color: 0x2d4a6b, linewidth: 1 });
-    const clientEdgeMat = new THREE.LineBasicMaterial({ color: 0x1e293b, linewidth: 1 });
+    const clientEdgeMat = new THREE.LineBasicMaterial({ color: 0x883300, linewidth: 1 });
 
     // ── Hotspots + clients ───────────────────────────────────────────────────
     const n = hotspots.length;
@@ -279,9 +224,8 @@ export default function MapPage() {
       ]);
       scene.add(new THREE.Line(eGeo, mainEdgeMat));
 
-      // clients
-      const orbit = clientOrbit(hs.clients.length);
-      const clientPos = arcXZ(hx, hz, orbit, hs.clients.length, angle, CLIENT_SPREAD);
+      // clients — radius encodes signal strength (close = strong, far = weak)
+      const clientPos = clientPositions(hx, hz, hs.clients.map((c) => c.signal), angle, CLIENT_SPREAD);
 
       hs.clients.forEach((c, j) => {
         const cp = clientPos[j];
@@ -292,7 +236,7 @@ export default function MapPage() {
         scene.add(cMesh);
         targets.push(cMesh);
 
-        const displayName = c.name ?? c.mac.slice(-8);
+        const displayName = c.hostname ?? c.mac.slice(-8);
         const clbl = css2dLabel(clip(displayName, 14));
         clbl.position.set(0, -0.32, 0);
         cMesh.add(clbl);
@@ -387,8 +331,7 @@ export default function MapPage() {
         <button
           type="button"
           onClick={() => {
-            void qc.invalidateQueries({ queryKey: ["cudy"] });
-            void qc.invalidateQueries({ queryKey: ["hosts"] });
+            void qc.invalidateQueries({ queryKey: ["map", "topology"] });
           }}
           className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 transition-colors px-2 py-1 rounded-md hover:bg-slate-800"
         >

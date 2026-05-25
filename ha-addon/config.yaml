@@ -1,5 +1,5 @@
 name: Bbox & Cudy Router GUI
-version: "1.0.36"
+version: "1.1.01"
 slug: fast5688b-gui
 description: Web GUI for managing Bbox and Cudy routers on your local network
 url: https://github.com/micoli/fast5688b-gui
