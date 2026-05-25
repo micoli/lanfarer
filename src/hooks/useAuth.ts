@@ -32,17 +32,21 @@ export function useAuth(): UseAuth {
   useEffect(() => { void check(); }, [check]);
 
   const login = useCallback(async (username: string, password: string): Promise<string | null> => {
-    const res = await fetch(`${basePath()}/__auth/login`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ username, password }),
-    });
-    if (res.ok) {
-      setState({ loading: false, authEnabled: true, username });
-      return null;
+    try {
+      const res = await fetch(`${basePath()}/__auth/login`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      if (res.ok) {
+        setState({ loading: false, authEnabled: true, username });
+        return null;
+      }
+      const data = (await res.json()) as { error?: string };
+      return data.error ?? "error";
+    } catch {
+      return "error";
     }
-    const data = (await res.json()) as { error?: string };
-    return data.error ?? "error";
   }, []);
 
   const logout = useCallback(async () => {

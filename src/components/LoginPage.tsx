@@ -17,9 +17,14 @@ export default function LoginPage({ onLogin }: Props) {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const err = await onLogin(username, password);
-    setLoading(false);
-    if (err) setError(t("auth.invalidCredentials"));
+    try {
+      const err = await onLogin(username, password);
+      if (err) setError(t("auth.invalidCredentials"));
+    } catch {
+      setError(t("auth.invalidCredentials"));
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
