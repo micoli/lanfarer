@@ -2,12 +2,13 @@ import http from "node:http";
 import { PORT, isDev, BBOX_PASSWORD, BASE_PATH, BBOX_TARGET, BBOX_HOST, BBOX_OVERRIDE_IP, VERBOSE } from "./config.ts";
 import { runCodegen } from "./codegen.ts";
 import { ensureSession } from "./session.ts";
-import { proxyRequest } from "./proxy.ts";
+import { bboxApiProxy } from "./bboxApiProxy.ts";
 import { handleHealth } from "./routes/health.ts";
 import { handleScan } from "./routes/scan.ts";
 import { handleCheckIp } from "./routes/check-ip.ts";
 import { handleAuthRoute, requireAuth } from "./routes/auth.ts";
 import { handleCudy } from "./routes/cudy.ts";
+import { handleUiConfig } from "./routes/ui-config.ts";
 import { serveStatic } from "./static.ts";
 
 async function main() {
@@ -35,7 +36,7 @@ async function main() {
 
     if (url.startsWith("/bbox-api")) {
       if (!requireAuth(req, res)) return;
-      await proxyRequest(req, res);
+      await bboxApiProxy(req, res);
       return;
     }
 
@@ -59,6 +60,12 @@ async function main() {
     if (url.startsWith("/__cudy")) {
       if (!requireAuth(req, res)) return;
       await handleCudy(req, res);
+      return;
+    }
+
+    if (url === "/__config/ui") {
+      if (!requireAuth(req, res)) return;
+      handleUiConfig(req, res);
       return;
     }
 

@@ -1,6 +1,7 @@
-import { Home, LogOut, Map, Network, Radio, Router, ScanLine, Settings2, Wifi } from "lucide-react";
+import { Home, LogOut, Map, Network, Radio, Router, ScanLine, Settings2, Wifi, type LucideIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { NavLink, Outlet } from "react-router-dom";
+import { useUiConfig } from "../hooks/useUiConfig.ts";
 import { ErrorBoundary } from "./ErrorBoundary";
 
 interface AuthProps {
@@ -31,19 +32,39 @@ function LangSwitcher() {
   );
 }
 
+type NavItem = { id: string; to: string; icon: LucideIcon; label: string; end: boolean };
+
+function buildAllNav(t: (key: string) => string): NavItem[] {
+  return [
+    { id: "home",              to: "/",          icon: Home,      label: t("nav.home"),             end: true  },
+    { id: "hosts",             to: "/hosts",      icon: Wifi,      label: t("nav.hosts"),            end: false },
+    { id: "scan",              to: "/scan",       icon: ScanLine,  label: t("nav.scan"),             end: false },
+    { id: "hotspots",          to: "/hotspots",   icon: Router,    label: t("nav.hotspots"),         end: false },
+    { id: "map",               to: "/map",        icon: Map,       label: t("nav.map"),              end: false },
+    { id: "wifi",              to: "/wifi",       icon: Radio,     label: t("nav.wifi"),             end: false },
+    { id: "dhcp-options",      to: "",            icon: Settings2, label: t("nav.dhcpOptions"),      end: false },
+    { id: "dhcp-reservations", to: "",            icon: Network,   label: t("nav.dhcpReservations"), end: false },
+  ];
+}
+
 export default function Layout({ auth }: { auth: AuthProps }) {
   const { t } = useTranslation();
+  const uiConfig = useUiConfig();
 
-  const NAV = [
-    { to: "/", icon: Home, label: t("nav.home"), end: true },
-    { to: "/hosts", icon: Wifi, label: t("nav.hosts"), end: false },
-    { to: "/scan", icon: ScanLine, label: t("nav.scan"), end: false },
-    { to: "/cudy", icon: Router, label: t("nav.cudy"), end: false },
-    { to: "/map", icon: Map, label: t("nav.map"), end: false },
-    { to: "/wifi", icon: Radio, label: t("nav.wifi"), end: false },
-    { to: "/dhcp/options", icon: Settings2, label: t("nav.dhcpOptions"), end: false },
-    { to: "/dhcp/reservations", icon: Network, label: t("nav.dhcpReservations"), end: false },
-  ] as const;
+  const allNav = buildAllNav(t);
+
+  const NAV: NavItem[] = uiConfig.menu === null
+    ? allNav.filter((n) => n.id !== "dhcp-options" && n.id !== "dhcp-reservations")
+    : uiConfig.menu.flatMap((item) => {
+        const entry = allNav.find((n) => n.id === item.id);
+        if (!entry) return [];
+        if (item.id === "dhcp-options" || item.id === "dhcp-reservations") {
+          if (!item.router) return [];
+          const suffix = item.id === "dhcp-options" ? "options" : "reservations";
+          return [{ ...entry, to: `/dhcp/${item.router}/${suffix}` }];
+        }
+        return [entry];
+      });
 
   return (
     <div className="flex h-dvh bg-slate-900 text-slate-100">

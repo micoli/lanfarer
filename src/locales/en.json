@@ -5,6 +5,7 @@
     "scan": "Network Scan",
     "wifi": "Wi-Fi",
     "cudy": "Hotspots",
+    "hotspots": "Hotspots",
     "map": "Map",
     "dhcpOptions": "DHCP Options",
     "dhcpReservations": "DHCP Reservations"

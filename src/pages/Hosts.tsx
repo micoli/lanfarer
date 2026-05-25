@@ -16,6 +16,7 @@ import {
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useCreateDhcpClient, useDhcpClients, useHosts, useIpCheck } from "../hooks/useBbox";
+import { useDhcpRouterId, useRouterForPage } from "../hooks/useUiConfig.ts";
 import type { components } from "../lib/api/schema.d.ts";
 
 type DhcpClient = components["schemas"]["DhcpClient"];
@@ -109,7 +110,7 @@ function Th({
   );
 }
 
-function HostRow({ host, i, isReserved }: { host: Host; i: number; isReserved: boolean }) {
+function HostRow({ host, i, isReserved, dhcpRouterId }: { host: Host; i: number; isReserved: boolean; dhcpRouterId: string | null }) {
   const { t } = useTranslation();
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState<Omit<DhcpClient, "id">>({
@@ -119,7 +120,7 @@ function HostRow({ host, i, isReserved }: { host: Host; i: number; isReserved: b
     ipaddress: "",
     ip6address: "",
   });
-  const create = useCreateDhcpClient();
+  const create = useCreateDhcpClient(dhcpRouterId);
   const { checking, conflict, clearConflict, check } = useIpCheck();
 
   function openAdd() {
@@ -234,7 +235,7 @@ function HostRow({ host, i, isReserved }: { host: Host; i: number; isReserved: b
         {relativeTime(host.lastseen, t("hosts.justNow"))}
       </td>
       <td className="px-4 py-2.5">
-        {isReserved ? (
+        {dhcpRouterId && (isReserved ? (
           <span title={t("hosts.reservationActive")} className="p-1 inline-flex text-blue-400">
             <Bookmark size={14} />
           </span>
@@ -247,7 +248,7 @@ function HostRow({ host, i, isReserved }: { host: Host; i: number; isReserved: b
           >
             <BookmarkPlus size={14} />
           </button>
-        )}
+        ))}
       </td>
     </tr>
   );
@@ -255,8 +256,10 @@ function HostRow({ host, i, isReserved }: { host: Host; i: number; isReserved: b
 
 export default function Hosts() {
   const { t, i18n } = useTranslation();
-  const { data: raw, isLoading, error, dataUpdatedAt } = useHosts();
-  const { data: rawClients } = useDhcpClients();
+  const dhcpRouterId = useDhcpRouterId();
+  const hostsRouterId = useRouterForPage("hosts");
+  const { data: raw, isLoading, error, dataUpdatedAt } = useHosts(hostsRouterId);
+  const { data: rawClients } = useDhcpClients(dhcpRouterId);
   const qc = useQueryClient();
 
   const reservedMacs = useMemo<Set<string>>(() => {
@@ -493,6 +496,7 @@ export default function Hosts() {
                 host={h}
                 i={i}
                 isReserved={reservedMacs.has(h.macaddress?.toLowerCase() ?? "")}
+                dhcpRouterId={dhcpRouterId}
               />
             ))}
           </tbody>

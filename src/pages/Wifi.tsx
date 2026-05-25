@@ -2,6 +2,8 @@ import { Eye, EyeOff, Shield, Wifi, WifiOff } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useWireless } from "../hooks/useBbox";
+import { useCudyClients, type CudyRouter } from "../hooks/useCudy.ts";
+import { useRouterForPage } from "../hooks/useUiConfig.ts";
 
 interface RadioBand {
   enable: number;
@@ -200,9 +202,54 @@ function Row({
   );
 }
 
+function CudyInterfaceCard({ iface }: { iface: { ssid: string; band: string; channel: number; bitrate: number; clients: unknown[] } }) {
+  return (
+    <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-5 flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Wifi size={16} className="text-green-400" />
+          <span className="font-semibold text-slate-100">{iface.band}</span>
+        </div>
+        <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/10 text-green-400">active</span>
+      </div>
+      <div className="flex flex-col gap-2">
+        <Row label="SSID" value={iface.ssid} mono />
+        <Row label="Canal" value={String(iface.channel)} />
+        <Row label="Débit" value={`${iface.bitrate} Mb/s`} />
+        <Row label="Clients" value={String(iface.clients.length)} />
+      </div>
+    </div>
+  );
+}
+
+function CudyRouterSection({ router }: { router: CudyRouter }) {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <h2 className="text-sm font-semibold text-slate-200">{router.name}</h2>
+        <span className="text-xs text-slate-500">{router.ip}</span>
+        <span className={`text-xs px-2 py-0.5 rounded-full ${router.online ? "bg-green-500/10 text-green-400" : "bg-slate-700 text-slate-500"}`}>
+          {router.online ? "en ligne" : "hors ligne"}
+        </span>
+      </div>
+      {router.online && router.interfaces.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {router.interfaces.map((iface) => (
+            <CudyInterfaceCard key={iface.ifname} iface={iface} />
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-slate-500">{router.online ? "Aucune interface Wi-Fi détectée" : "Routeur injoignable"}</p>
+      )}
+    </div>
+  );
+}
+
 export default function WifiPage() {
   const { t } = useTranslation();
-  const { data: raw, isLoading, error } = useWireless();
+  const wifiRouterId = useRouterForPage("wifi");
+  const { data: raw, isLoading, error } = useWireless(wifiRouterId);
+  const { data: cudyData } = useCudyClients();
   const w = parseWireless(raw);
 
   if (isLoading) {
@@ -223,26 +270,36 @@ export default function WifiPage() {
     );
   }
 
+  const cudyRouters = cudyData?.routers ?? [];
+
   return (
     <div className="p-6 flex flex-col gap-6 overflow-auto">
       <h1 className="text-lg font-semibold text-slate-100">{t("wifi.title")}</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <BandCard
-          band="2.4 GHz"
-          radio={w.radio["24"]}
-          ssid={w.ssid["24"]}
-          standards={w.standard["24"]}
-        />
-        <BandCard
-          band="5 GHz"
-          radio={w.radio["5"]}
-          ssid={w.ssid["5"]}
-          standards={w.standard["5"]}
-        />
+      {/* Bbox section */}
+      <div className="flex flex-col gap-3">
+        <h2 className="text-sm font-semibold text-slate-200">Bbox</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <BandCard
+            band="2.4 GHz"
+            radio={w.radio["24"]}
+            ssid={w.ssid["24"]}
+            standards={w.standard["24"]}
+          />
+          <BandCard
+            band="5 GHz"
+            radio={w.radio["5"]}
+            ssid={w.ssid["5"]}
+            standards={w.standard["5"]}
+          />
+        </div>
+        {w.ssid.guest && <GuestCard ssid={w.ssid.guest} />}
       </div>
 
-      {w.ssid.guest && <GuestCard ssid={w.ssid.guest} />}
+      {/* Cudy routers sections */}
+      {cudyRouters.map((router) => (
+        <CudyRouterSection key={router.name} router={router} />
+      ))}
     </div>
   );
 }

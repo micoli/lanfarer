@@ -28,11 +28,11 @@ export default function App() {
           <Route index element={<Home />} />
           <Route path="/hosts" element={<Hosts />} />
           <Route path="/wifi" element={<WifiPage />} />
-          <Route path="/dhcp/reservations" element={<DhcpReservations />} />
+          <Route path="/dhcp/:routerId/reservations" element={<DhcpReservations />} />
           <Route path="/scan" element={<NetworkScan />} />
-          <Route path="/cudy" element={<CudyClients />} />
+          <Route path="/hotspots" element={<CudyClients />} />
           <Route path="/map" element={<MapPage />} />
-          <Route path="/dhcp/options" element={<DhcpOptions />} />
+          <Route path="/dhcp/:routerId/options" element={<DhcpOptions />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

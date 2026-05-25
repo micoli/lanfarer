@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { useBboxWirelessHosts } from "../hooks/useBboxWireless";
 import { useCudyClients } from "../hooks/useCudy";
 import { useMacHostnames } from "../hooks/useMacHostnames";
+import { useRouterForPage } from "../hooks/useUiConfig.ts";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -66,9 +67,10 @@ interface HotspotNode {
 export default function MapPage() {
   const { t } = useTranslation();
   const qc = useQueryClient();
+  const routerId = useRouterForPage("map");
   const { data: cudyData, isLoading } = useCudyClients();
-  const bboxWireless = useBboxWirelessHosts();
-  const hostnames = useMacHostnames();
+  const bboxWireless = useBboxWirelessHosts(routerId);
+  const hostnames = useMacHostnames(routerId);
   const containerRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
 

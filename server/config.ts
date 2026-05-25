@@ -19,10 +19,20 @@ export function loadEnvLocal(): void {
 }
 
 interface BboxRouter {
+  name?: string;
   type?: string;
   ip?: string;
   password?: string;
   enabled?: boolean;
+}
+
+export interface BboxRouterSpec {
+  name: string;
+  password: string;
+  host: string;
+  connectHost: string;
+  targetUrl: URL;
+  isHttps: boolean;
 }
 
 function loadBboxFromConfig(): BboxRouter {
@@ -32,6 +42,23 @@ function loadBboxFromConfig(): BboxRouter {
     return (data.routers ?? []).find((r) => r.type === "bbox" && r.enabled !== false) ?? {};
   } catch {
     return {};
+  }
+}
+
+export function loadBboxRouterByName(name: string): BboxRouterSpec | null {
+  try {
+    const raw = fs.readFileSync(CONFIG_FILE, "utf8");
+    const data = parseYaml(raw) as { routers?: BboxRouter[] };
+    const r = (data.routers ?? []).find(
+      (router) => router.type === "bbox" && router.name === name && router.enabled !== false,
+    );
+    if (!r?.password) return null;
+    // Use the same host/target constants as the rest of the server (env var overridable)
+    const target = targetUrl;
+    const connectHost = r.ip ?? target.hostname;
+    return { name, password: r.password, host: BBOX_HOST, connectHost, targetUrl: target, isHttps };
+  } catch {
+    return null;
   }
 }
 
@@ -63,3 +90,25 @@ export const isHttps          = targetUrl.protocol === "https:";
 // BBOX_HOST is still used as Host header and TLS SNI so the Bbox accepts the request.
 export const BBOX_OVERRIDE_IP = bboxFromConfig.ip ?? null;
 export const BBOX_CONNECT_HOST = BBOX_OVERRIDE_IP ?? targetUrl.hostname;
+
+interface UiMenuItemConfig { id: string; router?: string }
+interface UiWidgetConfig   { type: string; id: string }
+export interface UiConfig {
+  menu: UiMenuItemConfig[] | null;
+  home: { widgets: UiWidgetConfig[] } | null;
+}
+
+export function loadUiConfig(): UiConfig {
+  try {
+    const raw = fs.readFileSync(CONFIG_FILE, "utf8");
+    const data = parseYaml(raw) as { ui?: { menu?: UiMenuItemConfig[]; home?: { widgets?: UiWidgetConfig[] } } };
+    const ui = data.ui;
+    if (!ui) return { menu: null, home: null };
+    return {
+      menu: ui.menu ?? null,
+      home: ui.home?.widgets ? { widgets: ui.home.widgets } : null,
+    };
+  } catch {
+    return { menu: null, home: null };
+  }
+}

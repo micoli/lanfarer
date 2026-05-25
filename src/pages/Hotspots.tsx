@@ -5,6 +5,7 @@ import { useCudyClients, type CudyClient, type CudyRouter } from "../hooks/useCu
 import { useBboxWirelessHosts, type BboxStation, type BboxWirelessHost } from "../hooks/useBboxWireless";
 import { useMacHostnames } from "../hooks/useMacHostnames";
 import { useMacIps } from "../hooks/useMacIps";
+import { useRouterForPage } from "../hooks/useUiConfig.ts";
 
 // ── Signal helpers ────────────────────────────────────────────────────────────
 
@@ -190,10 +191,11 @@ function BboxWirelessCard({ entry, hostnames, ips }: { entry: BboxWirelessHost; 
 export default function HotspotsPage() {
   const { t } = useTranslation();
   const qc = useQueryClient();
+  const routerId = useRouterForPage("hotspots");
   const { data: cudyData, isLoading: cudyLoading } = useCudyClients();
-  const bboxWireless = useBboxWirelessHosts();
-  const hostnames = useMacHostnames();
-  const ips = useMacIps();
+  const bboxWireless = useBboxWirelessHosts(routerId);
+  const hostnames = useMacHostnames(routerId);
+  const ips = useMacIps(routerId);
 
   const isLoading = cudyLoading;
 

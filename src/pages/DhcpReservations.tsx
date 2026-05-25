@@ -1,6 +1,7 @@
 import { AlertTriangle, Check, Download, Pencil, Plus, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useParams } from "react-router-dom";
 import {
   useCreateDhcpClient,
   useDeleteDhcpClient,
@@ -275,11 +276,13 @@ function ActionBtn({
 }
 
 export default function DhcpReservations() {
+  const { routerId: routerIdParam } = useParams<{ routerId: string }>();
+  const routerId = routerIdParam ?? null;
   const { t } = useTranslation();
-  const { data: rawData, isLoading, error } = useDhcpClients();
-  const create = useCreateDhcpClient();
-  const update = useUpdateDhcpClient();
-  const remove = useDeleteDhcpClient();
+  const { data: rawData, isLoading, error } = useDhcpClients(routerId);
+  const create = useCreateDhcpClient(routerId);
+  const update = useUpdateDhcpClient(routerId);
+  const remove = useDeleteDhcpClient(routerId);
 
   // Normalise whatever the BBox API returns into a flat DhcpClient[]
   const clients = normaliseClients(rawData);

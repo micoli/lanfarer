@@ -19,8 +19,8 @@ function normalizeMac(mac: string): string {
   return mac.toUpperCase().replace(/-/g, ":");
 }
 
-export function useMacHostnames(): (mac: string) => string | undefined {
-  const { data } = useHosts();
+export function useMacHostnames(routerId: string | null): (mac: string) => string | undefined {
+  const { data } = useHosts(routerId);
 
   const map = useMemo(() => {
     const m = new Map<string, string>();

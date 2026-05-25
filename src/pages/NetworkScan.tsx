@@ -11,6 +11,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useCreateDhcpClient, useDhcpClients, useDhcpConfig, useIpCheck } from "../hooks/useBbox";
+import { useDhcpRouterId } from "../hooks/useUiConfig.ts";
 import type { components } from "../lib/api/schema.d.ts";
 
 type DhcpClient = components["schemas"]["DhcpClient"];
@@ -89,7 +90,7 @@ function PortsCell({ ports }: { ports?: number[] }) {
   );
 }
 
-function ScanHostRow({ host, isReserved }: { host: ScanHost; isReserved: boolean }) {
+function ScanHostRow({ host, isReserved, dhcpRouterId }: { host: ScanHost; isReserved: boolean; dhcpRouterId: string | null }) {
   const { t } = useTranslation();
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState<Omit<DhcpClient, "id">>({
@@ -99,7 +100,7 @@ function ScanHostRow({ host, isReserved }: { host: ScanHost; isReserved: boolean
     ipaddress: "",
     ip6address: "",
   });
-  const create = useCreateDhcpClient();
+  const create = useCreateDhcpClient(dhcpRouterId);
   const { checking, conflict, clearConflict, check } = useIpCheck();
 
   function openAdd() {
@@ -231,7 +232,7 @@ function ScanHostRow({ host, isReserved }: { host: ScanHost; isReserved: boolean
         )}
       </td>
       <td className="px-4 py-2.5">
-        {isReserved ? (
+        {dhcpRouterId && (isReserved ? (
           <span title={t("scan.reservationActive")} className="p-1 inline-flex text-blue-400">
             <Bookmark size={14} />
           </span>
@@ -244,7 +245,7 @@ function ScanHostRow({ host, isReserved }: { host: ScanHost; isReserved: boolean
           >
             <BookmarkPlus size={14} />
           </button>
-        )}
+        ))}
       </td>
     </tr>
   );
@@ -252,6 +253,7 @@ function ScanHostRow({ host, isReserved }: { host: ScanHost; isReserved: boolean
 
 export default function NetworkScan() {
   const { t } = useTranslation();
+  const dhcpRouterId = useDhcpRouterId();
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [hosts, setHosts] = useState<ScanHost[]>([]);
@@ -259,8 +261,8 @@ export default function NetworkScan() {
   const [error, setError] = useState<string | null>(null);
   const esRef = useRef<EventSource | null>(null);
 
-  const { data: rawDhcp } = useDhcpConfig();
-  const { data: rawClients } = useDhcpClients();
+  const { data: rawDhcp } = useDhcpConfig(dhcpRouterId);
+  const { data: rawClients } = useDhcpClients(dhcpRouterId);
 
   useEffect(() => {
     if (subnet) return;
@@ -451,6 +453,7 @@ export default function NetworkScan() {
                   key={h.ip}
                   host={h}
                   isReserved={reservedMacs.has(h.mac?.toLowerCase() ?? "")}
+                  dhcpRouterId={dhcpRouterId}
                 />
               ))}
             </tbody>

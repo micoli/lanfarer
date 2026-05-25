@@ -35,68 +35,82 @@ export function useIpCheck() {
   return { checking, conflict, clearConflict: () => setConflict(null), check };
 }
 
-export function useDevice() {
+export function useDevice(routerId: string | null) {
   return useQuery<unknown>({
-    queryKey: ["device"],
-    queryFn: () => bboxApi.getDevice(),
+    queryKey: ["device", routerId],
+    queryFn: () => bboxApi.getDevice(routerId!),
     refetchInterval: 60_000,
+    enabled: routerId !== null,
   });
 }
 
-export function useWanStats() {
+export function useWanStats(routerId: string | null) {
   return useQuery<unknown>({
-    queryKey: ["wan", "stats"],
-    queryFn: () => bboxApi.getWanStats(),
+    queryKey: ["wan", "stats", routerId],
+    queryFn: () => bboxApi.getWanStats(routerId!),
     refetchInterval: 10_000,
+    enabled: routerId !== null,
   });
 }
 
-export function useWireless() {
+export function useWireless(routerId: string | null) {
   return useQuery<unknown>({
-    queryKey: ["wireless"],
-    queryFn: () => bboxApi.getWireless(),
+    queryKey: ["wireless", routerId],
+    queryFn: () => bboxApi.getWireless(routerId!),
+    enabled: routerId !== null,
   });
 }
 
-export function useDhcpConfig() {
+export function useDhcpConfig(routerId: string | null) {
   return useQuery<unknown>({
-    queryKey: ["dhcp", "config"],
-    queryFn: () => bboxApi.getDhcp(),
+    queryKey: ["dhcp", routerId, "config"],
+    queryFn: () => bboxApi.getDhcp(routerId!),
+    enabled: routerId !== null,
   });
 }
 
-export function useDhcpClients() {
+export function useDhcpClients(routerId: string | null) {
   return useQuery<unknown>({
-    queryKey: ["dhcp", "clients"],
-    queryFn: () => bboxApi.getDhcpClients(),
+    queryKey: ["dhcp", routerId, "clients"],
+    queryFn: () => bboxApi.getDhcpClients(routerId!),
+    enabled: routerId !== null,
   });
 }
 
-export function useCreateDhcpClient() {
+export function useCreateDhcpClient(routerId: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (client: Omit<DhcpClient, "id">) => bboxApi.createDhcpClient(client),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["dhcp", "clients"] }),
+    mutationFn: (client: Omit<DhcpClient, "id">) => {
+      if (!routerId) return Promise.reject(new Error("No DHCP router configured"));
+      return bboxApi.createDhcpClient(routerId, client);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["dhcp", routerId, "clients"] }),
   });
 }
 
-export function useUpdateDhcpClient() {
+export function useUpdateDhcpClient(routerId: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...client }: DhcpClient) => bboxApi.updateDhcpClient(id, client),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["dhcp", "clients"] }),
+    mutationFn: ({ id, ...client }: DhcpClient) => {
+      if (!routerId) return Promise.reject(new Error("No DHCP router configured"));
+      return bboxApi.updateDhcpClient(routerId, id, client);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["dhcp", routerId, "clients"] }),
   });
 }
 
-export function useDeleteDhcpClient() {
+export function useDeleteDhcpClient(routerId: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => bboxApi.deleteDhcpClient(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["dhcp", "clients"] }),
+    mutationFn: (id: number) => {
+      if (!routerId) return Promise.reject(new Error("No DHCP router configured"));
+      return bboxApi.deleteDhcpClient(routerId, id);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["dhcp", routerId, "clients"] }),
   });
 }
 
-export function useUpdateDhcpConfig() {
+export function useUpdateDhcpConfig(routerId: string | null) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (config: {
@@ -104,48 +118,60 @@ export function useUpdateDhcpConfig() {
       minaddress?: string;
       maxaddress?: string;
       leasetime?: number;
-    }) => bboxApi.updateDhcp(config),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["dhcp", "config"] }),
+    }) => {
+      if (!routerId) return Promise.reject(new Error("No DHCP router configured"));
+      return bboxApi.updateDhcp(routerId, config);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["dhcp", routerId, "config"] }),
   });
 }
 
-export function useHosts() {
+export function useHosts(routerId: string | null) {
   return useQuery<unknown>({
-    queryKey: ["hosts"],
-    queryFn: () => bboxApi.getHosts(),
+    queryKey: ["hosts", routerId],
+    queryFn: () => bboxApi.getHosts(routerId!),
     refetchInterval: 30_000,
+    enabled: routerId !== null,
   });
 }
 
-export function useDhcpOptions() {
+export function useDhcpOptions(routerId: string | null) {
   return useQuery<unknown>({
-    queryKey: ["dhcp", "options"],
-    queryFn: () => bboxApi.getDhcpOptions(),
+    queryKey: ["dhcp", routerId, "options"],
+    queryFn: () => bboxApi.getDhcpOptions(routerId!),
+    enabled: routerId !== null,
   });
 }
 
-export function useCreateDhcpOption() {
+export function useCreateDhcpOption(routerId: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ option, value }: { option: number; value: string }) =>
-      bboxApi.createDhcpOption(option, value),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["dhcp", "options"] }),
+    mutationFn: ({ option, value }: { option: number; value: string }) => {
+      if (!routerId) return Promise.reject(new Error("No DHCP router configured"));
+      return bboxApi.createDhcpOption(routerId, option, value);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["dhcp", routerId, "options"] }),
   });
 }
 
-export function useUpdateDhcpOption() {
+export function useUpdateDhcpOption(routerId: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, option, value }: { id: number; option: number; value: string }) =>
-      bboxApi.updateDhcpOption(id, option, value),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["dhcp", "options"] }),
+    mutationFn: ({ id, option, value }: { id: number; option: number; value: string }) => {
+      if (!routerId) return Promise.reject(new Error("No DHCP router configured"));
+      return bboxApi.updateDhcpOption(routerId, id, option, value);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["dhcp", routerId, "options"] }),
   });
 }
 
-export function useDeleteDhcpOption() {
+export function useDeleteDhcpOption(routerId: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => bboxApi.deleteDhcpOption(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["dhcp", "options"] }),
+    mutationFn: (id: number) => {
+      if (!routerId) return Promise.reject(new Error("No DHCP router configured"));
+      return bboxApi.deleteDhcpOption(routerId, id);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["dhcp", routerId, "options"] }),
   });
 }

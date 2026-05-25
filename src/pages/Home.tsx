@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, Clock, Cpu, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useDevice, useWanStats } from "../hooks/useBbox";
+import { useUiConfig, type WidgetConfig } from "../hooks/useUiConfig.ts";
 
 interface WanStats {
   rx: {
@@ -93,14 +94,131 @@ function StatCard({
   );
 }
 
-export default function Home() {
+function Skeleton() {
+  return <div className="h-8 bg-slate-700/50 rounded animate-pulse w-2/3" />;
+}
+
+// ── Widgets ────────────────────────────────────────────────────────────────────
+
+function BboxUptimeWidget({ device }: { device: DeviceInfo | null }) {
+  const { t } = useTranslation();
+  return (
+    <StatCard label={t("home.uptime")} icon={<Clock size={13} />}>
+      {device ? (
+        <p className="text-2xl font-semibold text-slate-100 tabular-nums">
+          {formatUptime(device.uptime)}
+        </p>
+      ) : (
+        <Skeleton />
+      )}
+      {device && (
+        <p className="text-xs text-slate-500">
+          {t("home.boots", { count: device.numberofboots })}
+        </p>
+      )}
+    </StatCard>
+  );
+}
+
+function BboxFirmwareWidget({ device }: { device: DeviceInfo | null }) {
   const { t, i18n } = useTranslation();
-  const { data: rawDevice, isLoading: loadingDevice } = useDevice();
-  const { data: rawStats, isLoading: loadingStats } = useWanStats();
+  return (
+    <StatCard label={t("home.system")} icon={<Cpu size={13} />}>
+      {device ? (
+        <div className="flex flex-col gap-1">
+          <p className="text-sm text-slate-200">
+            {t("home.firmware")} {device.running.version}
+          </p>
+          <p className="text-xs text-slate-500">
+            {new Date(device.running.date).toLocaleDateString(
+              i18n.language === "fr" ? "fr-FR" : "en-GB",
+              { day: "numeric", month: "long", year: "numeric" },
+            )}
+          </p>
+        </div>
+      ) : (
+        <Skeleton />
+      )}
+    </StatCard>
+  );
+}
+
+function BboxDownstreamWidget({ stats }: { stats: WanStats | null }) {
+  const { t } = useTranslation();
+  return (
+    <StatCard label={t("home.downstream")} icon={<ArrowDown size={13} className="text-green-400" />}>
+      {stats ? (
+        <div className="flex flex-col gap-2">
+          <p className="text-2xl font-semibold text-slate-100 tabular-nums">
+            {formatBandwidth(stats.rx.bandwidth)}
+          </p>
+          <BandwidthBar
+            value={stats.rx.bandwidth}
+            max={stats.rx.contractualBandwidth / 1000}
+            color="bg-green-500"
+          />
+          <div className="flex justify-between text-xs text-slate-500">
+            <span>{t("home.used", { pct: stats.rx.occupation })}</span>
+            <span>{t("home.max", { bw: formatBandwidth(stats.rx.contractualBandwidth / 1000) })}</span>
+          </div>
+          <p className="text-xs text-slate-500 pt-1 border-t border-slate-700">
+            {t("home.totalReceived")}{" "}
+            <span className="text-slate-300">{formatBytes(stats.rx.bytes)}</span>
+          </p>
+        </div>
+      ) : (
+        <Skeleton />
+      )}
+    </StatCard>
+  );
+}
+
+function BboxUpstreamWidget({ stats }: { stats: WanStats | null }) {
+  const { t } = useTranslation();
+  return (
+    <StatCard label={t("home.upstream")} icon={<ArrowUp size={13} className="text-blue-400" />}>
+      {stats ? (
+        <div className="flex flex-col gap-2">
+          <p className="text-2xl font-semibold text-slate-100 tabular-nums">
+            {formatBandwidth(stats.tx.bandwidth)}
+          </p>
+          <BandwidthBar
+            value={stats.tx.bandwidth}
+            max={stats.tx.contractualBandwidth / 1000}
+            color="bg-blue-500"
+          />
+          <div className="flex justify-between text-xs text-slate-500">
+            <span>{t("home.used", { pct: stats.tx.occupation })}</span>
+            <span>{t("home.max", { bw: formatBandwidth(stats.tx.contractualBandwidth / 1000) })}</span>
+          </div>
+          <p className="text-xs text-slate-500 pt-1 border-t border-slate-700">
+            {t("home.totalSent")}{" "}
+            <span className="text-slate-300">{formatBytes(stats.tx.bytes)}</span>
+          </p>
+        </div>
+      ) : (
+        <Skeleton />
+      )}
+    </StatCard>
+  );
+}
+
+const DEFAULT_WIDGETS: WidgetConfig[] = [
+];
+
+export default function Home() {
+  const uiConfig = useUiConfig();
+  const widgets = uiConfig.home?.widgets ?? DEFAULT_WIDGETS;
+
+  const deviceRouterId = widgets.find((w) => w.type === "bbox-uptime" || w.type === "bbox-firmware")?.id ?? null;
+  const statsRouterId  = widgets.find((w) => w.type === "bbox-downstream" || w.type === "bbox-upstream")?.id ?? null;
+
+  const { data: rawDevice, isLoading: loadingDevice } = useDevice(deviceRouterId);
+  const { data: rawStats,  isLoading: loadingStats  } = useWanStats(statsRouterId);
   const qc = useQueryClient();
 
   const device = parseDevice(rawDevice);
-  const stats = parseWanStats(rawStats);
+  const stats  = parseWanStats(rawStats);
 
   const loading = loadingDevice || loadingStats;
 
@@ -128,19 +246,13 @@ export default function Home() {
           {device?.using && (
             <div className="flex gap-1">
               {device.using.ftth ? (
-                <span className="text-xs text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full">
-                  FTTH
-                </span>
+                <span className="text-xs text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full">FTTH</span>
               ) : null}
               {device.using.ipv4 ? (
-                <span className="text-xs text-slate-400 bg-slate-700/50 px-2 py-0.5 rounded-full">
-                  IPv4
-                </span>
+                <span className="text-xs text-slate-400 bg-slate-700/50 px-2 py-0.5 rounded-full">IPv4</span>
               ) : null}
               {device.using.ipv6 ? (
-                <span className="text-xs text-slate-400 bg-slate-700/50 px-2 py-0.5 rounded-full">
-                  IPv6
-                </span>
+                <span className="text-xs text-slate-400 bg-slate-700/50 px-2 py-0.5 rounded-full">IPv6</span>
               ) : null}
             </div>
           )}
@@ -148,116 +260,23 @@ export default function Home() {
             type="button"
             onClick={refresh}
             className={`p-1.5 text-slate-400 hover:text-slate-200 transition-colors ${loading ? "animate-spin" : ""}`}
-            title={t("common.refresh")}
+            title="Rafraîchir"
           >
             <RefreshCw size={14} />
           </button>
         </div>
       </div>
 
-      {/* Device info row */}
+      {/* Widgets grid */}
       <div className="grid grid-cols-2 gap-4">
-        <StatCard label={t("home.uptime")} icon={<Clock size={13} />}>
-          {device ? (
-            <p className="text-2xl font-semibold text-slate-100 tabular-nums">
-              {formatUptime(device.uptime)}
-            </p>
-          ) : (
-            <Skeleton />
-          )}
-          {device && (
-            <p className="text-xs text-slate-500">
-              {t("home.boots", { count: device.numberofboots })}
-            </p>
-          )}
-        </StatCard>
-
-        <StatCard label={t("home.system")} icon={<Cpu size={13} />}>
-          {device ? (
-            <div className="flex flex-col gap-1">
-              <p className="text-sm text-slate-200">
-                {t("home.firmware")} {device.running.version}
-              </p>
-              <p className="text-xs text-slate-500">
-                {new Date(device.running.date).toLocaleDateString(
-                  i18n.language === "fr" ? "fr-FR" : "en-GB",
-                  {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  }
-                )}
-              </p>
-            </div>
-          ) : (
-            <Skeleton />
-          )}
-        </StatCard>
-      </div>
-
-      {/* WAN stats */}
-      <div className="grid grid-cols-2 gap-4">
-        <StatCard
-          label={t("home.downstream")}
-          icon={<ArrowDown size={13} className="text-green-400" />}
-        >
-          {stats ? (
-            <div className="flex flex-col gap-2">
-              <p className="text-2xl font-semibold text-slate-100 tabular-nums">
-                {formatBandwidth(stats.rx.bandwidth)}
-              </p>
-              <BandwidthBar
-                value={stats.rx.bandwidth}
-                max={stats.rx.contractualBandwidth / 1000}
-                color="bg-green-500"
-              />
-              <div className="flex justify-between text-xs text-slate-500">
-                <span>{t("home.used", { pct: stats.rx.occupation })}</span>
-                <span>
-                  {t("home.max", { bw: formatBandwidth(stats.rx.contractualBandwidth / 1000) })}
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 pt-1 border-t border-slate-700">
-                {t("home.totalReceived")}{" "}
-                <span className="text-slate-300">{formatBytes(stats.rx.bytes)}</span>
-              </p>
-            </div>
-          ) : (
-            <Skeleton />
-          )}
-        </StatCard>
-
-        <StatCard label={t("home.upstream")} icon={<ArrowUp size={13} className="text-blue-400" />}>
-          {stats ? (
-            <div className="flex flex-col gap-2">
-              <p className="text-2xl font-semibold text-slate-100 tabular-nums">
-                {formatBandwidth(stats.tx.bandwidth)}
-              </p>
-              <BandwidthBar
-                value={stats.tx.bandwidth}
-                max={stats.tx.contractualBandwidth / 1000}
-                color="bg-blue-500"
-              />
-              <div className="flex justify-between text-xs text-slate-500">
-                <span>{t("home.used", { pct: stats.tx.occupation })}</span>
-                <span>
-                  {t("home.max", { bw: formatBandwidth(stats.tx.contractualBandwidth / 1000) })}
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 pt-1 border-t border-slate-700">
-                {t("home.totalSent")}{" "}
-                <span className="text-slate-300">{formatBytes(stats.tx.bytes)}</span>
-              </p>
-            </div>
-          ) : (
-            <Skeleton />
-          )}
-        </StatCard>
+        {widgets.map((w, i) => {
+          if (w.type === "bbox-uptime")     return <BboxUptimeWidget     key={`${w.type}-${w.id}-${i}`} device={device} />;
+          if (w.type === "bbox-firmware")   return <BboxFirmwareWidget   key={`${w.type}-${w.id}-${i}`} device={device} />;
+          if (w.type === "bbox-downstream") return <BboxDownstreamWidget key={`${w.type}-${w.id}-${i}`} stats={stats} />;
+          if (w.type === "bbox-upstream")   return <BboxUpstreamWidget   key={`${w.type}-${w.id}-${i}`} stats={stats} />;
+          return null;
+        })}
       </div>
     </div>
   );
-}
-
-function Skeleton() {
-  return <div className="h-8 bg-slate-700/50 rounded animate-pulse w-2/3" />;
 }

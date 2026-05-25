@@ -56,9 +56,9 @@ function mergeGroup(
   return { ...list[0], ssid, frequency: undefined, stations };
 }
 
-export function useBboxWirelessHosts(): BboxWirelessHost[] {
-  const { data: hostsData } = useHosts();
-  const { data: wirelessData } = useWireless();
+export function useBboxWirelessHosts(routerId: string | null): BboxWirelessHost[] {
+  const { data: hostsData } = useHosts(routerId);
+  const { data: wirelessData } = useWireless(routerId);
 
   return useMemo(() => {
     if (!Array.isArray(hostsData) || !hostsData[0]?.wirelesshosts) return [];

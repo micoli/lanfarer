@@ -1,99 +1,94 @@
-import { apiClient, apiFetch } from "./client.ts";
+import { BboxApiError } from "./client.ts";
+import { basePath } from "../basePath.ts";
 import type { components } from "./schema.d.ts";
 
 type DhcpClient = components["schemas"]["DhcpClient"];
 
+async function bboxFetch(routerId: string, method: string, path: string, body?: Record<string, unknown>): Promise<unknown> {
+  const url = `${basePath()}/bbox-api/${routerId}${path}`;
+  const init: RequestInit = { method };
+  if (body !== undefined) {
+    init.headers = { "content-type": "application/json" };
+    init.body = JSON.stringify(body);
+  }
+  const res = await fetch(url, init);
+  if (!res.ok) throw new BboxApiError(res.status, `Erreur API ${res.status}`);
+  const data: unknown = await res.json();
+  const candidate = data as { exception?: { code: unknown } } | Array<{ exception?: { code: unknown } }> | undefined;
+  const code = Array.isArray(candidate) ? candidate[0]?.exception?.code : candidate?.exception?.code;
+  if (code === "401" || code === 401) throw new BboxApiError(401, "Session expirée");
+  return data;
+}
+
 export const bboxApi = {
-  getDevice(): Promise<unknown> {
-    return apiFetch(apiClient.GET("/bbox-api/api/v1/device"));
+  getDevice(routerId: string): Promise<unknown> {
+    return bboxFetch(routerId, "GET", "/api/v1/device");
   },
 
-  getWanStats(): Promise<unknown> {
-    return apiFetch(apiClient.GET("/bbox-api/api/v1/wan/ip/stats"));
+  getWanStats(routerId: string): Promise<unknown> {
+    return bboxFetch(routerId, "GET", "/api/v1/wan/ip/stats");
   },
 
-  getWireless(): Promise<unknown> {
-    return apiFetch(apiClient.GET("/bbox-api/api/v1/wireless"));
+  getWireless(routerId: string): Promise<unknown> {
+    return bboxFetch(routerId, "GET", "/api/v1/wireless");
   },
 
-  async getDhcp(): Promise<components["schemas"]["DhcpResponse"]> {
-    const data = await apiFetch(apiClient.GET("/bbox-api/api/v1/dhcp"));
+  async getDhcp(routerId: string): Promise<components["schemas"]["DhcpResponse"]> {
+    const data = await bboxFetch(routerId, "GET", "/api/v1/dhcp");
     return (data as components["schemas"]["DhcpResponse"][])[0];
   },
 
-  updateDhcp(config: components["schemas"]["DhcpConfigUpdate"]): Promise<unknown> {
-    return apiFetch(apiClient.PUT("/bbox-api/api/v1/dhcp", { body: config }));
+  updateDhcp(routerId: string, config: components["schemas"]["DhcpConfigUpdate"]): Promise<unknown> {
+    return bboxFetch(routerId, "PUT", "/api/v1/dhcp", config as Record<string, unknown>);
   },
 
-  getHosts(): Promise<unknown> {
-    return apiFetch(apiClient.GET("/bbox-api/api/v1/hosts"));
+  getHosts(routerId: string): Promise<unknown> {
+    return bboxFetch(routerId, "GET", "/api/v1/hosts");
   },
 
-  getDhcpOptions(): Promise<unknown> {
-    return apiFetch(apiClient.GET("/bbox-api/api/v1/dhcp/options"));
+  getDhcpOptions(routerId: string): Promise<unknown> {
+    return bboxFetch(routerId, "GET", "/api/v1/dhcp/options");
   },
 
-  createDhcpOption(option: number, value: string): Promise<unknown> {
-    return apiFetch(apiClient.POST("/bbox-api/api/v1/dhcp/option", { body: { option, value } }));
+  createDhcpOption(routerId: string, option: number, value: string): Promise<unknown> {
+    return bboxFetch(routerId, "POST", "/api/v1/dhcp/option", { option, value });
   },
 
-  updateDhcpOption(id: number, option: number, value: string): Promise<unknown> {
-    return apiFetch(
-      apiClient.PUT("/bbox-api/api/v1/dhcp/options/{id}", {
-        params: { path: { id } },
-        body: { enable: 1, name: option, format: "", value },
-      })
-    );
+  updateDhcpOption(routerId: string, id: number, option: number, value: string): Promise<unknown> {
+    return bboxFetch(routerId, "PUT", `/api/v1/dhcp/options/${id}`, { enable: 1, name: option, format: "", value });
   },
 
-  deleteDhcpOption(id: number): Promise<unknown> {
-    return apiFetch(
-      apiClient.DELETE("/bbox-api/api/v1/dhcp/options/{id}", {
-        params: { path: { id } },
-      })
-    );
+  deleteDhcpOption(routerId: string, id: number): Promise<unknown> {
+    return bboxFetch(routerId, "DELETE", `/api/v1/dhcp/options/${id}`);
   },
 
-  getDhcpClients(): Promise<DhcpClient[]> {
-    return apiFetch(apiClient.GET("/bbox-api/api/v1/dhcp/clients")) as Promise<DhcpClient[]>;
+  getDhcpClients(routerId: string): Promise<DhcpClient[]> {
+    return bboxFetch(routerId, "GET", "/api/v1/dhcp/clients") as Promise<DhcpClient[]>;
   },
 
-  createDhcpClient(client: Omit<DhcpClient, "id">): Promise<unknown> {
-    return apiFetch(
-      apiClient.POST("/bbox-api/api/v1/dhcp/clients", {
-        body: {
-          enable: client.enable,
-          device: client.macaddress,
-          ipaddress: client.ipaddress,
-          ip6address: client.ip6address,
-          macaddress: client.macaddress,
-          hostname: client.hostname,
-        },
-      })
-    );
+  createDhcpClient(routerId: string, client: Omit<DhcpClient, "id">): Promise<unknown> {
+    return bboxFetch(routerId, "POST", "/api/v1/dhcp/clients", {
+      enable: client.enable,
+      device: client.macaddress,
+      ipaddress: client.ipaddress,
+      ip6address: client.ip6address,
+      macaddress: client.macaddress,
+      hostname: client.hostname,
+    });
   },
 
-  updateDhcpClient(id: number, client: Partial<Omit<DhcpClient, "id">>): Promise<unknown> {
-    return apiFetch(
-      apiClient.PUT("/bbox-api/api/v1/dhcp/clients/{id}", {
-        params: { path: { id } },
-        body: {
-          enable: client.enable ?? 1,
-          device: client.macaddress ?? "",
-          ipaddress: client.ipaddress ?? "",
-          ip6address: client.ip6address ?? "",
-          macaddress: client.macaddress ?? "",
-          hostname: client.hostname ?? "",
-        },
-      })
-    );
+  updateDhcpClient(routerId: string, id: number, client: Partial<Omit<DhcpClient, "id">>): Promise<unknown> {
+    return bboxFetch(routerId, "PUT", `/api/v1/dhcp/clients/${id}`, {
+      enable: client.enable ?? 1,
+      device: client.macaddress ?? "",
+      ipaddress: client.ipaddress ?? "",
+      ip6address: client.ip6address ?? "",
+      macaddress: client.macaddress ?? "",
+      hostname: client.hostname ?? "",
+    });
   },
 
-  deleteDhcpClient(id: number): Promise<unknown> {
-    return apiFetch(
-      apiClient.DELETE("/bbox-api/api/v1/dhcp/clients/{id}", {
-        params: { path: { id } },
-      })
-    );
+  deleteDhcpClient(routerId: string, id: number): Promise<unknown> {
+    return bboxFetch(routerId, "DELETE", `/api/v1/dhcp/clients/${id}`);
   },
 };

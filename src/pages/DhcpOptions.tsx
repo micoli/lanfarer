@@ -1,6 +1,7 @@
 import { Check, Download, Lock, Pencil, Plus, Save, Trash2, X } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useParams } from "react-router-dom";
 import {
   useCreateDhcpOption,
   useDeleteDhcpOption,
@@ -109,15 +110,15 @@ function OptionRow({
   );
 }
 
-function DhcpOptionsTable({ raw }: { raw: unknown }) {
+function DhcpOptionsTable({ raw, routerId }: { raw: unknown; routerId: string | null }) {
   const { t } = useTranslation();
   const parsed = parseDhcpOptions(raw);
   const [addOpen, setAddOpen] = useState(false);
   const [newOption, setNewOption] = useState<number>(6);
   const [newValue, setNewValue] = useState("");
-  const create = useCreateDhcpOption();
-  const update = useUpdateDhcpOption();
-  const remove = useDeleteDhcpOption();
+  const create = useCreateDhcpOption(routerId);
+  const update = useUpdateDhcpOption(routerId);
+  const remove = useDeleteDhcpOption(routerId);
 
   if (!parsed) return null;
 
@@ -315,10 +316,12 @@ function Field({
 }
 
 export default function DhcpOptions() {
+  const { routerId: routerIdParam } = useParams<{ routerId: string }>();
+  const routerId = routerIdParam ?? null;
   const { t } = useTranslation();
-  const { data: rawDhcp, isLoading: loadingDhcp, error: errorDhcp } = useDhcpConfig();
-  const { data: rawDhcpOptions, isLoading: loadingOptions } = useDhcpOptions();
-  const updateDhcp = useUpdateDhcpConfig();
+  const { data: rawDhcp, isLoading: loadingDhcp, error: errorDhcp } = useDhcpConfig(routerId);
+  const { data: rawDhcpOptions, isLoading: loadingOptions } = useDhcpOptions(routerId);
+  const updateDhcp = useUpdateDhcpConfig(routerId);
 
   const dhcp = parseDhcp(rawDhcp);
 
@@ -426,7 +429,7 @@ export default function DhcpOptions() {
 
       <hr className="border-slate-700 my-6" />
 
-      <DhcpOptionsTable raw={rawDhcpOptions} />
+      <DhcpOptionsTable raw={rawDhcpOptions} routerId={routerId} />
     </div>
   );
 }
