@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { bboxApi } from "../lib/api/bbox.ts";
-import type { components } from "../lib/api/schema.d.ts";
-import { serverApi } from "../lib/api/server.ts";
+import { bboxApi } from "../api/bbox.ts";
+import type { components } from "../../../../src/lib/api/schema.d.ts";
+import { serverApi } from "../../../../src/lib/api/server.ts";
 
 type DhcpClient = components["schemas"]["DhcpClient"];
 

@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useCreateDhcpClient, useDhcpClients, useHosts, useIpCheck } from "../hooks/useBbox";
+import { useCreateDhcpClient, useDhcpClients, useHosts, useIpCheck } from "../../plugins/bbox/frontend/hooks/useBbox";
 import { useDhcpRouterId, useRouterForPage } from "../hooks/useUiConfig.ts";
 import type { components } from "../lib/api/schema.d.ts";
 
@@ -110,7 +110,17 @@ function Th({
   );
 }
 
-function HostRow({ host, i, isReserved, dhcpRouterId }: { host: Host; i: number; isReserved: boolean; dhcpRouterId: string | null }) {
+function HostRow({
+  host,
+  i,
+  isReserved,
+  dhcpRouterId,
+}: {
+  host: Host;
+  i: number;
+  isReserved: boolean;
+  dhcpRouterId: string | null;
+}) {
   const { t } = useTranslation();
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState<Omit<DhcpClient, "id">>({
@@ -235,20 +245,21 @@ function HostRow({ host, i, isReserved, dhcpRouterId }: { host: Host; i: number;
         {relativeTime(host.lastseen, t("hosts.justNow"))}
       </td>
       <td className="px-4 py-2.5">
-        {dhcpRouterId && (isReserved ? (
-          <span title={t("hosts.reservationActive")} className="p-1 inline-flex text-blue-400">
-            <Bookmark size={14} />
-          </span>
-        ) : (
-          <button
-            type="button"
-            title={t("hosts.addReservation")}
-            onClick={openAdd}
-            className="p-1 rounded text-slate-500 hover:text-blue-400 transition-colors"
-          >
-            <BookmarkPlus size={14} />
-          </button>
-        ))}
+        {dhcpRouterId &&
+          (isReserved ? (
+            <span title={t("hosts.reservationActive")} className="p-1 inline-flex text-blue-400">
+              <Bookmark size={14} />
+            </span>
+          ) : (
+            <button
+              type="button"
+              title={t("hosts.addReservation")}
+              onClick={openAdd}
+              className="p-1 rounded text-slate-500 hover:text-blue-400 transition-colors"
+            >
+              <BookmarkPlus size={14} />
+            </button>
+          ))}
       </td>
     </tr>
   );

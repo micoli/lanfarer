@@ -2,8 +2,8 @@ import { Eye, EyeOff, Shield, Wifi, WifiOff } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useWireless } from "../hooks/useBbox";
-import { useCudyClients, type CudyRouter } from "../hooks/useCudy.ts";
-import { useRouterForPage } from "../hooks/useUiConfig.ts";
+import { type CudyRouter, useCudyClients } from "../../../cudy/frontend/hooks/useCudy.ts";
+import { useRouterForPage } from "../../../../src/hooks/useUiConfig.ts";
 
 interface RadioBand {
   enable: number;
@@ -202,7 +202,11 @@ function Row({
   );
 }
 
-function CudyInterfaceCard({ iface }: { iface: { ssid: string; band: string; channel: number; bitrate: number; clients: unknown[] } }) {
+function CudyInterfaceCard({
+  iface,
+}: {
+  iface: { ssid: string; band: string; channel: number; bitrate: number; clients: unknown[] };
+}) {
   return (
     <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-5 flex flex-col gap-3">
       <div className="flex items-center justify-between">
@@ -210,7 +214,9 @@ function CudyInterfaceCard({ iface }: { iface: { ssid: string; band: string; cha
           <Wifi size={16} className="text-green-400" />
           <span className="font-semibold text-slate-100">{iface.band}</span>
         </div>
-        <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/10 text-green-400">active</span>
+        <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/10 text-green-400">
+          active
+        </span>
       </div>
       <div className="flex flex-col gap-2">
         <Row label="SSID" value={iface.ssid} mono />
@@ -228,7 +234,9 @@ function CudyRouterSection({ router }: { router: CudyRouter }) {
       <div className="flex items-center gap-2">
         <h2 className="text-sm font-semibold text-slate-200">{router.name}</h2>
         <span className="text-xs text-slate-500">{router.ip}</span>
-        <span className={`text-xs px-2 py-0.5 rounded-full ${router.online ? "bg-green-500/10 text-green-400" : "bg-slate-700 text-slate-500"}`}>
+        <span
+          className={`text-xs px-2 py-0.5 rounded-full ${router.online ? "bg-green-500/10 text-green-400" : "bg-slate-700 text-slate-500"}`}
+        >
           {router.online ? "en ligne" : "hors ligne"}
         </span>
       </div>
@@ -239,7 +247,9 @@ function CudyRouterSection({ router }: { router: CudyRouter }) {
           ))}
         </div>
       ) : (
-        <p className="text-xs text-slate-500">{router.online ? "Aucune interface Wi-Fi détectée" : "Routeur injoignable"}</p>
+        <p className="text-xs text-slate-500">
+          {router.online ? "Aucune interface Wi-Fi détectée" : "Routeur injoignable"}
+        </p>
       )}
     </div>
   );

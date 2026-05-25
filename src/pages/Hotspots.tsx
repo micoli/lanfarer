@@ -1,10 +1,14 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { RefreshCw, Router, Wifi, WifiOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useQueryClient } from "@tanstack/react-query";
-import { useCudyClients, type CudyClient, type CudyRouter } from "../hooks/useCudy";
-import { useBboxWirelessHosts, type BboxStation, type BboxWirelessHost } from "../hooks/useBboxWireless";
-import { useMacHostnames } from "../hooks/useMacHostnames";
-import { useMacIps } from "../hooks/useMacIps";
+import {
+  type BboxStation,
+  type BboxWirelessHost,
+  useBboxWirelessHosts,
+} from "../../plugins/bbox/frontend/hooks/useBboxWireless";
+import { type CudyClient, type CudyRouter, useCudyClients } from "../../plugins/cudy/frontend/hooks/useCudy";
+import { useMacHostnames } from "../../plugins/bbox/frontend/hooks/useMacHostnames";
+import { useMacIps } from "../../plugins/bbox/frontend/hooks/useMacIps";
 import { useRouterForPage } from "../hooks/useUiConfig.ts";
 
 // ── Signal helpers ────────────────────────────────────────────────────────────
@@ -40,7 +44,9 @@ function HostTable({ headers, children }: { headers: string[]; children: React.R
         <thead>
           <tr className="text-xs text-slate-500 uppercase tracking-wide">
             {headers.map((h) => (
-              <th key={h} className="px-4 py-2 text-left font-medium">{h}</th>
+              <th key={h} className="px-4 py-2 text-left font-medium">
+                {h}
+              </th>
             ))}
           </tr>
         </thead>
@@ -76,25 +82,35 @@ function CardHeader({
         {subtitle && <span className="ml-2 text-xs text-slate-500">{subtitle}</span>}
       </div>
       {badge && (
-        <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-400">{badge}</span>
+        <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-400">
+          {badge}
+        </span>
       )}
-      <span className="text-xs text-slate-400 ml-1">
-        {t("cudy.clientCount", { count })}
-      </span>
+      <span className="text-xs text-slate-400 ml-1">{t("cudy.clientCount", { count })}</span>
     </div>
   );
 }
 
 // ── Cudy section ──────────────────────────────────────────────────────────────
 
-function CudyClientRow({ client, hostname, ip }: { client: CudyClient; hostname?: string; ip?: string }) {
+function CudyClientRow({
+  client,
+  hostname,
+  ip,
+}: {
+  client: CudyClient;
+  hostname?: string;
+  ip?: string;
+}) {
   const { t } = useTranslation();
   return (
     <tr className="border-t border-slate-800 hover:bg-slate-800/40 transition-colors">
       <td className="px-4 py-2.5">
-        {hostname
-          ? <span className="text-xs text-slate-100">{hostname}</span>
-          : <span className="text-xs text-slate-500 italic">{t("hosts.noName")}</span>}
+        {hostname ? (
+          <span className="text-xs text-slate-100">{hostname}</span>
+        ) : (
+          <span className="text-xs text-slate-500 italic">{t("hosts.noName")}</span>
+        )}
         <div className="font-mono text-xs text-slate-500 mt-0.5">{client.mac}</div>
       </td>
       <td className={`px-4 py-2.5 text-xs font-mono ${signalColor(client.signal_dbm)}`}>
@@ -110,7 +126,15 @@ function CudyClientRow({ client, hostname, ip }: { client: CudyClient; hostname?
   );
 }
 
-function HotspotCard({ router, hostnames, ips }: { router: CudyRouter; hostnames: (mac: string) => string | undefined; ips: (mac: string) => string | undefined }) {
+function HotspotCard({
+  router,
+  hostnames,
+  ips,
+}: {
+  router: CudyRouter;
+  hostnames: (mac: string) => string | undefined;
+  ips: (mac: string) => string | undefined;
+}) {
   const { t } = useTranslation();
   const allClients = router.interfaces.flatMap((i) => i.clients);
 
@@ -124,10 +148,22 @@ function HotspotCard({ router, hostnames, ips }: { router: CudyRouter; hostnames
         count={allClients.length}
       />
       {router.online && allClients.length > 0 && (
-        <HostTable headers={[t("cudy.colHost"), t("cudy.colSignal"), t("cudy.colBand"), t("cudy.colSsid"), "IP", t("cudy.colTx"), t("cudy.colRx")]}>
+        <HostTable
+          headers={[
+            t("cudy.colHost"),
+            t("cudy.colSignal"),
+            t("cudy.colBand"),
+            t("cudy.colSsid"),
+            "IP",
+            t("cudy.colTx"),
+            t("cudy.colRx"),
+          ]}
+        >
           {allClients
             .sort((a, b) => a.signal_dbm - b.signal_dbm)
-            .map((c) => <CudyClientRow key={c.mac} client={c} hostname={hostnames(c.mac)} ip={ips(c.mac)} />)}
+            .map((c) => (
+              <CudyClientRow key={c.mac} client={c} hostname={hostnames(c.mac)} ip={ips(c.mac)} />
+            ))}
         </HostTable>
       )}
       {router.online && allClients.length === 0 && (
@@ -144,15 +180,27 @@ function formatRateMbps(rate: number | string | undefined): string {
   return n > 0 ? `${n} Mbps` : "—";
 }
 
-function BboxStationRow({ station, hostname, ip, ssid }: { station: BboxStation; hostname?: string; ip?: string; ssid?: string }) {
+function BboxStationRow({
+  station,
+  hostname,
+  ip,
+  ssid,
+}: {
+  station: BboxStation;
+  hostname?: string;
+  ip?: string;
+  ssid?: string;
+}) {
   const { t } = useTranslation();
   const dbm = Number(station.rssi) || 0;
   return (
     <tr className="border-t border-slate-800 hover:bg-slate-800/40 transition-colors">
       <td className="px-4 py-2.5">
-        {hostname
-          ? <span className="text-xs text-slate-100">{hostname}</span>
-          : <span className="text-xs text-slate-500 italic">{t("hosts.noName")}</span>}
+        {hostname ? (
+          <span className="text-xs text-slate-100">{hostname}</span>
+        ) : (
+          <span className="text-xs text-slate-500 italic">{t("hosts.noName")}</span>
+        )}
         <div className="font-mono text-xs text-slate-500 mt-0.5">{station.macaddress}</div>
       </td>
       <td className={`px-4 py-2.5 text-xs font-mono ${signalColor(dbm)}`}>
@@ -168,18 +216,42 @@ function BboxStationRow({ station, hostname, ip, ssid }: { station: BboxStation;
   );
 }
 
-function BboxWirelessCard({ entry, hostnames, ips }: { entry: BboxWirelessHost; hostnames: (mac: string) => string | undefined; ips: (mac: string) => string | undefined }) {
+function BboxWirelessCard({
+  entry,
+  hostnames,
+  ips,
+}: {
+  entry: BboxWirelessHost;
+  hostnames: (mac: string) => string | undefined;
+  ips: (mac: string) => string | undefined;
+}) {
   const { t } = useTranslation();
 
   return (
     <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
       <CardHeader online name={"Bbox"} count={entry.stations.length} />
-      <HostTable headers={[t("cudy.colHost"), t("cudy.colSignal"), t("cudy.colBand"), t("cudy.colSsid"), "IP", t("cudy.colTx"), t("cudy.colRx")]}>
+      <HostTable
+        headers={[
+          t("cudy.colHost"),
+          t("cudy.colSignal"),
+          t("cudy.colBand"),
+          t("cudy.colSsid"),
+          "IP",
+          t("cudy.colTx"),
+          t("cudy.colRx"),
+        ]}
+      >
         {entry.stations
           .slice()
           .sort((a, b) => (Number(a.rssi) || 0) - (Number(b.rssi) || 0))
           .map((s) => (
-            <BboxStationRow key={s.macaddress} station={s} hostname={hostnames(s.macaddress)} ip={ips(s.macaddress)} ssid={entry.ssid} />
+            <BboxStationRow
+              key={s.macaddress}
+              station={s}
+              hostname={hostnames(s.macaddress)}
+              ip={ips(s.macaddress)}
+              ssid={entry.ssid}
+            />
           ))}
       </HostTable>
     </div>

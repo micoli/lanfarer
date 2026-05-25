@@ -1,13 +1,13 @@
+import { useQueryClient } from "@tanstack/react-query";
+import { Map as MapIcon, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { CSS2DObject, CSS2DRenderer } from "three/addons/renderers/CSS2DRenderer.js";
-import { useQueryClient } from "@tanstack/react-query";
-import { Map as MapIcon, RefreshCw } from "lucide-react";
-import { useTranslation } from "react-i18next";
-import { useBboxWirelessHosts } from "../hooks/useBboxWireless";
-import { useCudyClients } from "../hooks/useCudy";
-import { useMacHostnames } from "../hooks/useMacHostnames";
+import { useBboxWirelessHosts } from "../../plugins/bbox/frontend/hooks/useBboxWireless";
+import { useCudyClients } from "../../plugins/cudy/frontend/hooks/useCudy";
+import { useMacHostnames } from "../../plugins/bbox/frontend/hooks/useMacHostnames";
 import { useRouterForPage } from "../hooks/useUiConfig.ts";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -37,10 +37,11 @@ function arcXZ(
   r: number,
   count: number,
   centerAngle: number,
-  spread: number,
+  spread: number
 ): { x: number; z: number }[] {
   if (count === 0) return [];
-  if (count === 1) return [{ x: cx + r * Math.cos(centerAngle), z: cz + r * Math.sin(centerAngle) }];
+  if (count === 1)
+    return [{ x: cx + r * Math.cos(centerAngle), z: cz + r * Math.sin(centerAngle) }];
   return Array.from({ length: count }, (_, i) => {
     const a = centerAngle - spread / 2 + (spread * i) / (count - 1);
     return { x: cx + r * Math.cos(a), z: cz + r * Math.sin(a) };
@@ -109,11 +110,11 @@ export default function MapPage() {
             tooltip: [hostnames(c.mac) ?? c.mac, `${c.signal_dbm} dBm`, c.band]
               .filter(Boolean)
               .join(" · "),
-          })),
+          }))
         ),
       })),
     ],
-    [bboxWireless, cudyData, hostnames],
+    [bboxWireless, cudyData, hostnames]
   );
 
   useEffect(() => {
@@ -226,7 +227,11 @@ export default function MapPage() {
 
     // pulsing halo ring
     const haloGeo = new THREE.TorusGeometry(0.75, 0.03, 8, 80);
-    const haloMat = new THREE.MeshBasicMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.5 });
+    const haloMat = new THREE.MeshBasicMaterial({
+      color: 0x3b82f6,
+      transparent: true,
+      opacity: 0.5,
+    });
     const halo = new THREE.Mesh(haloGeo, haloMat);
     halo.rotation.x = Math.PI / 2;
     bboxMesh.add(halo);
@@ -358,7 +363,8 @@ export default function MapPage() {
       clientEdgeMat.dispose();
       renderer.dispose();
       if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement);
-      if (container.contains(labelRenderer.domElement)) container.removeChild(labelRenderer.domElement);
+      if (container.contains(labelRenderer.domElement))
+        container.removeChild(labelRenderer.domElement);
     };
   }, [hotspots]);
 

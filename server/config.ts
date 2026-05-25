@@ -91,7 +91,7 @@ export const isHttps          = targetUrl.protocol === "https:";
 export const BBOX_OVERRIDE_IP = bboxFromConfig.ip ?? null;
 export const BBOX_CONNECT_HOST = BBOX_OVERRIDE_IP ?? targetUrl.hostname;
 
-interface UiMenuItemConfig { id: string; router?: string }
+interface UiMenuItemConfig { id: string; router?: string; children?: UiMenuItemConfig[] }
 interface UiWidgetConfig   { type: string; id: string }
 export interface UiConfig {
   menu: UiMenuItemConfig[] | null;

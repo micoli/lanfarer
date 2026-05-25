@@ -1,15 +1,15 @@
 import http from "node:http";
-import { BBOX_HOST, BBOX_CONNECT_HOST, BBOX_PASSWORD, targetUrl, isHttps, loadBboxRouterByName, type BboxRouterSpec } from "./config.ts";
-import { type Captured, makeRequestAsync } from "./http-client.ts";
-import { ensureSession, getSession, clearSession, type Session } from "./session.ts";
+import { BBOX_HOST, BBOX_CONNECT_HOST, BBOX_PASSWORD, targetUrl, isHttps, loadBboxRouterByName, type BboxRouterSpec } from "../../../server/config.ts";
+import { type Captured, makeRequestAsync } from "../../../server/http-client.ts";
+import { ensureSession, getSession, clearSession, type Session } from "../../../server/session.ts";
 
 function defaultSpec(): BboxRouterSpec {
   return { name: "default", password: BBOX_PASSWORD, host: BBOX_HOST, connectHost: BBOX_CONNECT_HOST, targetUrl, isHttps };
 }
 
 function parseRouterPath(url: string): { routerId: string; rawPath: string } | null {
-  // URL format: /bbox-api/{routerId}/api/v1/...
-  const afterPrefix = url.slice("/bbox-api/".length);
+  // URL format: /devices/api-proxy/bbox-proxy/bbox/{routerId}/api/v1/...
+  const afterPrefix = url.slice("/devices/api-proxy/bbox-proxy/bbox/".length);
   const slashIdx = afterPrefix.indexOf("/");
   const routerId = slashIdx === -1 ? afterPrefix.split("?")[0] : afterPrefix.slice(0, slashIdx);
   if (!routerId) return null;
@@ -34,7 +34,7 @@ export async function bboxApiProxy(
   const parsed = parseRouterPath(url);
   if (!parsed) {
     res.writeHead(400, { "content-type": "application/json" });
-    res.end(JSON.stringify({ error: "Missing routerId in bbox-api path" }));
+    res.end(JSON.stringify({ error: "Missing routerId in devices/api-proxy/bbox-proxy/bbox path" }));
     return;
   }
   const { routerId, rawPath } = parsed;

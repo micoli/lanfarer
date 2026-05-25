@@ -1,5 +1,5 @@
 import type http from "node:http";
-import { fetchAllCudyRouters, loadCudyConfig } from "../cudy.ts";
+import { fetchCudyRouter, loadCudyConfig } from "./fetcher.ts";
 
 export async function handleCudy(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
   const url = req.url ?? "/";
@@ -12,11 +12,19 @@ export async function handleCudy(req: http.IncomingMessage, res: http.ServerResp
     return;
   }
 
-  if (url === "/__cudy/clients" && req.method === "GET") {
+  if (url.startsWith("/devices/api-proxy/cudy-proxy/") && req.method === "GET") {
+    const afterPrefix = url.slice("/devices/api-proxy/cudy-proxy/".length);
+    const routerId = afterPrefix.split("/")[0];
+    const cfg = loadCudyConfig().find((r) => r.name === routerId);
+    if (!cfg) {
+      res.writeHead(404, { "content-type": "application/json" });
+      res.end(JSON.stringify({ error: `Router '${routerId}' not found` }));
+      return;
+    }
     try {
-      const routers = await fetchAllCudyRouters();
+      const result = await fetchCudyRouter(cfg);
       res.writeHead(200, { "content-type": "application/json" });
-      res.end(JSON.stringify({ routers }));
+      res.end(JSON.stringify(result));
     } catch (err) {
       res.writeHead(500, { "content-type": "application/json" });
       res.end(JSON.stringify({ error: (err as Error).message }));

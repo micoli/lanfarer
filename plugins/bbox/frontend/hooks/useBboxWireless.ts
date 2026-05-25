@@ -30,7 +30,12 @@ interface WirelessSsid {
 }
 
 interface WirelessData {
-  ssid?: { "24"?: WirelessSsid; "5"?: WirelessSsid; guest?: WirelessSsid; compatibility?: WirelessSsid };
+  ssid?: {
+    "24"?: WirelessSsid;
+    "5"?: WirelessSsid;
+    guest?: WirelessSsid;
+    compatibility?: WirelessSsid;
+  };
 }
 
 function parseWirelessData(raw: unknown): WirelessData | null {
@@ -42,7 +47,7 @@ const BAND_KEYS: ["24", "5"] = ["24", "5"];
 function mergeGroup(
   list: BboxWirelessHost[],
   ssidKey: "24" | "5" | "guest" | "compatibility" | null,
-  wireless: WirelessData,
+  wireless: WirelessData
 ): BboxWirelessHost | null {
   if (list.length === 0) return null;
 
@@ -63,7 +68,9 @@ export function useBboxWirelessHosts(routerId: string | null): BboxWirelessHost[
   return useMemo(() => {
     if (!Array.isArray(hostsData) || !hostsData[0]?.wirelesshosts) return [];
     const wh = hostsData[0].wirelesshosts as BboxWirelessHost[];
-    const entries = wh.filter((entry) => Array.isArray(entry.stations) && entry.stations.length > 0);
+    const entries = wh.filter(
+      (entry) => Array.isArray(entry.stations) && entry.stations.length > 0
+    );
 
     const wireless = parseWirelessData(wirelessData);
     if (!wireless) return entries;

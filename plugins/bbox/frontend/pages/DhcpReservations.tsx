@@ -9,11 +9,11 @@ import {
   useIpCheck,
   useUpdateDhcpClient,
 } from "../hooks/useBbox";
-import type { components } from "../lib/api/schema.d.ts";
+import type { components } from "../../../../src/lib/api/schema.d.ts";
 
 type DhcpClient = components["schemas"]["DhcpClient"];
 
-import { exportCsv } from "../lib/exportCsv";
+import { exportCsv } from "../../../../src/lib/exportCsv";
 
 // The BBox API may return clients in several shapes — normalise them all.
 function normaliseClients(raw: unknown): DhcpClient[] | null {

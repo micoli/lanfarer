@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import { parse as parseYaml } from "yaml";
-import { CONFIG_FILE } from "./config.ts";
+import { CONFIG_FILE } from "../../../server/config.ts";
 const TIMEOUT_MS = 5000;
 
 // ── Config ────────────────────────────────────────────────────────────────────

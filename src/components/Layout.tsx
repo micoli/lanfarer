@@ -1,6 +1,21 @@
-import { Home, LogOut, Map, Network, Radio, Router, ScanLine, Settings2, Wifi, type LucideIcon } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Home,
+  LogOut,
+  type LucideIcon,
+  Map,
+  Network,
+  Radio,
+  Router,
+  ScanLine,
+  Settings2,
+  Wifi,
+} from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink, Outlet } from "react-router-dom";
+import type { MenuItemConfig } from "../hooks/useUiConfig.ts";
 import { useUiConfig } from "../hooks/useUiConfig.ts";
 import { ErrorBoundary } from "./ErrorBoundary";
 
@@ -33,18 +48,95 @@ function LangSwitcher() {
 }
 
 type NavItem = { id: string; to: string; icon: LucideIcon; label: string; end: boolean };
+type NavGroup = { id: string; label: string; children: NavItem[] };
+type NavEntry = NavItem | NavGroup;
+
+function isNavGroup(e: NavEntry): e is NavGroup {
+  return "children" in e;
+}
 
 function buildAllNav(t: (key: string) => string): NavItem[] {
   return [
-    { id: "home",              to: "/",          icon: Home,      label: t("nav.home"),             end: true  },
-    { id: "hosts",             to: "/hosts",      icon: Wifi,      label: t("nav.hosts"),            end: false },
-    { id: "scan",              to: "/scan",       icon: ScanLine,  label: t("nav.scan"),             end: false },
-    { id: "hotspots",          to: "/hotspots",   icon: Router,    label: t("nav.hotspots"),         end: false },
-    { id: "map",               to: "/map",        icon: Map,       label: t("nav.map"),              end: false },
-    { id: "wifi",              to: "/wifi",       icon: Radio,     label: t("nav.wifi"),             end: false },
-    { id: "dhcp-options",      to: "",            icon: Settings2, label: t("nav.dhcpOptions"),      end: false },
-    { id: "dhcp-reservations", to: "",            icon: Network,   label: t("nav.dhcpReservations"), end: false },
+    { id: "home", to: "/", icon: Home, label: t("nav.home"), end: true },
+    { id: "hosts", to: "/hosts", icon: Wifi, label: t("nav.hosts"), end: false },
+    { id: "scan", to: "/scan", icon: ScanLine, label: t("nav.scan"), end: false },
+    { id: "hotspots", to: "/hotspots", icon: Router, label: t("nav.hotspots"), end: false },
+    { id: "map", to: "/map", icon: Map, label: t("nav.map"), end: false },
+    { id: "wifi", to: "/wifi", icon: Radio, label: t("nav.wifi"), end: false },
+    { id: "dhcp-options", to: "", icon: Settings2, label: t("nav.dhcpOptions"), end: false },
+    {
+      id: "dhcp-reservations",
+      to: "",
+      icon: Network,
+      label: t("nav.dhcpReservations"),
+      end: false,
+    },
   ];
+}
+
+function resolveMenuItem(
+  item: MenuItemConfig,
+  allNav: NavItem[],
+  t: (key: string) => string,
+): NavEntry | null {
+  if (item.children?.length) {
+    const children = item.children
+      .map((c) => resolveMenuItem(c, allNav, t))
+      .filter((e): e is NavItem => e !== null && !isNavGroup(e));
+    if (!children.length) return null;
+    const label = t(`nav.${item.id}`);
+    return { id: item.id, label, children };
+  }
+  const entry = allNav.find((n) => n.id === item.id);
+  if (!entry) return null;
+  if (item.id === "dhcp-options" || item.id === "dhcp-reservations") {
+    if (!item.router) return null;
+    const suffix = item.id === "dhcp-options" ? "options" : "reservations";
+    return { ...entry, to: `/dhcp/${item.router}/${suffix}` };
+  }
+  return entry;
+}
+
+function NavItemLink({ item }: { item: NavItem }) {
+  return (
+    <NavLink
+      to={item.to}
+      end={item.end}
+      className={({ isActive }) =>
+        `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
+          isActive
+            ? "bg-blue-600/15 text-blue-400 font-medium"
+            : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+        }`
+      }
+    >
+      <item.icon size={16} />
+      {item.label}
+    </NavLink>
+  );
+}
+
+function NavGroupSection({ group }: { group: NavGroup }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center justify-between w-full px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-300 transition-colors"
+      >
+        {group.label}
+        {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+      </button>
+      {open && (
+        <div className="pl-2 flex flex-col gap-0.5">
+          {group.children.map((child) => (
+            <NavItemLink key={child.to} item={child} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function Layout({ auth }: { auth: AuthProps }) {
@@ -53,18 +145,14 @@ export default function Layout({ auth }: { auth: AuthProps }) {
 
   const allNav = buildAllNav(t);
 
-  const NAV: NavItem[] = uiConfig.menu === null
-    ? allNav.filter((n) => n.id !== "dhcp-options" && n.id !== "dhcp-reservations")
-    : uiConfig.menu.flatMap((item) => {
-        const entry = allNav.find((n) => n.id === item.id);
-        if (!entry) return [];
-        if (item.id === "dhcp-options" || item.id === "dhcp-reservations") {
-          if (!item.router) return [];
-          const suffix = item.id === "dhcp-options" ? "options" : "reservations";
-          return [{ ...entry, to: `/dhcp/${item.router}/${suffix}` }];
-        }
-        return [entry];
-      });
+  const NAV: NavEntry[] =
+    uiConfig.menu === null
+      ? allNav.filter((n) => n.id !== "dhcp-options" && n.id !== "dhcp-reservations")
+      : uiConfig.menu
+          .map((item) => resolveMenuItem(item, allNav, t))
+          .filter((e): e is NavEntry => e !== null);
+
+  const flatNav: NavItem[] = NAV.flatMap((e) => (isNavGroup(e) ? e.children : [e]));
 
   return (
     <div className="flex h-dvh bg-slate-900 text-slate-100">
@@ -78,30 +166,22 @@ export default function Layout({ auth }: { auth: AuthProps }) {
         </div>
 
         <nav className="flex flex-col gap-1 flex-1">
-          {NAV.map(({ to, icon: Icon, label, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
-                  isActive
-                    ? "bg-blue-600/15 text-blue-400 font-medium"
-                    : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-                }`
-              }
-            >
-              <Icon size={16} />
-              {label}
-            </NavLink>
-          ))}
+          {NAV.map((entry) =>
+            isNavGroup(entry) ? (
+              <NavGroupSection key={entry.id} group={entry} />
+            ) : (
+              <NavItemLink key={entry.to} item={entry} />
+            )
+          )}
         </nav>
 
         <LangSwitcher />
         {auth.authEnabled && auth.username && (
           <button
             type="button"
-            onClick={() => { void auth.logout(); }}
+            onClick={() => {
+              void auth.logout();
+            }}
             className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 transition-colors mt-2 px-1"
             title={t("auth.logout")}
           >
@@ -113,9 +193,9 @@ export default function Layout({ auth }: { auth: AuthProps }) {
 
       {/* Main */}
       <div className="flex flex-col flex-1 min-w-0">
-        {/* Top nav mobile */}
+        {/* Top nav mobile — groupes aplatis */}
         <nav className="md:hidden flex border-b border-slate-800 shrink-0">
-          {NAV.map(({ to, icon: Icon, label, end }) => (
+          {flatNav.map(({ to, icon: Icon, label, end }) => (
             <NavLink
               key={to}
               to={to}

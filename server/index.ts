@@ -2,20 +2,42 @@ import http from "node:http";
 import { PORT, isDev, BBOX_PASSWORD, BASE_PATH, BBOX_TARGET, BBOX_HOST, BBOX_OVERRIDE_IP, VERBOSE } from "./config.ts";
 import { runCodegen } from "./codegen.ts";
 import { ensureSession } from "./session.ts";
-import { bboxApiProxy } from "./bboxApiProxy.ts";
 import { handleHealth } from "./routes/health.ts";
 import { handleScan } from "./routes/scan.ts";
 import { handleCheckIp } from "./routes/check-ip.ts";
 import { handleAuthRoute, requireAuth } from "./routes/auth.ts";
-import { handleCudy } from "./routes/cudy.ts";
 import { handleUiConfig } from "./routes/ui-config.ts";
 import { serveStatic } from "./static.ts";
+import fs from "node:fs";
+import path from "node:path";
+import type { RouterPlugin } from "./plugin.ts";
+
+async function loadPlugins(): Promise<RouterPlugin[]> {
+  const pluginsDir = path.resolve("plugins");
+  if (!fs.existsSync(pluginsDir)) return [];
+  const plugins: RouterPlugin[] = [];
+  for (const name of fs.readdirSync(pluginsDir).sort()) {
+    const entry = path.join(pluginsDir, name, "server", "index.ts");
+    if (!fs.existsSync(entry)) continue;
+    try {
+      const mod = (await import(entry)) as { plugin?: RouterPlugin };
+      if (mod.plugin) {
+        plugins.push(mod.plugin);
+        console.log(`[plugins] loaded: ${name}`);
+      }
+    } catch (err) {
+      console.warn(`[plugins] failed to load ${name}:`, err);
+    }
+  }
+  return plugins;
+}
 
 async function main() {
   if (isDev) await runCodegen();
 
   console.log(`[config] BBOX_TARGET=${BBOX_TARGET} BBOX_HOST=${BBOX_HOST} BBOX_OVERRIDE_IP=${BBOX_OVERRIDE_IP ?? "(none)"} PASSWORD=${BBOX_PASSWORD ? "set" : "MISSING (vérifiez config.yaml)"}`);
 
+  const routerPlugins = await loadPlugins();
 
   await ensureSession();
 
@@ -34,12 +56,6 @@ async function main() {
 
     if (await handleAuthRoute(req, res)) return;
 
-    if (url.startsWith("/bbox-api")) {
-      if (!requireAuth(req, res)) return;
-      await bboxApiProxy(req, res);
-      return;
-    }
-
     if (url === "/__health") {
       handleHealth(req, res);
       return;
@@ -57,10 +73,12 @@ async function main() {
       return;
     }
 
-    if (url.startsWith("/__cudy")) {
-      if (!requireAuth(req, res)) return;
-      await handleCudy(req, res);
-      return;
+    for (const plugin of routerPlugins) {
+      if (plugin.matches(url)) {
+        if (!requireAuth(req, res)) return;
+        await plugin.handle(req, res);
+        return;
+      }
     }
 
     if (url === "/__config/ui") {

@@ -16,8 +16,8 @@ rtk proxy <cmd>     # Run a command bypassing RTK filtering (debug)
 ## Commands
 
 ```bash
-npm run dev        # Start the Node.js server (Vite HMR + Bbox proxy)
-npm run serve      # Production mode (serves dist/ + Bbox proxy)
+npm run dev        # Start the Node.js server (Vite HMR + router proxies)
+npm run serve      # Production mode (serves dist/ + router proxies)
 npm run build      # TypeScript check + Vite build
 npm run check      # Biome lint + format (write fixes)
 npm run lint       # Biome lint only (write fixes)
@@ -42,26 +42,46 @@ Router credentials are configured in `config.yaml` (not committed). Optional env
 
 ## Architecture
 
-### Server (`server.ts`)
+### Server (`server/index.ts`)
 
 A standalone Node.js server that replaces both the Vite dev server and nginx in production:
-- Maintains a Bbox session (BBOX_ID + btoken) in memory using the password from `config.yaml`
-- Auto-logs in on startup, re-authenticates transparently on 401/403
-- Proxies `/bbox-api/*` to the Bbox router with cookies injected server-side
-- Appends `?btoken=...` automatically on POST/PUT/DELETE (CSRF requirement)
+- Scans `plugins/*/server/index.ts` at startup and loads them dynamically (auto-discovery)
+- Proxies authenticated requests to router plugins
+- Appends `?btoken=...` automatically on POST/PUT/DELETE (Bbox CSRF requirement)
 - In dev mode: integrates Vite via its JS API (`createServer` with `middlewareMode: true`) for HMR
 - In production: serves `dist/` as static files with SPA fallback
 - Health endpoint: `GET /__health` → `{ ok, hasSession, target }`
 
-### Bbox API Layer (`src/lib/bbox/`)
+### Plugin system (`plugins/`)
 
-Two-layer design:
-- **`client.ts`** — plain fetch wrappers (`bboxFetch`, `bboxPost`, `bboxPut`, `bboxDelete`). No token management — the server handles auth transparently.
-- **`api.ts`** — `bboxApi` object with typed methods. All Bbox endpoints go here.
+Each plugin lives in `plugins/<name>/` with two sub-trees:
 
-### Data Fetching (`src/hooks/useBbox.ts`)
+```
+plugins/
+  <name>/
+    server/
+      index.ts       # must export: plugin: RouterPlugin
+    frontend/
+      hostListProvider.ts   # optional — export: hostListProvider: HostListProvider
+```
 
-All server state goes through TanStack Query hooks. No components call `bboxApi` directly.
+**Server contract** (`server/plugin.ts`):
+```ts
+interface RouterPlugin {
+  readonly type: string;
+  matches(url: string): boolean;
+  handle(req, res): Promise<void>;
+}
+```
+
+**Frontend auto-discovery**: `plugins/hostListProviders.ts` uses `import.meta.glob` to collect all `hostListProvider` exports at build time — no manual registration needed.
+
+Current plugins: `bbox` (Bbox router proxy + DHCP/Wi-Fi API), `cudy` (Cudy AP LuCI clients).
+
+### Bbox API layer (`plugins/bbox/frontend/`)
+
+- **`api/bbox.ts`** — `bboxApi` object with typed methods. All Bbox endpoints go here.
+- **`hooks/useBbox.ts`** — TanStack Query hooks. No components call `bboxApi` directly.
 
 Query key conventions:
 - `['dhcp']` — DHCP config
@@ -75,6 +95,25 @@ Query key conventions:
 ### Routing (`src/App.tsx`)
 
 Uses **`HashRouter`** so the app works when served as static files without server-side routing. All routes are nested under `Layout` directly (no auth guard — authentication is server-side).
+
+### UI configuration (`config.yaml` → `ui:`)
+
+The `ui.menu` key controls the sidebar. Items can be nested with `children` to create collapsible groups:
+
+```yaml
+ui:
+  menu:
+    - id: home
+    - id: dhcp
+      children:
+        - id: dhcp-options
+          router: bbox-main
+        - id: dhcp-reservations
+          router: bbox-main
+```
+
+Valid leaf ids: `home`, `map`, `hosts`, `hotspots`, `scan`, `wifi`, `dhcp-options`, `dhcp-reservations`.
+Leaf items that require a router (dhcp-*, hosts, hotspots, wifi) must include `router: <name>`.
 
 ### Formatting
 

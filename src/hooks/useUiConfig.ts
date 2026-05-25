@@ -4,6 +4,7 @@ import { basePath } from "../lib/basePath.ts";
 export interface MenuItemConfig {
   id: string;
   router?: string;
+  children?: MenuItemConfig[];
 }
 
 export interface WidgetConfig {
@@ -34,16 +35,26 @@ export function useUiConfig(): UiConfig {
   return data ?? DEFAULT_CONFIG;
 }
 
+function findInMenu(items: MenuItemConfig[], pageId: string): MenuItemConfig | undefined {
+  for (const item of items) {
+    if (item.id === pageId) return item;
+    if (item.children) {
+      const found = findInMenu(item.children, pageId);
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
+
 export function useRouterForPage(pageId: string): string | null {
   const config = useUiConfig();
   if (!config.menu) return null;
-  const item = config.menu.find((m) => m.id === pageId);
-  return item?.router ?? null;
+  return findInMenu(config.menu, pageId)?.router ?? null;
 }
 
 export function useDhcpRouterId(): string | null {
   const config = useUiConfig();
   if (!config.menu) return null;
-  const dhcpItem = config.menu.find((m) => m.id === "dhcp-options" || m.id === "dhcp-reservations");
-  return dhcpItem?.router ?? null;
+  const item = findInMenu(config.menu, "dhcp-options") ?? findInMenu(config.menu, "dhcp-reservations");
+  return item?.router ?? null;
 }

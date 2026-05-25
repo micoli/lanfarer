@@ -13,17 +13,21 @@ A self-hosted web interface for managing a **Bouygues Bbox** router and **Cudy**
 - **DHCP options** — custom DHCP option management
 - **Network scan** — active subnet scanner (ping + TCP fallback, ARP, mDNS, port probing)
 - **Multi-router** — supports multiple Cudy APs alongside the Bbox gateway
+- **Plugin system** — router backends are auto-discovered from `plugins/`
+- **Configurable menu** — sidebar items and groups defined in `config.yaml`
 
 ## Architecture
 
 ```
-Browser  ──►  Node.js server (server/)  ──►  Bbox router API
-                │                        ──►  Cudy AP APIs
+Browser  ──►  Node.js server (server/)  ──►  plugins/bbox/server/   ──►  Bbox router API
+                │                        ──►  plugins/cudy/server/   ──►  Cudy AP APIs
                 │  (Vite in dev mode)
-                └► React SPA (src/)
+                └► React SPA (src/ + plugins/*/frontend/)
 ```
 
-The Node.js server handles authentication against the Bbox router transparently: it maintains a session (BBOX_ID cookie + btoken) and injects credentials on every proxied request. The React frontend never touches credentials directly.
+The Node.js server auto-discovers plugins at startup by scanning `plugins/*/server/index.ts`. Each plugin exports a `RouterPlugin` that declares which URLs it handles. The React frontend auto-discovers frontend plugins (e.g. host list providers) via `import.meta.glob` at build time.
+
+Authentication against the Bbox router is handled transparently server-side: a session (BBOX_ID cookie + btoken) is maintained in memory and injected on every proxied request.
 
 ## Quick start
 
@@ -63,7 +67,7 @@ users:
     passwordHash: scrypt:...   # generate with: npx tsx server/add-user.ts admin yourpassword
 
 routers:
-  - name: bbox
+  - name: bbox-main
     type: bbox
     ip: 192.168.1.1            # optional: connect directly by IP instead of DNS
     password: your_bbox_password
@@ -74,7 +78,38 @@ routers:
     ip: 192.168.1.10
     password: your_cudy_password
     enabled: true
+
+ui:
+  menu:
+    - id: home
+    - id: map
+    - id: scan
+    - id: hosts
+      router: bbox-main
+    - id: hotspots
+      router: bbox-main
+    - id: wifi
+      router: bbox-main
+    - id: dhcp
+      children:
+        - id: dhcp-options
+          router: bbox-main
+        - id: dhcp-reservations
+          router: bbox-main
+  home:
+    widgets:
+      - type: bbox-downstream
+        id: bbox-main
+      - type: bbox-upstream
+        id: bbox-main
+      - type: bbox-uptime
+        id: bbox-main
 ```
+
+**Menu item ids**: `home`, `map`, `scan`, `hosts`, `hotspots`, `wifi`, `dhcp-options`, `dhcp-reservations`.
+Items that require a router (`hosts`, `hotspots`, `wifi`, `dhcp-*`) must include `router: <name>`.
+Group items (with `children`) are rendered as collapsible sections in the sidebar.
+If `ui.menu` is omitted, all pages are shown in a flat list.
 
 Generate a password hash for a GUI user:
 
@@ -94,6 +129,23 @@ Only optional tunables — no credentials:
 | `PORT` | `5176` | Server port |
 
 Copy `.env.local.example` to `.env.local` for local overrides (never committed).
+
+## Plugin system
+
+Router backends are plugins in `plugins/<name>/`:
+
+```
+plugins/
+  <name>/
+    server/
+      index.ts          # export: plugin: RouterPlugin  (required)
+    frontend/
+      hostListProvider.ts   # export: hostListProvider  (optional)
+```
+
+A plugin is loaded automatically if `plugins/<name>/server/index.ts` exists and exports `plugin`. No registration step needed — drop the directory and restart the server.
+
+Frontend capabilities (e.g. providing the device list) are similarly auto-discovered via `import.meta.glob` at build time.
 
 ## Home Assistant addon
 
@@ -132,7 +184,7 @@ make addon-build  # build the HA addon image locally
 ## Stack
 
 - **Frontend**: React 19, React Router, TanStack Query, Tailwind CSS, Three.js, i18next
-- **Backend**: Node.js (TypeScript, `--experimental-strip-types`), no framework
+- **Backend**: Node.js (TypeScript via tsx), no framework
 - **Tooling**: Vite, Biome, Docker
 
 ## Bbox API references

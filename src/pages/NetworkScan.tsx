@@ -10,14 +10,14 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useCreateDhcpClient, useDhcpClients, useDhcpConfig, useIpCheck } from "../hooks/useBbox";
+import { useCreateDhcpClient, useDhcpClients, useDhcpConfig, useIpCheck } from "../../plugins/bbox/frontend/hooks/useBbox";
 import { useDhcpRouterId } from "../hooks/useUiConfig.ts";
 import type { components } from "../lib/api/schema.d.ts";
 
 type DhcpClient = components["schemas"]["DhcpClient"];
 
-import { exportCsv } from "../lib/exportCsv";
 import { basePath } from "../lib/basePath.ts";
+import { exportCsv } from "../lib/exportCsv";
 
 interface PingStats {
   min: number;
@@ -90,7 +90,15 @@ function PortsCell({ ports }: { ports?: number[] }) {
   );
 }
 
-function ScanHostRow({ host, isReserved, dhcpRouterId }: { host: ScanHost; isReserved: boolean; dhcpRouterId: string | null }) {
+function ScanHostRow({
+  host,
+  isReserved,
+  dhcpRouterId,
+}: {
+  host: ScanHost;
+  isReserved: boolean;
+  dhcpRouterId: string | null;
+}) {
   const { t } = useTranslation();
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState<Omit<DhcpClient, "id">>({
@@ -232,20 +240,21 @@ function ScanHostRow({ host, isReserved, dhcpRouterId }: { host: ScanHost; isRes
         )}
       </td>
       <td className="px-4 py-2.5">
-        {dhcpRouterId && (isReserved ? (
-          <span title={t("scan.reservationActive")} className="p-1 inline-flex text-blue-400">
-            <Bookmark size={14} />
-          </span>
-        ) : (
-          <button
-            type="button"
-            title={t("scan.addReservation")}
-            onClick={openAdd}
-            className="p-1 rounded text-slate-500 hover:text-blue-400 transition-colors"
-          >
-            <BookmarkPlus size={14} />
-          </button>
-        ))}
+        {dhcpRouterId &&
+          (isReserved ? (
+            <span title={t("scan.reservationActive")} className="p-1 inline-flex text-blue-400">
+              <Bookmark size={14} />
+            </span>
+          ) : (
+            <button
+              type="button"
+              title={t("scan.addReservation")}
+              onClick={openAdd}
+              className="p-1 rounded text-slate-500 hover:text-blue-400 transition-colors"
+            >
+              <BookmarkPlus size={14} />
+            </button>
+          ))}
       </td>
     </tr>
   );

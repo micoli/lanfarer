@@ -1,11 +1,16 @@
-import { BboxApiError } from "./client.ts";
-import { basePath } from "../basePath.ts";
-import type { components } from "./schema.d.ts";
+import { basePath } from "../../../../src/lib/basePath.ts";
+import { BboxApiError } from "../../../../src/lib/api/client.ts";
+import type { components } from "../../../../src/lib/api/schema.d.ts";
 
 type DhcpClient = components["schemas"]["DhcpClient"];
 
-async function bboxFetch(routerId: string, method: string, path: string, body?: Record<string, unknown>): Promise<unknown> {
-  const url = `${basePath()}/bbox-api/${routerId}${path}`;
+async function bboxFetch(
+  routerId: string,
+  method: string,
+  path: string,
+  body?: Record<string, unknown>
+): Promise<unknown> {
+  const url = `${basePath()}/devices/api-proxy/bbox-proxy/bbox/${routerId}${path}`;
   const init: RequestInit = { method };
   if (body !== undefined) {
     init.headers = { "content-type": "application/json" };
@@ -14,8 +19,13 @@ async function bboxFetch(routerId: string, method: string, path: string, body?: 
   const res = await fetch(url, init);
   if (!res.ok) throw new BboxApiError(res.status, `Erreur API ${res.status}`);
   const data: unknown = await res.json();
-  const candidate = data as { exception?: { code: unknown } } | Array<{ exception?: { code: unknown } }> | undefined;
-  const code = Array.isArray(candidate) ? candidate[0]?.exception?.code : candidate?.exception?.code;
+  const candidate = data as
+    | { exception?: { code: unknown } }
+    | Array<{ exception?: { code: unknown } }>
+    | undefined;
+  const code = Array.isArray(candidate)
+    ? candidate[0]?.exception?.code
+    : candidate?.exception?.code;
   if (code === "401" || code === 401) throw new BboxApiError(401, "Session expirée");
   return data;
 }
@@ -38,7 +48,10 @@ export const bboxApi = {
     return (data as components["schemas"]["DhcpResponse"][])[0];
   },
 
-  updateDhcp(routerId: string, config: components["schemas"]["DhcpConfigUpdate"]): Promise<unknown> {
+  updateDhcp(
+    routerId: string,
+    config: components["schemas"]["DhcpConfigUpdate"]
+  ): Promise<unknown> {
     return bboxFetch(routerId, "PUT", "/api/v1/dhcp", config as Record<string, unknown>);
   },
 
@@ -55,7 +68,12 @@ export const bboxApi = {
   },
 
   updateDhcpOption(routerId: string, id: number, option: number, value: string): Promise<unknown> {
-    return bboxFetch(routerId, "PUT", `/api/v1/dhcp/options/${id}`, { enable: 1, name: option, format: "", value });
+    return bboxFetch(routerId, "PUT", `/api/v1/dhcp/options/${id}`, {
+      enable: 1,
+      name: option,
+      format: "",
+      value,
+    });
   },
 
   deleteDhcpOption(routerId: string, id: number): Promise<unknown> {
@@ -77,7 +95,11 @@ export const bboxApi = {
     });
   },
 
-  updateDhcpClient(routerId: string, id: number, client: Partial<Omit<DhcpClient, "id">>): Promise<unknown> {
+  updateDhcpClient(
+    routerId: string,
+    id: number,
+    client: Partial<Omit<DhcpClient, "id">>
+  ): Promise<unknown> {
     return bboxFetch(routerId, "PUT", `/api/v1/dhcp/clients/${id}`, {
       enable: client.enable ?? 1,
       device: client.macaddress ?? "",

@@ -5,7 +5,7 @@ info:
   description: |
     API exposée par le serveur Node.js fast5688b.
     Comprend les routes propres du serveur (health, scan réseau, check-ip)
-    et les routes proxy vers le routeur BBox (préfix /bbox-api/).
+    et les routes proxy vers le routeur BBox (préfix /devices/api-proxy/bbox-proxy/bbox/).
 
 servers:
   - url: http://localhost:5176
@@ -104,7 +104,7 @@ paths:
 
   # ── Routes proxy BBox ──────────────────────────────────────────────────────
 
-  /bbox-api/api/v1/device:
+  /devices/api-proxy/bbox-proxy/bbox/api/v1/device:
     get:
       operationId: getDevice
       summary: Informations sur le routeur (modèle, firmware, uptime…)
@@ -118,7 +118,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/AnyObject"
 
-  /bbox-api/api/v1/wan/ip/stats:
+  /devices/api-proxy/bbox-proxy/bbox/api/v1/wan/ip/stats:
     get:
       operationId: getWanStats
       summary: Statistiques de trafic WAN (débit, octets)
@@ -132,7 +132,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/AnyObject"
 
-  /bbox-api/api/v1/wireless:
+  /devices/api-proxy/bbox-proxy/bbox/api/v1/wireless:
     get:
       operationId: getWireless
       summary: Configuration Wi-Fi (SSID, canal, sécurité…)
@@ -146,7 +146,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/AnyObject"
 
-  /bbox-api/api/v1/hosts:
+  /devices/api-proxy/bbox-proxy/bbox/api/v1/hosts:
     get:
       operationId: getHosts
       summary: Appareils connectés au réseau local
@@ -160,7 +160,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/AnyObject"
 
-  /bbox-api/api/v1/dhcp:
+  /devices/api-proxy/bbox-proxy/bbox/api/v1/dhcp:
     get:
       operationId: getDhcp
       summary: Configuration du serveur DHCP
@@ -186,7 +186,7 @@ paths:
         "200":
           description: OK
 
-  /bbox-api/api/v1/dhcp/clients:
+  /devices/api-proxy/bbox-proxy/bbox/api/v1/dhcp/clients:
     get:
       operationId: getDhcpClients
       summary: Liste des réservations DHCP statiques
@@ -212,7 +212,7 @@ paths:
         "200":
           description: Créé
 
-  /bbox-api/api/v1/dhcp/clients/{id}:
+  /devices/api-proxy/bbox-proxy/bbox/api/v1/dhcp/clients/{id}:
     put:
       operationId: updateDhcpClient
       summary: Met à jour une réservation DHCP
@@ -244,7 +244,7 @@ paths:
         "200":
           description: Supprimé
 
-  /bbox-api/api/v1/dhcp/options:
+  /devices/api-proxy/bbox-proxy/bbox/api/v1/dhcp/options:
     get:
       operationId: getDhcpOptions
       summary: Liste des options DHCP configurées et disponibles
@@ -258,7 +258,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/DhcpOptionsResponse"
 
-  /bbox-api/api/v1/dhcp/option:
+  /devices/api-proxy/bbox-proxy/bbox/api/v1/dhcp/option:
     post:
       operationId: createDhcpOption
       summary: Crée une option DHCP
@@ -272,7 +272,7 @@ paths:
         "200":
           description: Créé
 
-  /bbox-api/api/v1/dhcp/options/{id}:
+  /devices/api-proxy/bbox-proxy/bbox/api/v1/dhcp/options/{id}:
     put:
       operationId: updateDhcpOption
       summary: Met à jour une option DHCP

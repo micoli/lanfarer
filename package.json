@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node --import=tsx --watch-path=./server --watch-path=./openapi.yaml server/index.ts",
+    "dev": "node --import=tsx --watch-path=./server --watch-path=./plugins --watch-path=./openapi.yaml server/index.ts",
     "add-user": "tsx server/add-user.ts",
     "serve": "NODE_ENV=production tsx server/index.ts",
     "build": "tsc -b && vite build",

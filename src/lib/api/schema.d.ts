@@ -63,7 +63,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/bbox-api/api/v1/device": {
+    "/devices/api-proxy/bbox-proxy/bbox/api/v1/device": {
         parameters: {
             query?: never;
             header?: never;
@@ -80,7 +80,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/bbox-api/api/v1/wan/ip/stats": {
+    "/devices/api-proxy/bbox-proxy/bbox/api/v1/wan/ip/stats": {
         parameters: {
             query?: never;
             header?: never;
@@ -97,7 +97,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/bbox-api/api/v1/wireless": {
+    "/devices/api-proxy/bbox-proxy/bbox/api/v1/wireless": {
         parameters: {
             query?: never;
             header?: never;
@@ -114,7 +114,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/bbox-api/api/v1/hosts": {
+    "/devices/api-proxy/bbox-proxy/bbox/api/v1/hosts": {
         parameters: {
             query?: never;
             header?: never;
@@ -131,7 +131,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/bbox-api/api/v1/dhcp": {
+    "/devices/api-proxy/bbox-proxy/bbox/api/v1/dhcp": {
         parameters: {
             query?: never;
             header?: never;
@@ -149,7 +149,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/bbox-api/api/v1/dhcp/clients": {
+    "/devices/api-proxy/bbox-proxy/bbox/api/v1/dhcp/clients": {
         parameters: {
             query?: never;
             header?: never;
@@ -167,7 +167,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/bbox-api/api/v1/dhcp/clients/{id}": {
+    "/devices/api-proxy/bbox-proxy/bbox/api/v1/dhcp/clients/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -185,7 +185,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/bbox-api/api/v1/dhcp/options": {
+    "/devices/api-proxy/bbox-proxy/bbox/api/v1/dhcp/options": {
         parameters: {
             query?: never;
             header?: never;
@@ -202,7 +202,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/bbox-api/api/v1/dhcp/option": {
+    "/devices/api-proxy/bbox-proxy/bbox/api/v1/dhcp/option": {
         parameters: {
             query?: never;
             header?: never;
@@ -219,7 +219,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/bbox-api/api/v1/dhcp/options/{id}": {
+    "/devices/api-proxy/bbox-proxy/bbox/api/v1/dhcp/options/{id}": {
         parameters: {
             query?: never;
             header?: never;

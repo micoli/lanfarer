@@ -1,16 +1,16 @@
 import { HashRouter, Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
 import LoginPage from "./components/LoginPage";
-import CudyClients from "./pages/Hotspots.tsx";
-import DhcpOptions from "./pages/DhcpOptions";
-import DhcpReservations from "./pages/DhcpReservations";
+import { useAuth } from "./hooks/useAuth";
+import DhcpOptions from "../plugins/bbox/frontend/pages/DhcpOptions";
+import DhcpReservations from "../plugins/bbox/frontend/pages/DhcpReservations";
 import Home from "./pages/Home";
 import Hosts from "./pages/Hosts";
+import CudyClients from "./pages/Hotspots.tsx";
 import MapPage from "./pages/Map";
 import NetworkScan from "./pages/NetworkScan";
 import NotFound from "./pages/NotFound";
-import WifiPage from "./pages/Wifi";
-import { useAuth } from "./hooks/useAuth";
+import WifiPage from "../plugins/bbox/frontend/pages/Wifi";
 
 export default function App() {
   const auth = useAuth();

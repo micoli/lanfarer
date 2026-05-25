@@ -38,7 +38,9 @@ export default function LoginPage({ onLogin }: Props) {
         </div>
 
         <form
-          onSubmit={(e) => { void handleSubmit(e); }}
+          onSubmit={(e) => {
+            void handleSubmit(e);
+          }}
           className="bg-slate-800 rounded-xl p-6 border border-slate-700 flex flex-col gap-4"
         >
           <h1 className="text-slate-100 font-medium text-center">{t("auth.title")}</h1>

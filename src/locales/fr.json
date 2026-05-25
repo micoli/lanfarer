@@ -7,6 +7,7 @@
     "cudy": "Hotspots",
     "hotspots": "Hotspots",
     "map": "Carte",
+    "dhcp": "DHCP",
     "dhcpOptions": "Options DHCP",
     "dhcpReservations": "Réservations DHCP"
   },

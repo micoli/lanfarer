@@ -13,7 +13,11 @@ interface UseAuth extends AuthState {
 }
 
 export function useAuth(): UseAuth {
-  const [state, setState] = useState<AuthState>({ loading: true, authEnabled: false, username: null });
+  const [state, setState] = useState<AuthState>({
+    loading: true,
+    authEnabled: false,
+    username: null,
+  });
 
   const check = useCallback(async () => {
     try {
@@ -29,7 +33,9 @@ export function useAuth(): UseAuth {
     }
   }, []);
 
-  useEffect(() => { void check(); }, [check]);
+  useEffect(() => {
+    void check();
+  }, [check]);
 
   const login = useCallback(async (username: string, password: string): Promise<string | null> => {
     try {
