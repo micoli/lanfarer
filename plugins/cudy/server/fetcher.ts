@@ -86,8 +86,10 @@ async function luciLogin(ip: string, password: string): Promise<string | null> {
 }
 
 async function luciGetJson(ip: string, token: string, path: string): Promise<unknown> {
+  const url = `http://${ip}/cgi-bin/luci${path}`;
+  console.log(`curl -s -H 'Cookie: sysauth=${token}' '${url}'`);
   try {
-    const res = await fetchWithTimeout(`http://${ip}/cgi-bin/luci${path}`, {
+    const res = await fetchWithTimeout(url, {
       headers: { cookie: `sysauth=${token}` },
     });
     return await res.json();
@@ -187,6 +189,58 @@ function parseBandwidth(raw: unknown): import("../../contracts.ts").CudyBandwidt
     });
   }
   return points;
+}
+
+interface DevlistEntry {
+  iface: string;
+  ip: string;
+  mac: string;
+  tx_kbps: number;
+  rx_kbps: number;
+  signal: string | null;
+  duration: string;
+}
+
+function parseDevlistHtml(html: string): DevlistEntry[] {
+  const rows = html.match(/<tr id="cbi-table-\d+"[\s\S]*?(?=<tr id="cbi-table-|\s*<\/tbody>)/g) ?? [];
+  return rows.map((row) => {
+    const field = (name: string) => {
+      const m = row.match(new RegExp(`id="cbi-table-\\d+-${name}">[\\s\\S]*?<p class="form-control-static hidden-xs">(.*?)<\\/p>`, "s"));
+      return m ? m[1].trim() : "";
+    };
+
+    const iface = field("iface").replace(/<[^>]+>/g, "").trim();
+
+    const ipmac = field("ipmac");
+    const ipmacParts = ipmac.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "").trim().split("\n");
+    const ip = ipmacParts[0]?.trim() ?? "";
+    const mac = ipmacParts[1]?.trim().toUpperCase() ?? "";
+
+    const speed = field("speed").replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "");
+    const txMatch = speed.match(/([\d.]+)\s*Kbps/);
+    const rxMatch = speed.match(/[\s\S]*([\d.]+)\s*Kbps/);
+    const tx_kbps = txMatch ? parseFloat(txMatch[1]) : 0;
+    const rx_kbps = rxMatch ? parseFloat(rxMatch[1]) : 0;
+
+    const rawSignal = field("signal").replace(/<[^>]+>/g, "").trim();
+    const signal = rawSignal === "---" || rawSignal === "" ? null : rawSignal;
+
+    const duration = field("online").replace(/<[^>]+>/g, "").trim();
+
+    return { iface, ip, mac, tx_kbps, rx_kbps, signal, duration };
+  }).filter((e) => e.ip !== "");
+}
+
+export async function fetchCudyDevlist(cfg: CudyRouterConfig): Promise<DevlistEntry[] | null> {
+  const token = await luciLogin(cfg.ip, cfg.password);
+  if (!token) return null;
+  const url = `http://${cfg.ip}/cgi-bin/luci/admin/network/devices/devlist`;
+  try {
+    const res = await fetchWithTimeout(url, { headers: { cookie: `sysauth=${token}` } });
+    return parseDevlistHtml(await res.text());
+  } catch {
+    return null;
+  }
 }
 
 export async function fetchCudyBandwidth(

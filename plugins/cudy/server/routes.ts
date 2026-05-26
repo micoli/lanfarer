@@ -1,6 +1,6 @@
 import type http from "node:http";
 import type { WirelessData } from "../../contracts.ts";
-import { fetchCudyBandwidth, fetchCudyRouter, loadCudyConfig } from "./fetcher.ts";
+import { fetchCudyBandwidth, fetchCudyDevlist, fetchCudyRouter, loadCudyConfig } from "./fetcher.ts";
 
 function sendJson(res: http.ServerResponse, statusCode: number, data: unknown): void {
   const body = JSON.stringify(data);
@@ -46,6 +46,12 @@ export async function handleCudy(req: http.IncomingMessage, res: http.ServerResp
       if (subpath === "bandwidth") {
         const data = await fetchCudyBandwidth(cfg);
         sendJson(res, 200, data);
+        return;
+      }
+
+      if (subpath === "devlist") {
+        const data = await fetchCudyDevlist(cfg);
+        sendJson(res, data === null ? 502 : 200, data ?? { error: "login failed or endpoint unavailable" });
         return;
       }
 
