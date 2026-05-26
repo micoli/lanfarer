@@ -18,11 +18,11 @@ import { useTranslation } from "react-i18next";
 import {
   useCreateDhcpClient,
   useDhcpClients,
-  useHosts,
   useIpCheck,
 } from "../../plugins/bbox/frontend/hooks/useBbox";
-import type { DhcpClient, Host } from "../../plugins/contracts.ts";
-import { useDhcpRouterId, useRouterForPage } from "../hooks/useUiConfig.ts";
+import type { DhcpClient, Host, HostConnexion } from "../../plugins/contracts.ts";
+import { useHosts } from "../hooks/useHosts.ts";
+import { useDhcpRouterId } from "../hooks/useUiConfig.ts";
 
 import { exportCsv } from "../lib/exportCsv";
 
@@ -40,6 +40,23 @@ function Badge({ active }: { active: boolean }) {
       <WifiOff size={11} /> {t("hosts.inactive")}
     </span>
   );
+}
+
+function ConnexionBadge({ connexion, ssid }: { connexion: HostConnexion | undefined; ssid?: string }) {
+  if (!connexion) return <span className="text-slate-600">—</span>;
+  if (connexion === "wifi 5G")
+    return (
+      <span title={ssid} className="flex items-center gap-1 text-xs text-violet-400 cursor-default">
+        <Wifi size={11} /> 5G{ssid && <span className="text-violet-300/70">{ssid}</span>}
+      </span>
+    );
+  if (connexion === "wifi 2.4G")
+    return (
+      <span title={ssid} className="flex items-center gap-1 text-xs text-blue-400 cursor-default">
+        <Wifi size={11} /> 2.4G{ssid && <span className="text-blue-300/70">{ssid}</span>}
+      </span>
+    );
+  return <span className="text-xs text-slate-500">Wired</span>;
 }
 
 function relativeTime(ts: number | undefined, justNow: string): string {
@@ -159,7 +176,7 @@ function HostRow({
               }}
             />
           </td>
-          <td className="px-4 py-2" colSpan={2}>
+          <td className="px-4 py-2" colSpan={3}>
             <div className="flex gap-1.5 items-center">
               <button
                 type="button"
@@ -195,7 +212,7 @@ function HostRow({
         {conflict && (
           <tr className="bg-amber-500/10 border-t border-amber-500/20">
             <td
-              colSpan={7}
+              colSpan={8}
               className="px-4 py-1.5 text-xs text-amber-400 flex items-center gap-1.5"
             >
               <AlertTriangle size={12} />
@@ -222,6 +239,9 @@ function HostRow({
       <td className="px-4 py-2.5 text-sm font-mono text-slate-300">{host.ip ?? "—"}</td>
       <td className="px-4 py-2.5 text-xs font-mono text-slate-400">{host.mac ?? "—"}</td>
       <td className="px-4 py-2.5 text-xs text-slate-500 uppercase">{host.type ?? "—"}</td>
+      <td className="px-4 py-2.5">
+        <ConnexionBadge connexion={host.connexion} ssid={host.ssid} />
+      </td>
       <td className="px-4 py-2.5 text-xs text-slate-500">
         {relativeTime(host.lastseen, t("hosts.justNow"))}
       </td>
@@ -249,8 +269,7 @@ function HostRow({
 export default function Hosts() {
   const { t, i18n } = useTranslation();
   const dhcpRouterId = useDhcpRouterId();
-  const hostsRouterId = useRouterForPage("hosts");
-  const { data: hostsData, isLoading, error, dataUpdatedAt } = useHosts(hostsRouterId);
+  const { data: hostsData, isLoading, error, dataUpdatedAt } = useHosts();
   const { data: clientsData } = useDhcpClients(dhcpRouterId);
   const qc = useQueryClient();
 
@@ -262,8 +281,17 @@ export default function Hosts() {
 
   const [filter, setFilter] = useState("");
   const [showActive, setShowActive] = useState<"all" | "active" | "inactive">("all");
+  const [connexionFilter, setConnexionFilter] = useState<Set<HostConnexion>>(new Set());
   const [sortKey, setSortKey] = useState<SortKey>("active");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  function toggleConnexion(v: HostConnexion) {
+    setConnexionFilter((prev) => {
+      const next = new Set(prev);
+      next.has(v) ? next.delete(v) : next.add(v);
+      return next;
+    });
+  }
 
   const hosts = hostsData?.hosts ?? null;
 
@@ -273,6 +301,9 @@ export default function Hosts() {
 
     if (showActive === "active") list = list.filter((h) => h.active);
     else if (showActive === "inactive") list = list.filter((h) => !h.active);
+
+    if (connexionFilter.size > 0)
+      list = list.filter((h) => h.connexion && connexionFilter.has(h.connexion));
 
     if (filter) {
       const q = filter.toLowerCase();
@@ -297,7 +328,7 @@ export default function Hosts() {
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [hosts, filter, showActive, sortKey, sortDir]);
+  }, [hosts, filter, showActive, connexionFilter, sortKey, sortDir]);
 
   function handleSort(col: SortKey) {
     if (col === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -370,6 +401,7 @@ export default function Hosts() {
                   h.ip ?? "",
                   h.mac ?? "",
                   h.type ?? "",
+                  h.connexion ?? "",
                   relativeTime(h.lastseen, t("hosts.justNow")),
                 ])
               )
@@ -418,6 +450,19 @@ export default function Hosts() {
             </button>
           ))}
         </div>
+        <div className="flex items-center gap-3 border border-slate-700 rounded-lg px-3 py-1.5 bg-slate-800">
+          {(["wired", "wifi 2.4G", "wifi 5G"] as HostConnexion[]).map((v) => (
+            <label key={v} className="flex items-center gap-1.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={connexionFilter.has(v)}
+                onChange={() => toggleConnexion(v)}
+                className="accent-blue-500"
+              />
+              <ConnexionBadge connexion={v} />
+            </label>
+          ))}
+        </div>
         {filtered && filtered.length !== hosts.length && (
           <span className="text-xs text-slate-500">
             {t("hosts.results", { count: filtered.length })}
@@ -452,6 +497,7 @@ export default function Hosts() {
               />
               <th className="px-4 py-3 font-medium">{t("hosts.colMac")}</th>
               <th className="px-4 py-3 font-medium">{t("hosts.colType")}</th>
+              <th className="px-4 py-3 font-medium">{t("hosts.colConnexion")}</th>
               <Th
                 label={t("hosts.colLastSeen")}
                 col="lastseen"
@@ -465,7 +511,7 @@ export default function Hosts() {
           <tbody>
             {filtered?.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-sm text-slate-500">
+                <td colSpan={8} className="px-4 py-8 text-center text-sm text-slate-500">
                   {t("hosts.noHosts")}
                 </td>
               </tr>

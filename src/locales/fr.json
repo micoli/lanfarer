@@ -81,13 +81,14 @@
     "colIp": "IP",
     "colMac": "MAC",
     "colType": "Type",
+    "colConnexion": "Connexion",
     "colLastSeen": "Vu il y a",
     "noHosts": "Aucun appareil trouvé",
     "reservationActive": "Réservation DHCP active",
     "addReservation": "Ajouter une réservation DHCP",
     "createReservation": "Créer la réservation",
     "unexpectedFormat": "Format inattendu",
-    "csvHeaders": ["État", "Hôte", "IP", "MAC", "Type", "Vu il y a"]
+    "csvHeaders": ["État", "Hôte", "IP", "MAC", "Type", "Connexion", "Vu il y a"]
   },
   "dhcpOptions": {
     "title": "Options DHCP",

@@ -36,6 +36,18 @@ function bboxRouterSpecs() {
 export const plugin: RouterPlugin = {
   type: "bbox",
 
+  async fetchHosts() {
+    const results = await Promise.all(bboxRouterSpecs().map(({ spec }) => fetchBboxHosts(spec)));
+    const seen = new Set<string>();
+    const hosts = results.flatMap((r) => r.hosts).filter((h) => {
+      const key = h.mac.toUpperCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    return { hosts };
+  },
+
   async fetchHostnames(): Promise<Map<string, string>> {
     const map = new Map<string, string>();
     const results = await Promise.all(bboxRouterSpecs().map(({ spec }) => fetchBboxHosts(spec)));

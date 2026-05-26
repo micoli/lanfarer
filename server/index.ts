@@ -9,6 +9,7 @@ import { handleAuthRoute, requireAuth } from "./routes/auth.ts";
 import { handleUiConfig } from "./routes/ui-config.ts";
 import { handleRouters } from "./routes/routers.ts";
 import { createMapTopologyHandler } from "./routes/mapTopology.ts";
+import { handleHosts } from "./routes/hosts.ts";
 import { serveStatic } from "./static.ts";
 import fs from "node:fs";
 import path from "node:path";
@@ -82,6 +83,12 @@ async function main() {
         await plugin.handle(req, res);
         return;
       }
+    }
+
+    if (url === "/__hosts" && req.method === "GET") {
+      if (!requireAuth(req, res)) return;
+      await handleHosts(req, res, routerPlugins);
+      return;
     }
 
     if (url === "/__map/topology" && req.method === "GET") {

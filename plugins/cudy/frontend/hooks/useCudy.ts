@@ -1,6 +1,6 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { basePath } from "../../../../src/lib/basePath.ts";
-import type { CudyBandwidthData, Host, HostsData, WirelessData } from "../../../contracts.ts";
+import type { CudyBandwidthData, Host, HostConnexion, HostsData, WirelessData } from "../../../contracts.ts";
 
 interface DevlistEntry {
   iface: string;
@@ -50,12 +50,17 @@ export function useCudyHosts(routerId: string | null) {
       const res = await fetch(`${basePath()}/devices/api-proxy/cudy-proxy/${routerId}/devlist`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const entries = (await res.json()) as DevlistEntry[];
+      const toConnexion = (iface: string): HostConnexion => {
+        if (/5g/i.test(iface)) return "wifi 5G";
+        if (/2\.4g|wifi/i.test(iface)) return "wifi 2.4G";
+        return "wired";
+      };
       const hosts: Host[] = entries.map((e) => ({
         mac: e.mac,
         ip: e.ip,
         hostname: "",
         active: true,
-        type: e.iface,
+        connexion: toConnexion(e.iface),
       }));
       return { hosts };
     },

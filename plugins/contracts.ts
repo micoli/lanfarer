@@ -22,6 +22,8 @@ export interface WirelessData {
 
 // ── Cross-plugin host list contract ─────────────────────────────────────────
 
+export type HostConnexion = "wired" | "wifi 2.4G" | "wifi 5G";
+
 export interface Host {
   mac: string;
   ip: string;
@@ -29,6 +31,8 @@ export interface Host {
   hostname: string;
   active: boolean;
   type?: string;
+  connexion?: HostConnexion;
+  ssid?: string;
   lastseen?: number;
 }
 
