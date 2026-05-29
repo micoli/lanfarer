@@ -87,7 +87,6 @@ async function luciLogin(ip: string, password: string): Promise<string | null> {
 
 async function luciGetJson(ip: string, token: string, path: string): Promise<unknown> {
   const url = `http://${ip}/cgi-bin/luci${path}`;
-  console.log(`curl -s -H 'Cookie: sysauth=${token}' '${url}'`);
   try {
     const res = await fetchWithTimeout(url, {
       headers: { cookie: `sysauth=${token}` },

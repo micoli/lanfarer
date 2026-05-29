@@ -64,7 +64,10 @@ export default function MapPage() {
         clients: ap.clients.map((c) => ({
           ...c,
           signal: c.signal_dbm,
-          tooltip: [c.hostname ?? c.mac, c.signal_dbm !== undefined ? `${c.signal_dbm} dBm` : undefined]
+          tooltip: [
+            c.hostname ?? c.mac,
+            c.signal_dbm !== undefined ? `${c.signal_dbm} dBm` : undefined,
+          ]
             .filter(Boolean)
             .join(" · "),
         })),
@@ -225,7 +228,13 @@ export default function MapPage() {
       scene.add(new THREE.Line(eGeo, mainEdgeMat));
 
       // clients — radius encodes signal strength (close = strong, far = weak)
-      const clientPos = clientPositions(hx, hz, hs.clients.map((c) => c.signal), angle, CLIENT_SPREAD);
+      const clientPos = clientPositions(
+        hx,
+        hz,
+        hs.clients.map((c) => c.signal),
+        angle,
+        CLIENT_SPREAD
+      );
 
       hs.clients.forEach((c, j) => {
         const cp = clientPos[j];

@@ -52,6 +52,21 @@ export function useRouterForPage(pageId: string): string | null {
   return findInMenu(config.menu, pageId)?.router ?? null;
 }
 
+export function useRouterType(routerId: string | null): string | null {
+  const { data } = useQuery({
+    queryKey: ["config", "routers"],
+    queryFn: async () => {
+      const res = await fetch(`${basePath()}/__config/routers`);
+      if (!res.ok) return [] as { name: string; type: string }[];
+      return res.json() as Promise<{ name: string; type: string }[]>;
+    },
+    staleTime: Infinity,
+    retry: false,
+  });
+  if (!routerId || !data) return null;
+  return data.find((r) => r.name === routerId)?.type ?? null;
+}
+
 export function useDhcpRouterId(): string | null {
   const config = useUiConfig();
   if (!config.menu) return null;

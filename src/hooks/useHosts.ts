@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { basePath } from "../lib/basePath.ts";
 import type { HostsData } from "../../plugins/contracts.ts";
+import { basePath } from "../lib/basePath.ts";
 
 export function useHosts() {
   return useQuery<HostsData>({

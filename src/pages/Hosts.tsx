@@ -42,7 +42,13 @@ function Badge({ active }: { active: boolean }) {
   );
 }
 
-function ConnexionBadge({ connexion, ssid }: { connexion: HostConnexion | undefined; ssid?: string }) {
+function ConnexionBadge({
+  connexion,
+  ssid,
+}: {
+  connexion: HostConnexion | undefined;
+  ssid?: string;
+}) {
   if (!connexion) return <span className="text-slate-600">—</span>;
   if (connexion === "wifi 5G")
     return (

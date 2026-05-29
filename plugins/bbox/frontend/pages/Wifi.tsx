@@ -1,10 +1,10 @@
 import { Eye, EyeOff, Shield, Wifi, WifiOff } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useWifiSettings } from "../hooks/useBbox";
+import { useBBoxWifiSettings } from "../hooks/useBbox";
 import { type CudyRouterWireless, useCudyClients } from "../../../cudy/frontend/hooks/useCudy.ts";
-import type { AccessPoint } from "../../../contracts.ts";
-import { useRouterForPage } from "../../../../src/hooks/useUiConfig.ts";
+import { useAirportDeviceInfo, useAirportHosts } from "../../../airport/frontend/hooks/useAirport.ts";
+import type { AccessPoint, Host } from "../../../contracts.ts";
 
 interface RadioBand {
   enable: number;
@@ -224,6 +224,85 @@ function CudyAccessPointCard({ ap }: { ap: AccessPoint }) {
   );
 }
 
+
+function AirportClientRow({ host }: { host: Host }) {
+  return (
+    <div className="flex items-center justify-between text-xs py-1.5 border-b border-slate-700/50 last:border-0">
+      <div className="flex flex-col gap-0.5">
+        <span className="font-mono text-slate-300">{host.hostname || host.mac}</span>
+        {host.hostname && <span className="font-mono text-slate-500 text-[11px]">{host.mac}</span>}
+      </div>
+      <span className="text-slate-400 font-mono">{host.ip}</span>
+    </div>
+  );
+}
+
+function AirportSection({ routerId }: { routerId: string }) {
+  const { data, isLoading } = useAirportHosts(routerId);
+  const { data: deviceInfo } = useAirportDeviceInfo(routerId);
+  const hosts = data?.hosts ?? [];
+  const online = data?.online ?? false;
+  const hasDeviceInfo = deviceInfo && (deviceInfo.laMA || deviceInfo.waMA);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <h2 className="text-sm font-semibold text-slate-200">AirPort Extreme</h2>
+
+      <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-5 flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {online ? (
+              <Wifi size={16} className="text-green-400" />
+            ) : (
+              <WifiOff size={16} className="text-slate-500" />
+            )}
+            <span className="text-sm font-medium text-slate-200">AirPort Extreme</span>
+          </div>
+          {!isLoading && (
+            <span
+              className={`text-xs px-2 py-0.5 rounded-full ${online ? "bg-green-500/10 text-green-400" : "bg-slate-700 text-slate-500"}`}
+            >
+              {online ? "en ligne" : "hors ligne"}
+            </span>
+          )}
+        </div>
+
+        {hasDeviceInfo && (
+          <div className="flex flex-col gap-2">
+            {deviceInfo.waMA && <Row label="MAC Wi-Fi" value={deviceInfo.waMA} mono dimmed />}
+            {deviceInfo.laMA && deviceInfo.laMA !== deviceInfo.waMA && (
+              <Row label="MAC LAN" value={deviceInfo.laMA} mono dimmed />
+            )}
+            {deviceInfo.raMA && deviceInfo.raMA !== deviceInfo.waMA && (
+              <Row label="MAC radio" value={deviceInfo.raMA} mono dimmed />
+            )}
+          </div>
+        )}
+
+        <hr className="border-slate-700" />
+
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs font-medium text-slate-300">Appareils connectés</span>
+            {!isLoading && (
+              <span className="text-xs text-slate-500 ml-auto">
+                {hosts.length} appareil{hosts.length !== 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+          {isLoading ? (
+            <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          ) : hosts.length === 0 ? (
+            <p className="text-xs text-slate-500">Aucun appareil détecté dans la table ARP</p>
+          ) : (
+            hosts.map((h) => <AirportClientRow key={h.mac} host={h} />)
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CudyRouterSection({ router }: { router: CudyRouterWireless }) {
   const online = router.wireless.online;
   const aps = router.wireless.accessPoints;
@@ -255,20 +334,12 @@ function CudyRouterSection({ router }: { router: CudyRouterWireless }) {
 
 export default function WifiPage() {
   const { t } = useTranslation();
-  const wifiRouterId = useRouterForPage("wifi");
-  const { data: raw, isLoading, error } = useWifiSettings(wifiRouterId);
+
+  const { data: raw, isLoading, error } = useBBoxWifiSettings(
+    "bbox-main",
+  );
   const { data: cudyData } = useCudyClients();
   const w = parseWireless(raw);
-
-  if (!wifiRouterId) {
-    return (
-      <div className="p-6">
-        <p className="text-slate-500 text-sm">
-          Aucun routeur configuré pour cette page. Ajoutez <code className="text-slate-300">router: &lt;nom&gt;</code> sur l'item <code className="text-slate-300">wifi</code> dans <code className="text-slate-300">config.yaml</code>.
-        </p>
-      </div>
-    );
-  }
 
   if (isLoading) {
     return (
@@ -278,7 +349,7 @@ export default function WifiPage() {
     );
   }
 
-  if (error || !w) {
+  if (error && !w) {
     return (
       <div className="p-6">
         <p className="text-red-400 text-sm">
@@ -295,24 +366,26 @@ export default function WifiPage() {
       <h1 className="text-lg font-semibold text-slate-100">{t("wifi.title")}</h1>
 
       {/* Bbox section */}
-      <div className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-slate-200">Bbox</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <BandCard
-            band="2.4 GHz"
-            radio={w.radio["24"]}
-            ssid={w.ssid["24"]}
-            standards={w.standard["24"]}
-          />
-          <BandCard
-            band="5 GHz"
-            radio={w.radio["5"]}
-            ssid={w.ssid["5"]}
-            standards={w.standard["5"]}
-          />
+      {w && (
+        <div className="flex flex-col gap-3">
+          <h2 className="text-sm font-semibold text-slate-200">Bbox</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <BandCard
+              band="2.4 GHz"
+              radio={w.radio["24"]}
+              ssid={w.ssid["24"]}
+              standards={w.standard["24"]}
+            />
+            <BandCard
+              band="5 GHz"
+              radio={w.radio["5"]}
+              ssid={w.ssid["5"]}
+              standards={w.standard["5"]}
+            />
+          </div>
+          {w.ssid.guest && <GuestCard ssid={w.ssid.guest} />}
         </div>
-        {w.ssid.guest && <GuestCard ssid={w.ssid.guest} />}
-      </div>
+      )}
 
       {/* Cudy routers sections */}
       {cudyRouters.map((router) => (

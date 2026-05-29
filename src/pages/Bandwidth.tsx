@@ -2,8 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useWanGraphs } from "../../plugins/bbox/frontend/hooks/useBbox";
-import { useCudyBandwidth } from "../../plugins/cudy/frontend/hooks/useCudy";
 import type { CudyBandwidthPoint, WanGraphPoint } from "../../plugins/contracts.ts";
+import { useCudyBandwidth } from "../../plugins/cudy/frontend/hooks/useCudy";
 import { basePath } from "../lib/basePath.ts";
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
@@ -22,7 +22,10 @@ function fmtKbps(kbps: number): string {
 
 // ── Generic sparkline (takes { ts, value }[]) ─────────────────────────────────
 
-interface SparkPoint { ts: number; value: number }
+interface SparkPoint {
+  ts: number;
+  value: number;
+}
 
 function Sparkline({ points, color }: { points: SparkPoint[]; color: string }) {
   if (points.length < 2) return <div className="h-12 bg-slate-700/30 rounded animate-pulse" />;
@@ -48,8 +51,9 @@ function Sparkline({ points, color }: { points: SparkPoint[]; color: string }) {
   ].join(" ");
 
   const xTickCount = 4;
-  const xTicks = Array.from({ length: xTickCount + 1 }, (_, i) =>
-    minTs + Math.round((i / xTickCount) * (maxTs - minTs)),
+  const xTicks = Array.from(
+    { length: xTickCount + 1 },
+    (_, i) => minTs + Math.round((i / xTickCount) * (maxTs - minTs))
   );
   const yTicks = [0, max * 0.5, max];
 
@@ -57,7 +61,14 @@ function Sparkline({ points, color }: { points: SparkPoint[]; color: string }) {
     <svg viewBox={`0 0 ${W} ${H + AXIS_H}`} className="w-full" preserveAspectRatio="none">
       {yTicks.map((v) => (
         <g key={v}>
-          <line x1={PAD_LEFT} x2={W} y1={yS(v).toFixed(1)} y2={yS(v).toFixed(1)} stroke="#334155" strokeWidth="0.5" />
+          <line
+            x1={PAD_LEFT}
+            x2={W}
+            y1={yS(v).toFixed(1)}
+            y2={yS(v).toFixed(1)}
+            stroke="#334155"
+            strokeWidth="0.5"
+          />
           <text x={PAD_LEFT - 3} y={yS(v) + 2.5} textAnchor="end" fontSize="6.5" fill="#475569">
             {fmtKbps(v)}
           </text>
@@ -72,7 +83,14 @@ function Sparkline({ points, color }: { points: SparkPoint[]; color: string }) {
         strokeLinejoin="round"
       />
       {xTicks.map((ts) => (
-        <text key={ts} x={xS(ts).toFixed(1)} y={H + AXIS_H - 1} textAnchor="middle" fontSize="7" fill="#64748b">
+        <text
+          key={ts}
+          x={xS(ts).toFixed(1)}
+          y={H + AXIS_H - 1}
+          textAnchor="middle"
+          fontSize="7"
+          fill="#64748b"
+        >
           {fmtTime(ts)}
         </text>
       ))}
@@ -106,7 +124,9 @@ function BboxBandwidthCard({ routerId }: { routerId: string }) {
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
             <div className="flex justify-between text-xs text-slate-400">
-              <span className="flex items-center gap-1 text-green-400"><ArrowDown size={11} /> Downstream</span>
+              <span className="flex items-center gap-1 text-green-400">
+                <ArrowDown size={11} /> Downstream
+              </span>
               <span className="tabular-nums text-slate-300">
                 {fmtKbps(lastDown)} <span className="text-slate-500">/ max {fmtKbps(maxDown)}</span>
               </span>
@@ -115,7 +135,9 @@ function BboxBandwidthCard({ routerId }: { routerId: string }) {
           </div>
           <div className="flex flex-col gap-1">
             <div className="flex justify-between text-xs text-slate-400">
-              <span className="flex items-center gap-1 text-blue-400"><ArrowUp size={11} /> Upstream</span>
+              <span className="flex items-center gap-1 text-blue-400">
+                <ArrowUp size={11} /> Upstream
+              </span>
               <span className="tabular-nums text-slate-300">
                 {fmtKbps(lastUp)} <span className="text-slate-500">/ max {fmtKbps(maxUp)}</span>
               </span>
@@ -158,7 +180,10 @@ function CudyBandwidthCard({ routerId }: { routerId: string }) {
                 {fmtKbps(lastRa0)} <span className="text-slate-500">/ max {fmtKbps(maxRa0)}</span>
               </span>
             </div>
-            <Sparkline points={data.ra0.map((p) => ({ ts: p.ts, value: p.down }))} color="#f59e0b" />
+            <Sparkline
+              points={data.ra0.map((p) => ({ ts: p.ts, value: p.down }))}
+              color="#f59e0b"
+            />
           </div>
           <div className="flex flex-col gap-1">
             <div className="flex justify-between text-xs text-slate-400">
@@ -167,7 +192,10 @@ function CudyBandwidthCard({ routerId }: { routerId: string }) {
                 {fmtKbps(lastRai0)} <span className="text-slate-500">/ max {fmtKbps(maxRai0)}</span>
               </span>
             </div>
-            <Sparkline points={data.rai0.map((p) => ({ ts: p.ts, value: p.down }))} color="#a855f7" />
+            <Sparkline
+              points={data.rai0.map((p) => ({ ts: p.ts, value: p.down }))}
+              color="#a855f7"
+            />
           </div>
         </div>
       )}
@@ -177,7 +205,10 @@ function CudyBandwidthCard({ routerId }: { routerId: string }) {
 
 // ── Router list hook ──────────────────────────────────────────────────────────
 
-interface RouterEntry { name: string; type: string }
+interface RouterEntry {
+  name: string;
+  type: string;
+}
 
 function useAllRouters() {
   return useQuery<RouterEntry[]>({
@@ -200,7 +231,9 @@ export default function Bandwidth() {
   return (
     <div className="p-6 flex flex-col gap-6 overflow-auto">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-slate-100">{t("nav.bandwidth", "Bande passante")}</h1>
+        <h1 className="text-lg font-semibold text-slate-100">
+          {t("nav.bandwidth", "Bande passante")}
+        </h1>
         <button
           type="button"
           onClick={() => void refetch()}
@@ -214,7 +247,10 @@ export default function Bandwidth() {
       {isLoading && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {[1, 2].map((i) => (
-            <div key={i} className="bg-slate-800/60 border border-slate-700 rounded-xl p-5 h-48 animate-pulse" />
+            <div
+              key={i}
+              className="bg-slate-800/60 border border-slate-700 rounded-xl p-5 h-48 animate-pulse"
+            />
           ))}
         </div>
       )}
@@ -230,7 +266,7 @@ export default function Bandwidth() {
               <BboxBandwidthCard key={r.name} routerId={r.name} />
             ) : r.type === "cudy" ? (
               <CudyBandwidthCard key={r.name} routerId={r.name} />
-            ) : null,
+            ) : null
           )}
         </div>
       )}

@@ -2,7 +2,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, Clock, Cpu, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useDevice, useWanGraphs, useWanStats } from "../../plugins/bbox/frontend/hooks/useBbox";
-import { useCudyBandwidth } from "../../plugins/cudy/frontend/hooks/useCudy";
 import type {
   CudyBandwidthData,
   CudyBandwidthPoint,
@@ -11,6 +10,7 @@ import type {
   WanGraphsData,
   WanStatsData,
 } from "../../plugins/contracts.ts";
+import { useCudyBandwidth } from "../../plugins/cudy/frontend/hooks/useCudy";
 import { useUiConfig, type WidgetConfig } from "../hooks/useUiConfig.ts";
 
 function formatBytes(n: number): string {
@@ -183,13 +183,7 @@ function fmtTime(ts: number): string {
   return `${hh}:${mm}:${ss}`;
 }
 
-function WanSparkline({
-  points,
-  color,
-}: {
-  points: WanGraphPoint[];
-  color: string;
-}) {
+function WanSparkline({ points, color }: { points: WanGraphPoint[]; color: string }) {
   if (points.length < 2) return <div className="h-12 bg-slate-700/30 rounded animate-pulse" />;
 
   const W = 300;
@@ -204,15 +198,17 @@ function WanSparkline({
 
   // X ticks: ~4 evenly spaced
   const xTickCount = 4;
-  const xTicks: number[] = Array.from({ length: xTickCount + 1 }, (_, i) =>
-    minTs + Math.round((i / xTickCount) * (maxTs - minTs)),
+  const xTicks: number[] = Array.from(
+    { length: xTickCount + 1 },
+    (_, i) => minTs + Math.round((i / xTickCount) * (maxTs - minTs))
   );
 
   // Y ticks: 0, 50%, 100%
   const yTickValues = [0, max * 0.5, max];
   const PAD_LEFT = 36;
 
-  const xScaled = (ts: number) => PAD_LEFT + padX + ((ts - minTs) / rangeTs) * (W - PAD_LEFT - padX * 2);
+  const xScaled = (ts: number) =>
+    PAD_LEFT + padX + ((ts - minTs) / rangeTs) * (W - PAD_LEFT - padX * 2);
   const yScaled = (v: number) => padY + (1 - v / max) * (H - padY * 2);
 
   const fillScaled = [
@@ -247,7 +243,9 @@ function WanSparkline({
       ))}
       <polygon points={fillScaled} opacity="0.15" fill={color} />
       <polyline
-        points={points.map((p) => `${xScaled(p.ts).toFixed(1)},${yScaled(p.value).toFixed(1)}`).join(" ")}
+        points={points
+          .map((p) => `${xScaled(p.ts).toFixed(1)},${yScaled(p.value).toFixed(1)}`)
+          .join(" ")}
         fill="none"
         stroke={color}
         strokeWidth="0.8"
@@ -326,7 +324,14 @@ function BboxWanGraphsWidget({ graphs }: { graphs: WanGraphsData | undefined }) 
   );
 }
 
-function CudySparkline({ points, color }: { points: CudyBandwidthPoint[]; dir: "up" | "down"; color: string }) {
+function CudySparkline({
+  points,
+  color,
+}: {
+  points: CudyBandwidthPoint[];
+  dir: "up" | "down";
+  color: string;
+}) {
   if (points.length < 2) return <div className="h-12 bg-slate-700/30 rounded animate-pulse" />;
 
   const W = 300;
@@ -351,8 +356,9 @@ function CudySparkline({ points, color }: { points: CudyBandwidthPoint[]; dir: "
   ].join(" ");
 
   const xTickCount = 4;
-  const xTicks = Array.from({ length: xTickCount + 1 }, (_, i) =>
-    minTs + Math.round((i / xTickCount) * (maxTs - minTs)),
+  const xTicks = Array.from(
+    { length: xTickCount + 1 },
+    (_, i) => minTs + Math.round((i / xTickCount) * (maxTs - minTs))
   );
   const yTicks = [0, max * 0.5, max];
 
@@ -360,7 +366,14 @@ function CudySparkline({ points, color }: { points: CudyBandwidthPoint[]; dir: "
     <svg viewBox={`0 0 ${W} ${H + AXIS_H}`} className="w-full" preserveAspectRatio="none">
       {yTicks.map((v) => (
         <g key={v}>
-          <line x1={PAD_LEFT} x2={W} y1={yS(v).toFixed(1)} y2={yS(v).toFixed(1)} stroke="#334155" strokeWidth="0.5" />
+          <line
+            x1={PAD_LEFT}
+            x2={W}
+            y1={yS(v).toFixed(1)}
+            y2={yS(v).toFixed(1)}
+            stroke="#334155"
+            strokeWidth="0.5"
+          />
           <text x={PAD_LEFT - 3} y={yS(v) + 2.5} textAnchor="end" fontSize="6.5" fill="#475569">
             {formatKbps(v)}
           </text>
@@ -375,7 +388,14 @@ function CudySparkline({ points, color }: { points: CudyBandwidthPoint[]; dir: "
         strokeLinejoin="round"
       />
       {xTicks.map((ts) => (
-        <text key={ts} x={xS(ts).toFixed(1)} y={H + AXIS_H - 1} textAnchor="middle" fontSize="7" fill="#64748b">
+        <text
+          key={ts}
+          x={xS(ts).toFixed(1)}
+          y={H + AXIS_H - 1}
+          textAnchor="middle"
+          fontSize="7"
+          fill="#64748b"
+        >
           {fmtTime(ts)}
         </text>
       ))}
@@ -383,7 +403,13 @@ function CudySparkline({ points, color }: { points: CudyBandwidthPoint[]; dir: "
   );
 }
 
-function BboxCudyBandwidthWidget({ routerName, data }: { routerName: string; data: CudyBandwidthData | undefined }) {
+function BboxCudyBandwidthWidget({
+  routerName,
+  data,
+}: {
+  routerName: string;
+  data: CudyBandwidthData | undefined;
+}) {
   const lastRa0 = data?.ra0[data.ra0.length - 1]?.down ?? 0;
   const lastRai0 = data?.rai0[data.rai0.length - 1]?.down ?? 0;
   const maxRa0 = data ? Math.max(...data.ra0.map((p) => p.down), 1) : 1;
@@ -438,15 +464,14 @@ export default function Home() {
     widgets.find((w) => w.type === "bbox-uptime" || w.type === "bbox-firmware")?.id ?? null;
   const statsRouterId =
     widgets.find((w) => w.type === "bbox-downstream" || w.type === "bbox-upstream")?.id ?? null;
-  const graphsRouterId =
-    widgets.find((w) => w.type === "bbox-wan-graphs")?.id ?? null;
-  const cudyBandwidthRouterId =
-    widgets.find((w) => w.type === "cudy-bandwidth")?.id ?? null;
+  const graphsRouterId = widgets.find((w) => w.type === "bbox-wan-graphs")?.id ?? null;
+  const cudyBandwidthRouterId = widgets.find((w) => w.type === "cudy-bandwidth")?.id ?? null;
 
   const { data: device, isLoading: loadingDevice } = useDevice(deviceRouterId);
   const { data: stats, isLoading: loadingStats } = useWanStats(statsRouterId);
   const { data: graphs, isLoading: loadingGraphs } = useWanGraphs(graphsRouterId);
-  const { data: cudyBandwidth, isLoading: loadingCudyBandwidth } = useCudyBandwidth(cudyBandwidthRouterId);
+  const { data: cudyBandwidth, isLoading: loadingCudyBandwidth } =
+    useCudyBandwidth(cudyBandwidthRouterId);
   const qc = useQueryClient();
 
   const loading = loadingDevice || loadingStats || loadingGraphs || loadingCudyBandwidth;
@@ -516,7 +541,13 @@ export default function Home() {
           if (w.type === "bbox-wan-graphs")
             return <BboxWanGraphsWidget key={`${w.type}-${w.id}-${i}`} graphs={graphs} />;
           if (w.type === "cudy-bandwidth")
-            return <BboxCudyBandwidthWidget key={`${w.type}-${w.id}-${i}`} routerName={w.id} data={cudyBandwidth} />;
+            return (
+              <BboxCudyBandwidthWidget
+                key={`${w.type}-${w.id}-${i}`}
+                routerName={w.id}
+                data={cudyBandwidth}
+              />
+            );
           return null;
         })}
       </div>

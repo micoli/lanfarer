@@ -77,7 +77,7 @@ export function useWireless(routerId: string | null) {
   });
 }
 
-export function useWifiSettings(routerId: string | null) {
+export function useBBoxWifiSettings(routerId: string | null) {
   return useQuery<unknown>({
     queryKey: ["wifi-settings", routerId],
     queryFn: () => bboxApi.getWifiSettings(routerId!),
