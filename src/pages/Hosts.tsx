@@ -1,4 +1,3 @@
-import { useQueryClient } from "@tanstack/react-query";
 import {
   ChevronDown,
   ChevronsUpDown,
@@ -136,8 +135,7 @@ function HostRow({ host, i }: { host: Host; i: number }) {
 
 export default function Hosts() {
   const { t, i18n } = useTranslation();
-  const { data: hostsData, isLoading, error, dataUpdatedAt } = useHosts();
-  const qc = useQueryClient();
+  const { data: hostsData, isLoading, progress, progressLabel, error, dataUpdatedAt, refresh } = useHosts();
 
   const [filter, setFilter] = useState("");
   const [showActive, setShowActive] = useState<"all" | "active" | "inactive">("all");
@@ -202,8 +200,19 @@ export default function Hosts() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center flex-1">
-        <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      <div className="flex flex-col items-center justify-center flex-1 gap-4 px-8">
+        <div className="w-full max-w-xs flex flex-col gap-2">
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <span>{progressLabel || t("common.loading")}</span>
+            <span>{progress}%</span>
+          </div>
+          <div className="h-1.5 w-full bg-slate-700 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-blue-500 rounded-full transition-all duration-300 ease-out"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
       </div>
     );
   }
@@ -273,7 +282,7 @@ export default function Hosts() {
           </button>
           <button
             type="button"
-            onClick={() => qc.invalidateQueries({ queryKey: ["hosts"] })}
+            onClick={refresh}
             className="p-1.5 text-slate-400 hover:text-slate-200 transition-colors"
             title={t("common.refresh")}
           >

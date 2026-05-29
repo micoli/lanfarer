@@ -29,31 +29,62 @@ function merge(a: Host, b: Host): Host {
   };
 }
 
+function sseWrite(res: http.ServerResponse, event: string, data: unknown) {
+  res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+}
+
 export async function handleHosts(
   _req: http.IncomingMessage,
   res: http.ServerResponse,
   plugins: RouterPlugin[],
 ): Promise<void> {
-  const results = await Promise.allSettled(
-    plugins.filter((p) => p.fetchHosts).map((p) => p.fetchHosts!()),
-  );
+  const hostsPlugins = plugins.filter((p) => p.fetchHosts);
 
-  const byMac = new Map<string, Host>();
+  res.writeHead(200, {
+    "content-type": "text/event-stream",
+    "cache-control": "no-cache",
+    "connection": "keep-alive",
+    "x-accel-buffering": "no",
+  });
 
-  for (const result of results) {
-    if (result.status !== "fulfilled") continue;
-    for (const host of result.value.hosts) {
-      const key = host.mac.toUpperCase();
-      const existing = byMac.get(key);
-      if (!existing) {
-        byMac.set(key, host);
-      } else {
-        byMac.set(key, score(host) >= score(existing) ? merge(host, existing) : merge(existing, host));
-      }
-    }
+  const total = hostsPlugins.length;
+  if (total === 0) {
+    sseWrite(res, "result", { hosts: [] } satisfies HostsData);
+    res.end();
+    return;
   }
 
-  const body = JSON.stringify({ hosts: [...byMac.values()] } satisfies HostsData);
-  res.writeHead(200, { "content-type": "application/json", "content-length": Buffer.byteLength(body) });
-  res.end(body);
+  const byMac = new Map<string, Host>();
+  let done = 0;
+
+  sseWrite(res, "progress", { pct: 0, label: hostsPlugins.map((p) => p.type).join(", ") });
+
+  await Promise.allSettled(
+    hostsPlugins.map(async (p) => {
+      try {
+        const { hosts } = await p.fetchHosts!();
+        for (const host of hosts) {
+          const key = host.mac.toUpperCase();
+          const existing = byMac.get(key);
+          if (!existing) {
+            byMac.set(key, host);
+          } else {
+            byMac.set(
+              key,
+              score(host) >= score(existing) ? merge(host, existing) : merge(existing, host),
+            );
+          }
+        }
+      } finally {
+        done++;
+        sseWrite(res, "progress", {
+          pct: Math.round((done / total) * 95),
+          label: p.type,
+        });
+      }
+    }),
+  );
+
+  sseWrite(res, "result", { hosts: [...byMac.values()] } satisfies HostsData);
+  res.end();
 }

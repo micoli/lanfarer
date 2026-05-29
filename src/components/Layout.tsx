@@ -18,6 +18,7 @@ import type { FrontendPlugin, NavItemDescriptor } from "../../plugins/frontend-p
 import type { MenuItemConfig } from "../hooks/useUiConfig.ts";
 import { useUiConfig } from "../hooks/useUiConfig.ts";
 import { ErrorBoundary } from "./ErrorBoundary";
+import { ThemeSelector } from "./ThemeSelector";
 
 interface AuthProps {
   authEnabled: boolean;
@@ -115,14 +116,14 @@ function NavItemLink({ item }: { item: NavItem }) {
       to={item.to}
       end={item.end}
       className={({ isActive }) =>
-        `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
+        `flex items-center gap-3 px-4 py-2.5 text-sm transition-all rounded-r-xl mr-3 ${
           isActive
-            ? "bg-blue-600/15 text-blue-400 font-medium"
-            : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+            ? "bg-blue-500/15 text-blue-400 font-semibold border-l-4 border-blue-500 pl-3"
+            : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 border-l-4 border-transparent pl-3"
         }`
       }
     >
-      <item.icon size={16} />
+      <item.icon size={18} />
       {item.label}
     </NavLink>
   );
@@ -135,13 +136,13 @@ function NavGroupSection({ group }: { group: NavGroup }) {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center justify-between w-full px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-300 transition-colors"
+        className="flex items-center justify-between w-full px-4 py-2 text-xs font-semibold uppercase tracking-widest text-slate-500 hover:text-slate-400 transition-colors"
       >
         {group.label}
-        {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+        {open ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
       </button>
       {open && (
-        <div className="pl-2 flex flex-col gap-0.5">
+        <div className="flex flex-col gap-0.5">
           {group.children.map((child) => (
             <NavItemLink key={child.to} item={child} />
           ))}
@@ -178,15 +179,15 @@ export default function Layout({
   return (
     <div className="flex h-dvh bg-slate-900 text-slate-100">
       {/* Sidebar desktop */}
-      <aside className="hidden md:flex flex-col w-52 border-r border-slate-800 p-4 shrink-0">
-        <div className="flex items-center gap-2 mb-6 px-1">
-          <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
-            <Network size={14} className="text-white" />
+      <aside className="hidden md:flex flex-col w-64 bg-slate-900 border-r border-slate-700/50 shrink-0">
+        <div className="flex items-center gap-3 px-4 py-5 border-b border-slate-700/50">
+          <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
+            <Network size={15} className="text-white" strokeWidth={2.5} />
           </div>
-          <span className="font-semibold text-sm text-slate-100">fast5688b</span>
+          <span className="font-semibold text-slate-100 tracking-wide">fast5688b</span>
         </div>
 
-        <nav className="flex flex-col gap-1 flex-1">
+        <nav className="flex flex-col gap-0.5 flex-1 pt-3 pb-3 overflow-y-auto">
           {NAV.map((entry) =>
             isNavGroup(entry) ? (
               <NavGroupSection key={entry.id} group={entry} />
@@ -196,20 +197,25 @@ export default function Layout({
           )}
         </nav>
 
-        <LangSwitcher />
-        {auth.authEnabled && auth.username && (
-          <button
-            type="button"
-            onClick={() => {
-              void auth.logout();
-            }}
-            className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 transition-colors mt-2 px-1"
-            title={t("auth.logout")}
-          >
-            <LogOut size={13} />
-            {auth.username}
-          </button>
-        )}
+        <div className="border-t border-slate-700/50 px-4 py-3 flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <ThemeSelector />
+            <LangSwitcher />
+          </div>
+          {auth.authEnabled && auth.username && (
+            <button
+              type="button"
+              onClick={() => {
+                void auth.logout();
+              }}
+              className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
+              title={t("auth.logout")}
+            >
+              <LogOut size={13} />
+              {auth.username}
+            </button>
+          )}
+        </div>
       </aside>
 
       {/* Main */}

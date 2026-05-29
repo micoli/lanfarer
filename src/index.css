@@ -8,8 +8,49 @@
   }
 }
 
-:root {
+/* ── Dark theme (HA-inspired) ─────────────────────────────── */
+:root,
+[data-theme="dark"] {
   color-scheme: dark;
+
+  --c-slate-950: 10 12 20;
+  --c-slate-900: 17 19 24;
+  --c-slate-800: 28 31 46;
+  --c-slate-700: 42 47 66;
+  --c-slate-600: 61 68 96;
+  --c-slate-500: 107 116 148;
+  --c-slate-400: 155 163 194;
+  --c-slate-300: 197 204 224;
+  --c-slate-200: 221 226 240;
+  --c-slate-100: 240 242 248;
+
+  --c-blue-700: 2 119 189;
+  --c-blue-600: 2 136 209;
+  --c-blue-500: 3 169 244;
+  --c-blue-400: 41 182 246;
+  --c-blue-300: 79 195 247;
+}
+
+/* ── Light theme ──────────────────────────────────────────── */
+[data-theme="light"] {
+  color-scheme: light;
+
+  --c-slate-950: 229 231 235;
+  --c-slate-900: 243 244 246;
+  --c-slate-800: 255 255 255;
+  --c-slate-700: 229 231 235;
+  --c-slate-600: 209 213 219;
+  --c-slate-500: 107 114 128;
+  --c-slate-400: 75 85 99;
+  --c-slate-300: 55 65 81;
+  --c-slate-200: 31 41 55;
+  --c-slate-100: 17 24 39;
+
+  --c-blue-700: 2 119 189;
+  --c-blue-600: 2 136 209;
+  --c-blue-500: 3 169 244;
+  --c-blue-400: 2 119 189;
+  --c-blue-300: 1 87 155;
 }
 
 * {
@@ -20,8 +61,8 @@ body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif;
   -webkit-font-smoothing: antialiased;
-  background-color: #0f172a;
-  color: #f1f5f9;
+  background-color: rgb(var(--c-slate-900));
+  color: rgb(var(--c-slate-100));
 }
 
 @keyframes ping-once {

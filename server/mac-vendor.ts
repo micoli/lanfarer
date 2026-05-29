@@ -7,8 +7,14 @@ interface MacEntry { macPrefix: string; vendorName: string }
 let vendorMap    = new Map<string, string>();
 let vendorLoadedAt = 0;
 
+export function formatMac(mac: string): string {
+  if (/^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/.test(mac)) return mac;
+  const hex = mac.toUpperCase().replace(/[^0-9A-F]/g, "");
+  return hex.match(/.{1,2}/g)?.join(":") ?? mac;
+}
+
 export function normaliseOui(mac: string): string {
-  return mac.replace(/[:\-.]/g, "").toUpperCase().slice(0, 6);
+  return formatMac(mac).replace(/[:\-.]/g, "").toUpperCase().slice(0, 6);
 }
 
 function buildVendorMap(entries: MacEntry[]): Map<string, string> {
@@ -48,3 +54,5 @@ export async function loadVendorDb(): Promise<void> {
 export function lookupVendor(mac: string): string {
   return vendorMap.get(normaliseOui(mac)) ?? "";
 }
+
+await loadVendorDb();

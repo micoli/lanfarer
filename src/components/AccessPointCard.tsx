@@ -263,7 +263,7 @@ function ClientRow({
           <span className="text-xs text-slate-500 italic">{t("hosts.noName")}</span>
         )}
         <div className="font-mono text-xs text-slate-500 mt-0.5">{client.mac}</div>
-        {vendor && <div className="text-xs text-slate-600 mt-0.5">{vendor}</div>}
+        {vendor && <div className="text-xs text-slate-500 mt-0.5">{vendor}</div>}
       </td>
       <td className={`px-4 py-2.5 text-xs font-mono ${signalColor(client.signal_dbm)}`}>
         <span className="mr-1.5 tracking-tight">{signalBars(client.signal_dbm)}</span>

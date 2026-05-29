@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { basePath } from "../lib/basePath.ts";
 
 function ouiPrefix(mac: string): string {
-  return mac.toUpperCase().replace(/[^0-9A-F]/g, "").slice(0, 6);
+  return mac.toUpperCase().replace(/[^0-9A-F]/g, "");
 }
 
 async function fetchVendor(mac: string): Promise<string | null> {
@@ -17,7 +17,7 @@ export function useVendor(mac: string | undefined): string | undefined {
   const { data } = useQuery({
     queryKey: ["oui", oui],
     queryFn: () => fetchVendor(oui),
-    enabled: oui.length === 6,
+    enabled: true,
     staleTime: Infinity,
     retry: false,
   });
