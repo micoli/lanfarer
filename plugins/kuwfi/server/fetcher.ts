@@ -268,3 +268,59 @@ export async function fetchAllKuwfiRouters(): Promise<KuwfiRouterResult[]> {
   const configs = loadKuwfiConfig();
   return Promise.all(configs.map(fetchKuwfiRouter));
 }
+
+// ── Bandwidth ─────────────────────────────────────────────────────────────────
+
+interface RawThroughputEntry {
+  name: string;
+  data: string[];
+}
+
+interface RawSystemThroughput {
+  WanThroughput?: {
+    Throughput?: RawThroughputEntry[];
+  };
+}
+
+async function fetchKuwfiThroughputSeries(
+  ip: string,
+  token: string,
+  wlanid: number,
+): Promise<import("../../contracts.ts").KuwfiBandwidthPoint[]> {
+  try {
+    const res = await fetchWithTimeout(`http://${ip}/cgi-bin/system_throughput?wlanid=${wlanid}`, {
+      headers: { cookie: `stork=${token}` },
+    });
+    const json = (await res.json()) as RawSystemThroughput;
+    const entries = json.WanThroughput?.Throughput?.filter((e) => e.data.length > 0) ?? [];
+    if (entries.length === 0) return [];
+
+    const len = Math.max(...entries.map((e) => e.data.length));
+    const now = Math.floor(Date.now() / 1000);
+
+    return Array.from({ length: len }, (_, i) => {
+      const bytesPerSec = entries.reduce((sum, e) => sum + Number(e.data[i] ?? 0), 0);
+      return {
+        ts: now - (len - 1 - i),
+        up: 0,
+        down: Math.round((bytesPerSec * 8) / 1000),
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchKuwfiBandwidth(
+  cfg: KuwfiRouterConfig,
+): Promise<import("../../contracts.ts").KuwfiBandwidthData> {
+  const token = await kuwfiLogin(cfg.ip, cfg.password);
+  if (!token) return { band24: [], band5: [] };
+
+  const [band24, band5] = await Promise.all([
+    fetchKuwfiThroughputSeries(cfg.ip, token, 0),
+    fetchKuwfiThroughputSeries(cfg.ip, token, 1),
+  ]);
+
+  return { band24, band5 };
+}

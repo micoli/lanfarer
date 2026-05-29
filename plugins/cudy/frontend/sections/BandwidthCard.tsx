@@ -1,5 +1,7 @@
 import { ArrowDown } from "lucide-react";
+import { useEffect } from "react";
 import { Sparkline } from "../../../../src/components/Sparkline.tsx";
+import { useBandwidthNav } from "../../../../src/contexts/BandwidthNavContext.tsx";
 import { useCudyBandwidth } from "../hooks/useCudy.ts";
 
 function fmtKbps(kbps: number): string {
@@ -9,6 +11,15 @@ function fmtKbps(kbps: number): string {
 
 export default function CudyBandwidthCard({ routerName }: { routerName: string }) {
   const { data, isLoading } = useCudyBandwidth(routerName);
+  const nav = useBandwidthNav();
+  const cardId = `bw-${routerName}`;
+  const online = !!data && (data.ra0.length > 0 || data.rai0.length > 0);
+
+  useEffect(() => {
+    if (!nav) return;
+    nav.register({ id: cardId, name: routerName, type: "cudy", online });
+    return () => nav.unregister(cardId);
+  }, [nav, cardId, routerName, online]);
 
   const lastRa0 = data?.ra0[data.ra0.length - 1]?.down ?? 0;
   const lastRai0 = data?.rai0[data.rai0.length - 1]?.down ?? 0;
@@ -16,7 +27,7 @@ export default function CudyBandwidthCard({ routerName }: { routerName: string }
   const maxRai0 = data ? Math.max(...data.rai0.map((p) => p.down), 1) : 1;
 
   return (
-    <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-5 flex flex-col gap-4">
+    <div id={cardId} className="bg-slate-800/60 border border-slate-700 rounded-xl p-5 flex flex-col gap-4">
       <div className="flex items-center gap-2 text-slate-400 text-xs uppercase tracking-wider font-medium">
         <ArrowDown size={13} className="text-amber-400" />
         {routerName} — Wi-Fi

@@ -136,6 +136,17 @@ export interface CudyBandwidthData {
   rai0: CudyBandwidthPoint[];
 }
 
+export interface KuwfiBandwidthPoint {
+  ts: number;
+  up: number;
+  down: number;
+}
+
+export interface KuwfiBandwidthData {
+  band24: KuwfiBandwidthPoint[];
+  band5: KuwfiBandwidthPoint[];
+}
+
 // ── Map topology contract ─────────────────────────────────────────────────────
 
 export interface MapClient {

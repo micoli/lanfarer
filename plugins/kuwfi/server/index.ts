@@ -1,7 +1,7 @@
 import type http from "node:http";
 import type { RouterPlugin } from "../../../server/plugin.ts";
 import type { HostConnexion, MapAccessPoint, MapClient } from "../../contracts.ts";
-import { fetchAllKuwfiRouters, fetchKuwfiRouter, loadKuwfiConfig } from "./fetcher.ts";
+import { fetchAllKuwfiRouters, fetchKuwfiBandwidth, fetchKuwfiRouter, loadKuwfiConfig } from "./fetcher.ts";
 
 const PREFIX = "/devices/api-proxy/kuwfi-proxy/";
 
@@ -59,7 +59,15 @@ export const plugin: RouterPlugin = {
         return;
       }
 
+      const subpath = parts[1] ?? "";
+
       try {
+        if (subpath === "bandwidth") {
+          const data = await fetchKuwfiBandwidth(cfg);
+          sendJson(res, 200, data);
+          return;
+        }
+
         const result = await fetchKuwfiRouter(cfg);
         sendJson(res, 200, result);
         return;

@@ -1,6 +1,6 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { basePath } from "../../../../src/lib/basePath.ts";
-import type { Host, HostConnexion, HostsData } from "../../../contracts.ts";
+import type { Host, HostConnexion, HostsData, KuwfiBandwidthData } from "../../../contracts.ts";
 
 export interface KuwfiClient {
   mac: string;
@@ -35,6 +35,19 @@ function usekuwfiRouterList() {
       return res.json() as Promise<{ routers: { name: string; ip: string }[] }>;
     },
     staleTime: 60_000,
+  });
+}
+
+export function useKuwfiBandwidth(routerId: string | null) {
+  return useQuery<KuwfiBandwidthData>({
+    queryKey: ["kuwfi", "bandwidth", routerId],
+    queryFn: async () => {
+      const res = await fetch(`${basePath()}/devices/api-proxy/kuwfi-proxy/${routerId}/bandwidth`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json() as Promise<KuwfiBandwidthData>;
+    },
+    refetchInterval: 30_000,
+    enabled: routerId !== null,
   });
 }
 

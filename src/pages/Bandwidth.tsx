@@ -1,10 +1,15 @@
 import { useTranslation } from "react-i18next";
+import { BandwidthNavProvider } from "../contexts/BandwidthNavContext.tsx";
 import { frontendPlugins } from "../../plugins/frontendPlugins.ts";
 import { useRouters } from "../hooks/useUiConfig.ts";
 
 export default function Bandwidth() {
   const { t } = useTranslation();
   const routers = useRouters();
+
+  const bandwidthRouters = [...(routers ?? [])]
+    .filter((r) => frontendPlugins.find((p) => p.type === r.type)?.bandwidthCard)
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <div className="p-6 flex flex-col gap-6 overflow-auto">
@@ -29,15 +34,17 @@ export default function Bandwidth() {
         <p className="text-slate-500 text-sm">Aucun routeur configuré dans config.yaml.</p>
       )}
 
-      {routers && routers.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {routers.map((r) => {
-            const plugin = frontendPlugins.find((p) => p.type === r.type);
-            const Card = plugin?.bandwidthCard;
-            if (!Card) return null;
-            return <Card key={r.name} routerName={r.name} />;
-          })}
-        </div>
+      {routers && bandwidthRouters.length > 0 && (
+        <BandwidthNavProvider>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {bandwidthRouters.map((r) => {
+              const plugin = frontendPlugins.find((p) => p.type === r.type);
+              const Card = plugin?.bandwidthCard;
+              if (!Card) return null;
+              return <Card key={r.name} routerName={r.name} />;
+            })}
+          </div>
+        </BandwidthNavProvider>
       )}
     </div>
   );

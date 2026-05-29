@@ -1,5 +1,7 @@
 import { ArrowDown, ArrowUp } from "lucide-react";
+import { useEffect } from "react";
 import { Sparkline } from "../../../../src/components/Sparkline.tsx";
+import { useBandwidthNav } from "../../../../src/contexts/BandwidthNavContext.tsx";
 import { useWanGraphs } from "../hooks/useBbox.ts";
 
 function fmtKbps(kbps: number): string {
@@ -9,6 +11,15 @@ function fmtKbps(kbps: number): string {
 
 export default function BboxBandwidthCard({ routerName }: { routerName: string }) {
   const { data, isLoading } = useWanGraphs(routerName);
+  const nav = useBandwidthNav();
+  const cardId = `bw-${routerName}`;
+  const online = !!data && (data.down.length > 0 || data.up.length > 0);
+
+  useEffect(() => {
+    if (!nav) return;
+    nav.register({ id: cardId, name: routerName, type: "bbox", online });
+    return () => nav.unregister(cardId);
+  }, [nav, cardId, routerName, online]);
 
   const lastDown = data?.down[data.down.length - 1]?.value ?? 0;
   const lastUp = data?.up[data.up.length - 1]?.value ?? 0;
@@ -16,7 +27,7 @@ export default function BboxBandwidthCard({ routerName }: { routerName: string }
   const maxUp = data ? Math.max(...data.up.map((p) => p.value), 1) : 1;
 
   return (
-    <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-5 flex flex-col gap-4">
+    <div id={cardId} className="bg-slate-800/60 border border-slate-700 rounded-xl p-5 flex flex-col gap-4">
       <div className="flex items-center gap-2 text-slate-400 text-xs uppercase tracking-wider font-medium">
         <ArrowDown size={13} className="text-green-400" />
         <ArrowUp size={13} className="text-blue-400" />
