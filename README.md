@@ -1,6 +1,6 @@
-# Bbox & Cudy Router GUI
+# Router GUI
 
-A self-hosted web interface for managing a **Bouygues Bbox** router and **Cudy** Wi-Fi access points on your local network. Available as a standalone Docker container or a **Home Assistant addon**.
+A self-hosted web interface for managing a **Bouygues Bbox** router and multiple Wi-Fi access points (**Cudy**, **KuWFi**, **Apple AirPort**) on your local network. Available as a standalone Docker container or a **Home Assistant addon**.
 
 ## Features
 
@@ -13,15 +13,17 @@ A self-hosted web interface for managing a **Bouygues Bbox** router and **Cudy**
 - **DHCP reservations** — view and manage static leases
 - **DHCP options** — custom DHCP option management
 - **Network scan** — active subnet scanner (ping + TCP fallback, ARP, mDNS, port probing)
-- **Multi-router** — supports multiple Cudy APs alongside the Bbox gateway
+- **Multi-router** — supports multiple APs (Cudy, KuWFi CPE, Apple AirPort) alongside the Bbox gateway
 - **Plugin system** — router backends are auto-discovered from `plugins/`
 - **Configurable menu** — sidebar items and groups defined in `config.yaml`
 
 ## Architecture
 
 ```
-Browser  ──►  Node.js server (server/)  ──►  plugins/bbox/server/   ──►  Bbox router API
-                │                        ──►  plugins/cudy/server/   ──►  Cudy AP APIs
+Browser  ──►  Node.js server (server/)  ──►  plugins/bbox/server/    ──►  Bbox router API
+                │                        ──►  plugins/cudy/server/    ──►  Cudy AP (LuCI)
+                │                        ──►  plugins/kuwfi/server/   ──►  KuWFi CPE (CGI)
+                │                        ──►  plugins/airport/server/ ──►  Apple AirPort (ARP)
                 │  (Vite in dev mode)
                 └► React SPA (src/ + plugins/*/frontend/)
 ```
@@ -78,6 +80,17 @@ routers:
     type: cudy
     ip: 192.168.1.10
     password: your_cudy_password
+    enabled: true
+
+  - name: outdoor-ap
+    type: kuwfi
+    ip: 192.168.1.20
+    password: admin
+    enabled: true
+
+  - name: airport-extreme
+    type: airport
+    ip: 192.168.1.30
     enabled: true
 
 ui:
@@ -166,6 +179,17 @@ plugins/
 A plugin is loaded automatically if `plugins/<name>/server/index.ts` exists and exports `plugin`. No registration step needed — drop the directory and restart the server.
 
 Frontend capabilities (e.g. providing the device list) are similarly auto-discovered via `import.meta.glob` at build time.
+
+### Built-in plugins
+
+| Plugin | Type | Description |
+|---|---|---|
+| `bbox` | `bbox` | Bouygues Bbox — proxies the full Bbox REST API (DHCP, Wi-Fi, WAN graphs, hosts) |
+| `cudy` | `cudy` | Cudy Wi-Fi APs — uses the LuCI HTTP interface to fetch stations and bandwidth |
+| `kuwfi` | `kuwfi` | KuWFi CPE outdoor APs — uses the proprietary CGI auth (MD5 password, `stork` token) |
+| `airport` | `airport` | Apple AirPort Extreme — derives host list from the local ARP table |
+
+**KuWFi auth flow**: `POST /cgi-bin/login` with `opcode=1&username=admin&password=<md5(pwd)>` → token, then `POST /cgi-bin/login` with `opcode=3` (MAC auth). All subsequent API calls use `Cookie: stork=<token>` + a timestamp `interval` param.
 
 ## Home Assistant addon
 

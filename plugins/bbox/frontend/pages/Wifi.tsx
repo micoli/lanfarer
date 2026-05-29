@@ -3,8 +3,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useBBoxWifiSettings } from "../hooks/useBbox";
 import { type CudyRouterWireless, useCudyClients } from "../../../cudy/frontend/hooks/useCudy.ts";
-import { useAirportDeviceInfo, useAirportHosts } from "../../../airport/frontend/hooks/useAirport.ts";
-import type { AccessPoint, Host } from "../../../contracts.ts";
+import type { AccessPoint } from "../../../contracts.ts";
 
 interface RadioBand {
   enable: number;

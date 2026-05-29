@@ -78,7 +78,7 @@ interface RouterPlugin {
 
 **Frontend auto-discovery**: `plugins/hostListProviders.ts` uses `import.meta.glob` to collect all `hostListProvider` exports at build time — no manual registration needed.
 
-Current plugins: `bbox` (Bbox router proxy + DHCP/Wi-Fi/graphs API), `cudy` (Cudy AP LuCI clients + bandwidth).
+Current plugins: `bbox` (Bbox router proxy + DHCP/Wi-Fi/graphs API), `cudy` (Cudy AP LuCI clients + bandwidth), `airport` (Apple AirPort Extreme via ARP table), `kuwfi` (KuWFi CPE outdoor APs — proprietary CGI auth).
 
 ### Bbox API layer (`plugins/bbox/frontend/`)
 
@@ -95,6 +95,8 @@ Query key conventions:
 - `['wan', 'graphs', routerId]` — historique débit WAN (dernière heure, kbps)
 - `['wireless', routerId]` — Wi-Fi settings
 - `['cudy', 'bandwidth', routerId]` — débit Wi-Fi Cudy par interface (kbps, dérivé des volumes cumulatifs)
+- `['kuwfi', 'router', routerId]` — données complètes d'un AP KuWFi (accessPoints + clients)
+- `['kuwfi', 'hosts', routerId]` — liste d'hôtes KuWFi
 - `['config', 'routers']` — liste de tous les routeurs configurés
 
 ### Routing (`src/App.tsx`)
