@@ -7,12 +7,19 @@ export function createMapTopologyHandler(
   plugins: RouterPlugin[],
 ): (req: http.IncomingMessage, res: http.ServerResponse) => Promise<void> {
   return async function handleMapTopology(_req, res) {
-    // Pass 1: collect hostnames from plugins that provide them
+    // Pass 1: collect hostnames + IPs from plugins that provide them
     const hostnameMap = new Map<string, string>();
+    const ipMap = new Map<string, string>();
     for (const plugin of plugins) {
       if (plugin.fetchHostnames) {
         const m = await plugin.fetchHostnames();
         for (const [mac, name] of m) hostnameMap.set(mac, name);
+      }
+      if (plugin.fetchHosts) {
+        const { hosts } = await plugin.fetchHosts();
+        for (const h of hosts) {
+          if (h.ip) ipMap.set(h.mac.toUpperCase(), h.ip);
+        }
       }
     }
 
@@ -20,7 +27,7 @@ export function createMapTopologyHandler(
     const segments = await Promise.all(
       plugins
         .filter((p) => p.fetchTopologySegments)
-        .map((p) => p.fetchTopologySegments!(hostnameMap)),
+        .map((p) => p.fetchTopologySegments!(hostnameMap, ipMap)),
     );
 
     const topology: MapTopology = { accessPoints: segments.flat() };

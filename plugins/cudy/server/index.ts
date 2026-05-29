@@ -53,13 +53,14 @@ export const plugin: RouterPlugin = {
 
   handle: (req: http.IncomingMessage, res: http.ServerResponse) => handleCudy(req, res),
 
-  async fetchTopologySegments(hostnameMap: Map<string, string>): Promise<MapAccessPoint[]> {
+  async fetchTopologySegments(hostnameMap: Map<string, string>, ipMap: Map<string, string>): Promise<MapAccessPoint[]> {
     const routers = await fetchAllCudyRouters();
     return routers.map((r) => {
       const clients: MapClient[] = r.interfaces.flatMap((iface) =>
         iface.clients.map((c) => ({
           mac: c.mac,
           hostname: hostnameMap.get(c.mac.toUpperCase()),
+          ip: ipMap.get(c.mac.toUpperCase()),
           signal_dbm: c.signal_dbm,
         })),
       );

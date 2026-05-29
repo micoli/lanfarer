@@ -6,6 +6,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { CSS2DObject, CSS2DRenderer } from "three/addons/renderers/CSS2DRenderer.js";
 import { useMapTopology } from "../hooks/useMapTopology.ts";
+import { useVendors } from "../hooks/useVendor.ts";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -81,6 +82,14 @@ export default function MapPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
 
+  const allClientMacs = useMemo(
+    () => (topology?.accessPoints ?? []).flatMap((ap) => ap.clients.map((c) => c.mac)),
+    [topology],
+  );
+  const vendorMap = useVendors(allClientMacs);
+  const vendorMapRef = useRef<Map<string, string>>(new Map());
+  vendorMapRef.current = vendorMap;
+
   const hotspots = useMemo(
     () =>
       (topology?.accessPoints ?? []).map((ap) => ({
@@ -88,15 +97,17 @@ export default function MapPage() {
         clients: ap.clients.map((c) => ({
           ...c,
           signal: c.signal_dbm,
-          tooltip: [
+          // tooltip built dynamically in animate() via vendorMapRef — no vendor dep here
+          tooltipBase: [
             c.hostname ?? c.mac,
+            c.ip,
             c.signal_dbm !== undefined ? `${c.signal_dbm} dBm` : undefined,
           ]
             .filter(Boolean)
             .join(" · "),
         })),
       })),
-    [topology]
+    [topology], // vendorMap intentionally excluded — accessed via ref
   );
 
   useEffect(() => {
@@ -307,7 +318,7 @@ export default function MapPage() {
         const cMat = stdMat(cColor, 0.4);
         const cMesh = new THREE.Mesh(geoSm, cMat);
         cMesh.position.set(cp.x, hy, cp.z);
-        cMesh.userData = { tooltip: c.tooltip, groupIdx: i };
+        cMesh.userData = { tooltipBase: c.tooltipBase, mac: c.mac, groupIdx: i };
         scene.add(cMesh);
         targets.push(cMesh);
         group.mats.push(cMat);
@@ -350,21 +361,25 @@ export default function MapPage() {
     });
     ro.observe(container);
 
-    // ── Hover tooltip ─────────────────────────────────────────────────────────
+    // ── Hover tooltip — raycasting in animation loop so camera damping doesn't break it
+    const mouseNDC = new THREE.Vector2(-999, -999);
+    let mouseClientX = 0;
+    let mouseClientY = 0;
+    let activeTipText: string | null = null;
+    let activeTipX = 0;
+    let activeTipY = 0;
+
     const onMouseMove = (e: MouseEvent) => {
       const rect = renderer.domElement.getBoundingClientRect();
-      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-      raycaster.setFromCamera(mouse, camera);
-      const hits = raycaster.intersectObjects(targets);
-      if (hits.length > 0) {
-        const tip = (hits[0].object as THREE.Mesh).userData.tooltip as string;
-        setTooltip({ text: tip, x: e.clientX - rect.left, y: e.clientY - rect.top });
-      } else {
-        setTooltip(null);
-      }
+      mouseNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouseNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      mouseClientX = e.clientX - rect.left;
+      mouseClientY = e.clientY - rect.top;
     };
-    const onMouseLeave = () => setTooltip(null);
+    const onMouseLeave = () => {
+      mouseNDC.set(-999, -999);
+      if (activeTipText !== null) { activeTipText = null; setTooltip(null); }
+    };
 
     let selectedGroup = -1;
     function applySelection(sel: number) {
@@ -419,6 +434,36 @@ export default function MapPage() {
       mesh.scale.setScalar(pulse);
       haloMat.opacity = 0.35 + 0.2 * Math.sin(t * 0.002);
       controls.update();
+
+      // Raycast every frame — stays in sync with camera damping
+      raycaster.setFromCamera(mouseNDC, camera);
+      const hits = raycaster.intersectObjects(targets);
+      if (hits.length > 0) {
+        const seen = new Set<string>();
+        const lines: string[] = [];
+        for (const hit of hits) {
+          const m = hit.object as THREE.Mesh;
+          if (seen.has(m.uuid)) continue;
+          seen.add(m.uuid);
+          const ud = m.userData as { tooltip?: string; tooltipBase?: string; mac?: string };
+          const base = ud.tooltip ?? ud.tooltipBase ?? "";
+          if (!base) continue;
+          const vendor = ud.mac ? vendorMapRef.current.get(ud.mac.toLowerCase()) : undefined;
+          lines.push(vendor ? `${base} · ${vendor}` : base);
+        }
+        const newTip = lines.join("\n");
+        const moved = Math.hypot(mouseClientX - activeTipX, mouseClientY - activeTipY) > 3;
+        if (newTip !== activeTipText || moved) {
+          activeTipText = newTip;
+          activeTipX = mouseClientX;
+          activeTipY = mouseClientY;
+          setTooltip({ text: newTip, x: mouseClientX, y: mouseClientY });
+        }
+      } else if (activeTipText !== null) {
+        activeTipText = null;
+        setTooltip(null);
+      }
+
       renderer.render(scene, camera);
       labelRenderer.render(scene, camera);
     };
@@ -479,10 +524,14 @@ export default function MapPage() {
         <div ref={containerRef} className="absolute inset-0" />
         {tooltip && (
           <div
-            className="absolute pointer-events-none bg-slate-800 border border-slate-600 text-slate-200 text-xs px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap"
+            className="absolute pointer-events-none bg-slate-800 border border-slate-600 text-slate-200 text-xs px-2.5 py-1.5 rounded-md shadow-xl"
             style={{ left: tooltip.x + 14, top: tooltip.y - 10, zIndex: 10 }}
           >
-            {tooltip.text}
+            {tooltip.text.split("\n").map((line, i) => (
+              <div key={i} className={i > 0 ? "mt-1 pt-1 border-t border-slate-700" : ""}>
+                {line}
+              </div>
+            ))}
           </div>
         )}
         <p className="absolute bottom-2 right-3 text-xs text-slate-600 pointer-events-none select-none">

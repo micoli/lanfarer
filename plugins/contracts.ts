@@ -152,6 +152,7 @@ export interface KuwfiBandwidthData {
 export interface MapClient {
   mac: string;
   hostname?: string;
+  ip?: string;
   signal_dbm?: number;
 }
 

@@ -59,7 +59,7 @@ export const plugin: RouterPlugin = {
     return map;
   },
 
-  async fetchTopologySegments(hostnameMap: Map<string, string>): Promise<MapAccessPoint[]> {
+  async fetchTopologySegments(hostnameMap: Map<string, string>, ipMap: Map<string, string>): Promise<MapAccessPoint[]> {
     const segments: MapAccessPoint[] = [];
     await Promise.all(
       bboxRouterSpecs().map(async ({ name, spec }) => {
@@ -68,6 +68,7 @@ export const plugin: RouterPlugin = {
           const clients: MapClient[] = ap.clients.map((c) => ({
             mac: c.mac,
             hostname: hostnameMap.get(c.mac.toUpperCase()),
+            ip: ipMap.get(c.mac.toUpperCase()),
             signal_dbm: c.signal_dbm,
           }));
           segments.push({

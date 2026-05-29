@@ -80,13 +80,14 @@ export const plugin: RouterPlugin = {
     sendJson(res, 404, { error: "not found" });
   },
 
-  async fetchTopologySegments(hostnameMap: Map<string, string>): Promise<MapAccessPoint[]> {
+  async fetchTopologySegments(hostnameMap: Map<string, string>, ipMap: Map<string, string>): Promise<MapAccessPoint[]> {
     const routers = await fetchAllKuwfiRouters();
     return routers.map((r) => {
       const clients: MapClient[] = r.accessPoints.flatMap((ap) =>
         ap.clients.map((c) => ({
           mac: c.mac,
           hostname: hostnameMap.get(c.mac.toUpperCase()),
+          ip: ipMap.get(c.mac.toUpperCase()),
           signal_dbm: c.signal_dbm,
         })),
       );
