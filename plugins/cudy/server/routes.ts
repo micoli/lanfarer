@@ -63,6 +63,10 @@ export async function handleCudy(req: http.IncomingMessage, res: http.ServerResp
           ssid: iface.ssid,
           band: iface.band,
           channel: iface.channel,
+          bssid: iface.bssid,
+          password: iface.password,
+          standard: iface.standard,
+          width: iface.width,
           clients: iface.clients.map((c) => ({
             mac: c.mac,
             signal_dbm: c.signal_dbm,

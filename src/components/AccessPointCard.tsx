@@ -1,8 +1,21 @@
-import { Wifi, WifiOff } from "lucide-react";
-import { useEffect } from "react";
+import {
+  AlertTriangle,
+  Bookmark,
+  BookmarkPlus,
+  Check,
+  Wifi,
+  WifiOff,
+  X,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { AccessPoint, WirelessClient } from "../../plugins/contracts.ts";
+import {
+  useCreateDhcpClient,
+  useIpCheck,
+} from "../../plugins/bbox/frontend/hooks/useBbox.ts";
+import type { AccessPoint, DhcpClient, WirelessClient } from "../../plugins/contracts.ts";
 import { useHotspotNav } from "../contexts/HotspotNavContext.tsx";
+import { useVendor } from "../hooks/useVendor.ts";
 
 export function sortAccessPoints<T extends { ssid: string; band: string }>(aps: T[]): T[] {
   return [...aps].sort((a, b) => {
@@ -34,10 +47,33 @@ export function formatRate(kbps: number): string {
   return `${kbps} Kbps`;
 }
 
-export function HostTable({ headers, children }: { headers: string[]; children: React.ReactNode }) {
+// Fixed column widths indexed by total column count.
+// 5 cols: Host | Signal | IP | Tx | Rx
+// 6 cols: Host | Signal | IP | Tx | Rx | (DHCP action)
+const COL_WIDTHS: Record<number, string[]> = {
+  5: ["36%", "18%", "24%", "11%", "11%"],
+  6: ["32%", "16%", "22%", "10%", "10%", "10%"],
+};
+
+export function HostTable({
+  headers,
+  children,
+}: {
+  headers: string[];
+  children: React.ReactNode;
+}) {
+  const widths = COL_WIDTHS[headers.length] ?? [];
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+      <table className="w-full text-sm" style={{ tableLayout: "fixed" }}>
+        {widths.length > 0 && (
+          <colgroup>
+            {widths.map((w, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: stable fixed-width columns
+              <col key={i} style={{ width: w }} />
+            ))}
+          </colgroup>
+        )}
         <thead>
           <tr className="text-xs text-slate-500 uppercase tracking-wide">
             {headers.map((h) => (
@@ -59,12 +95,16 @@ export function CardHeader({
   subtitle,
   badge,
   count,
+  ssid,
+  band,
 }: {
   online: boolean;
   name: string;
   subtitle?: string;
   badge?: string;
   count: number;
+  ssid?: string;
+  band?: string;
 }) {
   const { t } = useTranslation();
   return (
@@ -77,6 +117,14 @@ export function CardHeader({
       <div className="flex-1 min-w-0">
         <span className="font-medium text-sm text-slate-100">{name}</span>
         {subtitle && <span className="ml-2 text-xs text-slate-500">{subtitle}</span>}
+        {ssid && (
+          <span className="ml-2 font-mono text-xs text-slate-300">{ssid}</span>
+        )}
+        {band && (
+          <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded bg-slate-700 text-slate-400">
+            {band}
+          </span>
+        )}
       </div>
       {badge && (
         <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-400">
@@ -88,20 +136,124 @@ export function CardHeader({
   );
 }
 
-export function ClientRow({
+function ClientRow({
   client,
-  ssid,
-  band,
   hostname,
   ip,
+  isReserved,
+  dhcpRouterId,
+  colCount,
 }: {
   client: WirelessClient;
-  ssid: string;
-  band: string;
   hostname?: string;
   ip?: string;
+  isReserved: boolean;
+  dhcpRouterId: string | null;
+  colCount: number;
 }) {
   const { t } = useTranslation();
+  const vendor = useVendor(client.mac);
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState<Omit<DhcpClient, "id">>({
+    enable: 1,
+    hostname: "",
+    macaddress: "",
+    ipaddress: "",
+    ip6address: "",
+  });
+  const create = useCreateDhcpClient(dhcpRouterId);
+  const { checking, conflict, clearConflict, check } = useIpCheck();
+
+  function openAdd() {
+    setDraft({
+      enable: 1,
+      hostname: hostname ?? "",
+      macaddress: client.mac,
+      ipaddress: ip ?? "",
+      ip6address: "",
+    });
+    setAdding(true);
+  }
+
+  if (adding) {
+    return (
+      <>
+        <tr className="border-t border-slate-800 bg-slate-800/60">
+          <td className="px-4 py-2" colSpan={2}>
+            <input
+              className="input-cell w-full"
+              placeholder={t("common.hostname")}
+              value={draft.hostname}
+              onChange={(e) => setDraft({ ...draft, hostname: e.target.value })}
+            />
+          </td>
+          <td className="px-4 py-2">
+            <input
+              className="input-cell font-mono w-full"
+              placeholder="192.168.1.x"
+              value={draft.ipaddress}
+              onChange={(e) => {
+                setDraft({ ...draft, ipaddress: e.target.value });
+                clearConflict();
+              }}
+            />
+          </td>
+          <td className="px-4 py-2">
+            <input
+              className="input-cell font-mono w-full"
+              placeholder="aa:bb:cc:dd:ee:ff"
+              value={draft.macaddress}
+              onChange={(e) => {
+                setDraft({ ...draft, macaddress: e.target.value });
+                clearConflict();
+              }}
+            />
+          </td>
+          <td className="px-4 py-2" colSpan={colCount - 4}>
+            <div className="flex gap-1.5 items-center">
+              <button
+                type="button"
+                title={conflict ? t("common.forceConflict") : t("hosts.createReservation")}
+                disabled={!draft.macaddress || !draft.ipaddress || create.isPending || checking}
+                onClick={() =>
+                  check(draft.ipaddress, draft.macaddress, () =>
+                    create.mutate(draft, { onSuccess: () => setAdding(false) })
+                  )
+                }
+                className={`p-1 rounded disabled:opacity-40 transition-colors ${conflict ? "text-amber-400 hover:text-amber-300" : "text-blue-400 hover:text-blue-300"}`}
+              >
+                {conflict ? <AlertTriangle size={14} /> : <Check size={14} />}
+              </button>
+              <button
+                type="button"
+                title={t("common.cancel")}
+                onClick={() => {
+                  setAdding(false);
+                  clearConflict();
+                }}
+                className="p-1 rounded text-slate-400 hover:text-slate-200 transition-colors"
+              >
+                <X size={14} />
+              </button>
+              {create.error && (
+                <span className="text-xs text-red-400">{(create.error as Error).message}</span>
+              )}
+            </div>
+          </td>
+        </tr>
+        {conflict && (
+          <tr className="bg-amber-500/10 border-t border-amber-500/20">
+            <td colSpan={colCount} className="px-4 py-1.5 text-xs text-amber-400 flex items-center gap-1.5">
+              <AlertTriangle size={12} />
+              {conflict}
+              {t("common.clickAgainToForce")}
+            </td>
+          </tr>
+        )}
+      </>
+    );
+  }
+
   return (
     <tr className="border-t border-slate-800 hover:bg-slate-800/40 transition-colors">
       <td className="px-4 py-2.5">
@@ -111,16 +263,42 @@ export function ClientRow({
           <span className="text-xs text-slate-500 italic">{t("hosts.noName")}</span>
         )}
         <div className="font-mono text-xs text-slate-500 mt-0.5">{client.mac}</div>
+        {vendor && <div className="text-xs text-slate-600 mt-0.5">{vendor}</div>}
       </td>
       <td className={`px-4 py-2.5 text-xs font-mono ${signalColor(client.signal_dbm)}`}>
         <span className="mr-1.5 tracking-tight">{signalBars(client.signal_dbm)}</span>
         {client.signal_dbm} dBm
       </td>
-      <td className="px-4 py-2.5 text-xs text-slate-400">{band}</td>
-      <td className="px-4 py-2.5 text-xs text-slate-400">{ssid || "—"}</td>
-      <td className="px-4 py-2.5 font-mono text-xs text-slate-400">{ip || "—"}</td>
+      <td className="px-4 py-2.5">
+        <span className="font-mono text-xs text-slate-400">{ip || "—"}</span>
+        {dhcpRouterId && ip && (
+          <span
+            className={`ml-1.5 text-xs px-1 py-0.5 rounded ${isReserved ? "bg-blue-500/10 text-blue-400" : "bg-slate-700/60 text-slate-500"}`}
+          >
+            {isReserved ? "static" : "DHCP"}
+          </span>
+        )}
+      </td>
       <td className="px-4 py-2.5 text-xs text-slate-500">{formatRate(client.tx_kbps)}</td>
       <td className="px-4 py-2.5 text-xs text-slate-500">{formatRate(client.rx_kbps)}</td>
+      {dhcpRouterId && (
+        <td className="px-4 py-2.5">
+          {isReserved ? (
+            <span title={t("hosts.reservationActive")} className="p-1 inline-flex text-blue-400">
+              <Bookmark size={14} />
+            </span>
+          ) : (
+            <button
+              type="button"
+              title={t("hosts.addReservation")}
+              onClick={openAdd}
+              className="p-1 rounded text-slate-500 hover:text-blue-400 transition-colors"
+            >
+              <BookmarkPlus size={14} />
+            </button>
+          )}
+        </td>
+      )}
     </tr>
   );
 }
@@ -132,6 +310,8 @@ export function AccessPointCard({
   routerOnline,
   hostnames,
   ips,
+  dhcpRouterId,
+  reservedMacs,
 }: {
   ap: AccessPoint;
   routerName: string;
@@ -139,6 +319,8 @@ export function AccessPointCard({
   routerOnline: boolean;
   hostnames: (mac: string) => string | undefined;
   ips: (mac: string) => string | undefined;
+  dhcpRouterId?: string | null;
+  reservedMacs?: Set<string>;
 }) {
   const { t } = useTranslation();
   const nav = useHotspotNav();
@@ -148,9 +330,28 @@ export function AccessPointCard({
 
   useEffect(() => {
     if (!nav) return;
-    nav.register({ id: cardId, name: routerName, ssid: ap.ssid, band: ap.band, ip: routerSubtitle, clientCount: ap.clients.length, online: routerOnline });
+    nav.register({
+      id: cardId,
+      name: routerName,
+      ssid: ap.ssid,
+      band: ap.band,
+      ip: routerSubtitle,
+      clientCount: ap.clients.length,
+      online: routerOnline,
+    });
     return () => nav.unregister(cardId);
   }, [nav, cardId, routerName, routerSubtitle, ap.clients.length, routerOnline]);
+
+  const hasDhcp = !!dhcpRouterId;
+  const baseHeaders = [
+    t("cudy.colHost"),
+    t("cudy.colSignal"),
+    "IP",
+    t("cudy.colTx"),
+    t("cudy.colRx"),
+  ];
+  const headers = hasDhcp ? [...baseHeaders, ""] : baseHeaders;
+  const colCount = headers.length;
 
   return (
     <div id={cardId} className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
@@ -160,27 +361,20 @@ export function AccessPointCard({
         subtitle={routerSubtitle}
         badge={!routerOnline ? t("cudy.offline") : undefined}
         count={ap.clients.length}
+        ssid={ap.ssid}
+        band={ap.band}
       />
       {routerOnline && ap.clients.length > 0 && (
-        <HostTable
-          headers={[
-            t("cudy.colHost"),
-            t("cudy.colSignal"),
-            t("cudy.colBand"),
-            t("cudy.colSsid"),
-            "IP",
-            t("cudy.colTx"),
-            t("cudy.colRx"),
-          ]}
-        >
+        <HostTable headers={headers}>
           {sorted.map((c) => (
             <ClientRow
               key={c.mac}
               client={c}
-              ssid={ap.ssid}
-              band={ap.band}
               hostname={hostnames(c.mac)}
               ip={ips(c.mac)}
+              isReserved={reservedMacs?.has(c.mac.toLowerCase()) ?? false}
+              dhcpRouterId={dhcpRouterId ?? null}
+              colCount={colCount}
             />
           ))}
         </HostTable>

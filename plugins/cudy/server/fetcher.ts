@@ -42,6 +42,10 @@ export interface CudyInterface {
   channel: number;
   bitrate: number;
   clients: CudyClient[];
+  bssid?: string;
+  password?: string;
+  standard?: string;
+  width?: number;
 }
 
 export interface CudyRouterResult {
@@ -95,6 +99,110 @@ async function luciGetJson(ip: string, token: string, path: string): Promise<unk
   } catch {
     return null;
   }
+}
+
+async function luciRpc(ip: string, token: string, rpcPath: string, method: string, params: unknown[]): Promise<unknown> {
+  const url = `http://${ip}/cgi-bin/luci${rpcPath}?auth=${token}`;
+  try {
+    const res = await fetchWithTimeout(url, {
+      method: "POST",
+      headers: { "content-type": "application/json", cookie: `sysauth=${token}` },
+      body: JSON.stringify({ id: 1, method, params }),
+    });
+    const json = (await res.json()) as { result?: unknown };
+    return json.result ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// ── WiFi config helpers ────────────────────────────────────────────────────────
+
+interface UciSection {
+  ".type"?: string;
+  ".name"?: string;
+  device?: string;
+  hwmode?: string;
+  htmode?: string;
+  ssid?: string;
+  key?: string;
+  disabled?: string;
+}
+
+function hwmodeToStandard(hwmode: string): string {
+  const m = hwmode.toLowerCase();
+  if (m.includes("be")) return "Wi-Fi 7 (802.11be)";
+  if (m.includes("ax")) return "Wi-Fi 6 (802.11ax)";
+  if (m.includes("ac") || m === "11ac") return "Wi-Fi 5 (802.11ac)";
+  if (m.includes("na") || (m.includes("n") && m.includes("a"))) return "Wi-Fi 4 (802.11n)";
+  if (m.includes("ng") || (m.includes("n") && m.includes("g"))) return "Wi-Fi 4 (802.11n)";
+  if (m.includes("a")) return "802.11a";
+  if (m.includes("g")) return "802.11g";
+  if (m.includes("b")) return "802.11b";
+  return hwmode;
+}
+
+function htmodeToWidth(htmode: string): number {
+  const m = htmode.toUpperCase();
+  if (m.includes("320")) return 320;
+  if (m.includes("160")) return 160;
+  if (m.includes("80")) return 80;
+  if (m.includes("40")) return 40;
+  return 20;
+}
+
+interface IfaceWifiConfig {
+  bssid?: string;
+  password?: string;
+  standard?: string;
+  width?: number;
+}
+
+async function fetchWifiConfig(ip: string, token: string, ifnames: string[]): Promise<Map<string, IfaceWifiConfig>> {
+  const result = new Map<string, IfaceWifiConfig>();
+
+  // UCI: password, standard (hwmode), width (htmode)
+  const uciRaw = await luciRpc(ip, token, "/rpc/uci", "get_all", ["wireless"]);
+  const uciSections = (uciRaw ?? {}) as Record<string, UciSection>;
+
+  // Build map: ssid → { password, standard, width } from UCI
+  const deviceMap = new Map<string, { standard?: string; width?: number }>();
+  const ifaceMap = new Map<string, { password?: string; deviceRef?: string }>();
+  for (const [, sec] of Object.entries(uciSections)) {
+    if (sec[".type"] === "wifi-device") {
+      deviceMap.set(sec[".name"] ?? "", {
+        standard: sec.hwmode ? hwmodeToStandard(sec.hwmode) : undefined,
+        width: sec.htmode ? htmodeToWidth(sec.htmode) : undefined,
+      });
+    } else if (sec[".type"] === "wifi-iface") {
+      ifaceMap.set(sec.ssid ?? "", {
+        password: sec.key,
+        deviceRef: sec.device,
+      });
+    }
+  }
+
+  // iwinfo: BSSID per interface
+  const bssidResults = await Promise.all(
+    ifnames.map((ifname) => luciRpc(ip, token, "/rpc/iwinfo", "info", [ifname]))
+  );
+
+  for (let i = 0; i < ifnames.length; i++) {
+    const ifname = ifnames[i];
+    const info = bssidResults[i] as { bssid?: string; ssid?: string } | null;
+    const bssid = info?.bssid;
+    const ssid = info?.ssid ?? "";
+    const ifaceConfig = ifaceMap.get(ssid);
+    const devConfig = ifaceConfig?.deviceRef ? deviceMap.get(ifaceConfig.deviceRef) : undefined;
+    result.set(ifname, {
+      bssid,
+      password: ifaceConfig?.password,
+      standard: devConfig?.standard,
+      width: devConfig?.width,
+    });
+  }
+
+  return result;
 }
 
 // ── Fetcher ───────────────────────────────────────────────────────────────────
@@ -157,6 +265,19 @@ export async function fetchCudyRouter(cfg: CudyRouterConfig): Promise<CudyRouter
         }
       }
       result.interfaces.push(iface);
+    }
+  }
+
+  if (result.interfaces.length > 0) {
+    const wifiConfig = await fetchWifiConfig(cfg.ip, token, result.interfaces.map((i) => i.ifname));
+    for (const iface of result.interfaces) {
+      const details = wifiConfig.get(iface.ifname);
+      if (details) {
+        iface.bssid = details.bssid;
+        iface.password = details.password;
+        iface.standard = details.standard;
+        iface.width = details.width;
+      }
     }
   }
 

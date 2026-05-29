@@ -8,6 +8,7 @@ import { handleCheckIp } from "./routes/check-ip.ts";
 import { handleAuthRoute, requireAuth } from "./routes/auth.ts";
 import { handleUiConfig } from "./routes/ui-config.ts";
 import { handleRouters } from "./routes/routers.ts";
+import { handleOui } from "./routes/oui.ts";
 import { createMapTopologyHandler } from "./routes/mapTopology.ts";
 import { handleHosts } from "./routes/hosts.ts";
 import { serveStatic } from "./static.ts";
@@ -106,6 +107,12 @@ async function main() {
     if (url === "/__config/routers") {
       if (!requireAuth(req, res)) return;
       handleRouters(req, res);
+      return;
+    }
+
+    if (url.startsWith("/__oui")) {
+      if (!requireAuth(req, res)) return;
+      await handleOui(req, res);
       return;
     }
 

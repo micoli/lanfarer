@@ -1,13 +1,26 @@
+import { useMemo } from "react";
 import { AccessPointCard } from "../../../../src/components/AccessPointCard.tsx";
 import type { RouterConfig } from "../../../../plugins/frontend-plugin.ts";
+import { useDhcpClients } from "../hooks/useBbox.ts";
 import { useBboxWireless } from "../hooks/useBboxWireless.ts";
 import { useMacHostnames } from "../hooks/useMacHostnames.ts";
 import { useMacIps } from "../hooks/useMacIps.ts";
+import { useDhcpRouterId } from "../../../../src/hooks/useUiConfig.ts";
 
 function BboxRouterSection({ routerId }: { routerId: string }) {
+  const dhcpRouterId = useDhcpRouterId();
   const { data: bboxWireless } = useBboxWireless(routerId);
   const hostnames = useMacHostnames(routerId);
   const ips = useMacIps(routerId);
+  const { data: dhcpData } = useDhcpClients(dhcpRouterId);
+
+  const reservedMacs = useMemo(
+    () =>
+      new Set(
+        (dhcpData?.clients ?? []).map((c) => c.macaddress?.toLowerCase() ?? "").filter(Boolean),
+      ),
+    [dhcpData],
+  );
 
   return (
     <>
@@ -25,6 +38,8 @@ function BboxRouterSection({ routerId }: { routerId: string }) {
             routerOnline={bboxWireless?.online ?? false}
             hostnames={hostnames}
             ips={ips}
+            dhcpRouterId={dhcpRouterId}
+            reservedMacs={reservedMacs}
           />
         ))}
     </>

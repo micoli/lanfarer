@@ -13,6 +13,10 @@ export interface AccessPoint {
   band: "2.4G" | "5G";
   channel: number;
   clients: WirelessClient[];
+  bssid?: string;
+  password?: string;
+  standard?: string;
+  width?: number;
 }
 
 export interface WirelessData {
