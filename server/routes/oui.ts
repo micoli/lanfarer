@@ -1,10 +1,8 @@
 import type http from "node:http";
-
-// OUI prefix (first 3 bytes, uppercase no separator) → vendor name
-const cache = new Map<string, string | null>();
+import {lookupVendor} from "../mac-vendor.ts";
 
 function ouiPrefix(mac: string): string {
-  return mac.toUpperCase().replace(/[^0-9A-F]/g, "").slice(0, 6);
+  return formatMac(mac).toUpperCase().replace(/[^0-9A-F]/g, "").slice(0, 6);
 }
 
 function sendJson(res: http.ServerResponse, code: number, data: unknown) {
@@ -13,22 +11,10 @@ function sendJson(res: http.ServerResponse, code: number, data: unknown) {
   res.end(body);
 }
 
-async function lookupVendor(oui: string): Promise<string | null> {
-  if (cache.has(oui)) return cache.get(oui)!;
-  try {
-    const mac = `${oui.slice(0, 2)}:${oui.slice(2, 4)}:${oui.slice(4, 6)}`;
-    const res = await fetch(`https://api.macvendors.com/${mac}`, {
-      headers: { Accept: "text/plain" },
-      signal: AbortSignal.timeout(3000),
-    });
-    if (res.status === 404) { cache.set(oui, null); return null; }
-    if (!res.ok) return null;
-    const vendor = (await res.text()).trim() || null;
-    cache.set(oui, vendor);
-    return vendor;
-  } catch {
-    return null;
-  }
+export function formatMac(mac: string): string {
+  if (/^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/.test(mac)) return mac;
+  const hex = mac.toUpperCase().replace(/[^0-9A-F]/g, "");
+  return hex.match(/.{1,2}/g)?.join(":") ?? mac;
 }
 
 export async function handleOui(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {

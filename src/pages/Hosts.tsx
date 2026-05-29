@@ -12,6 +12,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Host, HostConnexion } from "../../plugins/contracts.ts";
 import { useHosts } from "../hooks/useHosts.ts";
+import { useVendor } from "../hooks/useVendor.ts";
 
 import { exportCsv } from "../lib/exportCsv";
 
@@ -105,6 +106,7 @@ function Th({
 
 function HostRow({ host, i }: { host: Host; i: number }) {
   const { t } = useTranslation();
+  const vendor = useVendor(host.mac ?? undefined);
   return (
     <tr
       key={host.mac ?? i}
@@ -117,7 +119,10 @@ function HostRow({ host, i }: { host: Host; i: number }) {
         {host.hostname || <span className="text-slate-500 italic">{t("hosts.noName")}</span>}
       </td>
       <td className="px-4 py-2.5 text-sm font-mono text-slate-300">{host.ip ?? "—"}</td>
-      <td className="px-4 py-2.5 text-xs font-mono text-slate-400">{host.mac ?? "—"}</td>
+      <td className="px-4 py-2.5 text-xs font-mono text-slate-400">
+        {host.mac ?? "—"}
+        {vendor && <div className="text-slate-500 font-sans normal-case">{vendor}</div>}
+      </td>
       <td className="px-4 py-2.5 text-xs text-slate-500 uppercase">{host.type ?? "—"}</td>
       <td className="px-4 py-2.5">
         <ConnexionBadge connexion={host.connexion} ssid={host.ssid} />
@@ -137,8 +142,8 @@ export default function Hosts() {
   const [filter, setFilter] = useState("");
   const [showActive, setShowActive] = useState<"all" | "active" | "inactive">("all");
   const [connexionFilter, setConnexionFilter] = useState<Set<HostConnexion>>(new Set());
-  const [sortKey, setSortKey] = useState<SortKey>("active");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [sortKey, setSortKey] = useState<SortKey>("ip");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   function toggleConnexion(v: HostConnexion) {
     setConnexionFilter((prev) => {
