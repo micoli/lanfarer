@@ -11,6 +11,7 @@ import CudyClients from "./pages/Hotspots.tsx";
 import MapPage from "./pages/Map";
 import NetworkScan from "./pages/NetworkScan";
 import NotFound from "./pages/NotFound";
+import Ping from "./pages/Ping";
 
 type AuthProps = ReturnType<typeof useAuth>;
 
@@ -32,6 +33,7 @@ function AppRoutes({ auth }: { auth: AuthProps }) {
           <Route path="/scan" element={<NetworkScan />} />
           <Route path="/hotspots" element={<CudyClients />} />
           <Route path="/map" element={<MapPage />} />
+          <Route path="/ping" element={<Ping />} />
           {pluginRoutes.map((r) => (
             <Route key={r.path} path={r.path} element={<r.component />} />
           ))}

@@ -21,7 +21,7 @@ import {
   useIpCheck,
 } from "../../plugins/bbox/frontend/hooks/useBbox.ts";
 import { useHosts } from "../hooks/useHosts.ts";
-import { useVendor } from "../hooks/useVendor.ts";
+import { useVendor, useVendors } from "../hooks/useVendor.ts";
 import { useDhcpRouterId } from "../hooks/useUiConfig.ts";
 
 import { exportCsv } from "../lib/exportCsv";
@@ -286,7 +286,7 @@ export default function Hosts() {
   }, [dhcpData]);
 
   const [filter, setFilter] = useState("");
-  const [showActive, setShowActive] = useState<"all" | "active" | "inactive">("all");
+  const [showActive, setShowActive] = useState<"all" | "active" | "inactive">("active");
   const [connexionFilter, setConnexionFilter] = useState<Set<HostConnexion>>(new Set());
   const [sortKey, setSortKey] = useState<SortKey>("ip");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -300,6 +300,8 @@ export default function Hosts() {
   }
 
   const hosts = hostsData?.hosts ?? null;
+  const allMacs = useMemo(() => (hosts ?? []).map((h) => h.mac), [hosts]);
+  const vendorMap = useVendors(allMacs);
 
   const filtered = useMemo(() => {
     if (!hosts) return null;
@@ -317,7 +319,8 @@ export default function Hosts() {
         (h) =>
           h.hostname?.toLowerCase().includes(q) ||
           h.ip?.includes(q) ||
-          h.mac?.toLowerCase().includes(q)
+          h.mac?.toLowerCase().includes(q) ||
+          (h.mac && vendorMap.get(h.mac.toLowerCase())?.toLowerCase().includes(q))
       );
     }
 

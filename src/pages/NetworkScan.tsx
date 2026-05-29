@@ -272,6 +272,7 @@ export default function NetworkScan() {
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [hosts, setHosts] = useState<ScanHost[]>([]);
   const [subnet, setSubnet] = useState("");
+  const [filter, setFilter] = useState("");
   const [error, setError] = useState<string | null>(null);
   const esRef = useRef<EventSource | null>(null);
 
@@ -350,6 +351,19 @@ export default function NetworkScan() {
 
   const pct = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
 
+  const filteredHosts = useMemo(() => {
+    if (!filter) return hosts;
+    const q = filter.toLowerCase();
+    return hosts.filter(
+      (h) =>
+        h.ip.includes(q) ||
+        h.mac?.toLowerCase().includes(q) ||
+        h.hostname?.toLowerCase().includes(q) ||
+        h.vendor?.toLowerCase().includes(q) ||
+        h.mdnsName?.toLowerCase().includes(q),
+    );
+  }, [hosts, filter]);
+
   return (
     <div className="p-6 flex flex-col gap-4 overflow-auto">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -425,6 +439,16 @@ export default function NetworkScan() {
         </div>
       </div>
 
+      {hosts.length > 0 && (
+        <input
+          type="search"
+          placeholder={t("hosts.search")}
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          className="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors w-64 self-start"
+        />
+      )}
+
       {(scanning || progress.total > 0) && (
         <div className="flex flex-col gap-1.5">
           <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
@@ -462,7 +486,7 @@ export default function NetworkScan() {
               </tr>
             </thead>
             <tbody>
-              {hosts.map((h) => (
+              {filteredHosts.map((h) => (
                 <ScanHostRow
                   key={h.ip}
                   host={h}

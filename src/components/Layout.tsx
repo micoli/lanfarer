@@ -9,6 +9,7 @@ import {
   Network,
   Router,
   ScanLine,
+  Signal,
   Wifi,
 } from "lucide-react";
 import { useState } from "react";
@@ -63,6 +64,7 @@ const CORE_DESCRIPTORS: NavItemDescriptor[] = [
   { id: "scan", icon: ScanLine, labelKey: "nav.scan", path: "/scan" },
   { id: "hotspots", icon: Router, labelKey: "nav.hotspots", path: "/hotspots" },
   { id: "map", icon: Map, labelKey: "nav.map", path: "/map" },
+  { id: "ping", icon: Signal, labelKey: "nav.ping", path: "/ping" },
 ];
 
 function resolveMenuItem(

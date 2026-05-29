@@ -9,6 +9,7 @@
     "map": "Carte",
     "dhcp": "DHCP",
     "bandwidth": "Bande passante",
+    "ping": "Ping",
     "dhcpOptions": "Options DHCP",
     "dhcpReservations": "Réservations DHCP"
   },
@@ -194,6 +195,22 @@
     "legendClient": "Hôte connecté",
     "legendSignal": "Force du signal",
     "hint": "glisser pour tourner · molette pour zoomer"
+  },
+  "ping": {
+    "title": "Ping / Latence",
+    "subtitle": "RTT et perte de paquets en temps réel — rafraîchi toutes les 3 s",
+    "connecting": "connexion…",
+    "timeout": "timeout",
+    "ms": "ms",
+    "colRtt": "RTT",
+    "colMin": "Min",
+    "colAvg": "Moy",
+    "colMax": "Max",
+    "colLoss": "Perte",
+    "colHistory": "Historique",
+    "hostCount": "{{count}} appareil",
+    "hostCount_other": "{{count}} appareils",
+    "noHosts": "Aucun appareil avec adresse IP"
   },
   "auth": {
     "title": "Connexion",

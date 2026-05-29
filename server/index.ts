@@ -11,6 +11,7 @@ import { handleRouters } from "./routes/routers.ts";
 import { handleOui } from "./routes/oui.ts";
 import { createMapTopologyHandler } from "./routes/mapTopology.ts";
 import { handleHosts } from "./routes/hosts.ts";
+import { handlePing } from "./routes/ping.ts";
 import { serveStatic } from "./static.ts";
 import fs from "node:fs";
 import path from "node:path";
@@ -84,6 +85,12 @@ async function main() {
         await plugin.handle(req, res);
         return;
       }
+    }
+
+    if (url.startsWith("/__ping") && req.method === "GET") {
+      if (!requireAuth(req, res)) return;
+      await handlePing(req, res);
+      return;
     }
 
     if (url === "/__hosts" && req.method === "GET") {

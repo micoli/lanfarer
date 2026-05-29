@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { basePath } from "../lib/basePath.ts";
 
 function ouiPrefix(mac: string): string {
@@ -22,4 +23,28 @@ export function useVendor(mac: string | undefined): string | undefined {
     retry: false,
   });
   return data ?? undefined;
+}
+
+export function useVendors(macs: (string | undefined | null)[]): Map<string, string> {
+  const prefixes = macs.map((mac) => (mac ? ouiPrefix(mac) : ""));
+
+  const results = useQueries({
+    queries: prefixes.map((oui) => ({
+      queryKey: ["oui", oui],
+      queryFn: () => (oui ? fetchVendor(oui) : Promise.resolve(null)),
+      enabled: !!oui,
+      staleTime: Infinity,
+      retry: false,
+    })),
+  });
+
+  return useMemo(() => {
+    const map = new Map<string, string>();
+    macs.forEach((mac, i) => {
+      const vendor = results[i]?.data;
+      if (mac && vendor) map.set(mac.toLowerCase(), vendor);
+    });
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [results]);
 }

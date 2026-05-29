@@ -9,6 +9,7 @@
     "map": "Map",
     "dhcp": "DHCP",
     "bandwidth": "Bandwidth",
+    "ping": "Ping",
     "dhcpOptions": "DHCP Options",
     "dhcpReservations": "DHCP Reservations"
   },
@@ -194,6 +195,22 @@
     "legendClient": "Connected host",
     "legendSignal": "Signal strength",
     "hint": "drag to rotate · scroll to zoom"
+  },
+  "ping": {
+    "title": "Ping / Latency",
+    "subtitle": "Real-time RTT and packet loss — refreshed every 3 s",
+    "connecting": "connecting…",
+    "timeout": "timeout",
+    "ms": "ms",
+    "colRtt": "RTT",
+    "colMin": "Min",
+    "colAvg": "Avg",
+    "colMax": "Max",
+    "colLoss": "Loss",
+    "colHistory": "History",
+    "hostCount": "{{count}} device",
+    "hostCount_other": "{{count}} devices",
+    "noHosts": "No devices with an IP address"
   },
   "auth": {
     "title": "Sign in",
