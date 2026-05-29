@@ -114,9 +114,9 @@ export default function MapPage() {
     sun.position.set(6, 10, 8);
     sun.castShadow = true;
     scene.add(sun);
-    const bboxGlow = new THREE.PointLight(0x3b82f6, 3, 7);
-    bboxGlow.position.set(0, 0.5, 0);
-    scene.add(bboxGlow);
+    const glow = new THREE.PointLight(0x3b82f6, 3, 7);
+    glow.position.set(0, 0.5, 0);
+    scene.add(glow);
 
     // ── Grid ─────────────────────────────────────────────────────────────────
     const grid = new THREE.GridHelper(22, 22, 0x1e293b, 0x1e293b);
@@ -173,15 +173,15 @@ export default function MapPage() {
     const targets: THREE.Mesh[] = [];
 
     // ── Bbox ─────────────────────────────────────────────────────────────────
-    const bboxMesh = new THREE.Mesh(geoBig, stdMat(0x3b82f6, 0.4));
-    bboxMesh.castShadow = true;
-    bboxMesh.userData = { tooltip: "LAN" };
-    scene.add(bboxMesh);
-    targets.push(bboxMesh);
+    const mesh = new THREE.Mesh(geoBig, stdMat(0x3b82f6, 0.4));
+    mesh.castShadow = true;
+    mesh.userData = { tooltip: "LAN" };
+    scene.add(mesh);
+    targets.push(mesh);
 
-    const bboxLabel = css2dLabel("LAN");
-    bboxLabel.position.set(0, -0.8, 0);
-    bboxMesh.add(bboxLabel);
+    const label = css2dLabel("LAN");
+    label.position.set(0, -0.8, 0);
+    mesh.add(label);
 
     // pulsing halo ring
     const haloGeo = new THREE.TorusGeometry(0.75, 0.03, 8, 80);
@@ -192,7 +192,7 @@ export default function MapPage() {
     });
     const halo = new THREE.Mesh(haloGeo, haloMat);
     halo.rotation.x = Math.PI / 2;
-    bboxMesh.add(halo);
+    mesh.add(halo);
 
     // ── Edge materials ────────────────────────────────────────────────────────
     const mainEdgeMat = new THREE.LineBasicMaterial({ color: 0x2d4a6b, linewidth: 1 });
@@ -294,7 +294,7 @@ export default function MapPage() {
       const t = performance.now();
       // pulse bbox + halo
       const pulse = 1 + 0.045 * Math.sin(t * 0.0025);
-      bboxMesh.scale.setScalar(pulse);
+      mesh.scale.setScalar(pulse);
       haloMat.opacity = 0.35 + 0.2 * Math.sin(t * 0.002);
       controls.update();
       renderer.render(scene, camera);

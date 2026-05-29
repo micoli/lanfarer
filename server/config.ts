@@ -96,6 +96,7 @@ interface UiWidgetConfig   { type: string; id: string }
 export interface UiConfig {
   menu: UiMenuItemConfig[] | null;
   home: { widgets: UiWidgetConfig[] } | null;
+  dhcp: { router: string } | null;
 }
 
 export interface RouterEntry {
@@ -131,18 +132,23 @@ function buildDefaultUiConfig(): UiConfig {
     menu.push({ id: "dhcp-options", router: firstBbox.name });
     menu.push({ id: "dhcp-reservations", router: firstBbox.name });
   }
-  return { menu, home: null };
+  return { menu, home: null, dhcp: firstBbox ? { router: firstBbox.name } : null };
 }
 
 export function loadUiConfig(): UiConfig {
   try {
     const raw = fs.readFileSync(CONFIG_FILE, "utf8");
-    const data = parseYaml(raw) as { ui?: { menu?: UiMenuItemConfig[]; home?: { widgets?: UiWidgetConfig[] } } };
+    const data = parseYaml(raw) as {
+      ui?: { menu?: UiMenuItemConfig[]; home?: { widgets?: UiWidgetConfig[] } };
+      dhcp?: { router?: string };
+    };
     const ui = data.ui;
-    if (!ui) return buildDefaultUiConfig();
+    const dhcp = data.dhcp?.router ? { router: data.dhcp.router } : null;
+    if (!ui) return { ...buildDefaultUiConfig(), dhcp };
     return {
       menu: ui.menu ?? null,
       home: ui.home?.widgets ? { widgets: ui.home.widgets } : null,
+      dhcp,
     };
   } catch {
     return buildDefaultUiConfig();

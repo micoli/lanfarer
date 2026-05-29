@@ -7,15 +7,14 @@ import {
   type LucideIcon,
   Map,
   Network,
-  Radio,
   Router,
   ScanLine,
-  Settings2,
   Wifi,
 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink, Outlet } from "react-router-dom";
+import type { FrontendPlugin, NavItemDescriptor } from "../../plugins/frontend-plugin.ts";
 import type { MenuItemConfig } from "../hooks/useUiConfig.ts";
 import { useUiConfig } from "../hooks/useUiConfig.ts";
 import { ErrorBoundary } from "./ErrorBoundary";
@@ -56,47 +55,58 @@ function isNavGroup(e: NavEntry): e is NavGroup {
   return "children" in e;
 }
 
-function buildAllNav(t: (key: string) => string): NavItem[] {
-  return [
-    { id: "home", to: "/", icon: Home, label: t("nav.home"), end: true },
-    { id: "bandwidth", to: "/bandwidth", icon: Activity, label: t("nav.bandwidth"), end: false },
-    { id: "hosts", to: "/hosts", icon: Wifi, label: t("nav.hosts"), end: false },
-    { id: "scan", to: "/scan", icon: ScanLine, label: t("nav.scan"), end: false },
-    { id: "hotspots", to: "/hotspots", icon: Router, label: t("nav.hotspots"), end: false },
-    { id: "map", to: "/map", icon: Map, label: t("nav.map"), end: false },
-    { id: "wifi", to: "/wifi", icon: Radio, label: t("nav.wifi"), end: false },
-    { id: "dhcp-options", to: "", icon: Settings2, label: t("nav.dhcpOptions"), end: false },
-    {
-      id: "dhcp-reservations",
-      to: "",
-      icon: Network,
-      label: t("nav.dhcpReservations"),
-      end: false,
-    },
-  ];
-}
+const CORE_DESCRIPTORS: NavItemDescriptor[] = [
+  { id: "home", icon: Home, labelKey: "nav.home", path: "/", end: true },
+  { id: "bandwidth", icon: Activity, labelKey: "nav.bandwidth", path: "/bandwidth" },
+  { id: "hosts", icon: Wifi, labelKey: "nav.hosts", path: "/hosts" },
+  { id: "scan", icon: ScanLine, labelKey: "nav.scan", path: "/scan" },
+  { id: "hotspots", icon: Router, labelKey: "nav.hotspots", path: "/hotspots" },
+  { id: "map", icon: Map, labelKey: "nav.map", path: "/map" },
+];
 
 function resolveMenuItem(
   item: MenuItemConfig,
-  allNav: NavItem[],
+  descriptors: NavItemDescriptor[],
   t: (key: string) => string
 ): NavEntry | null {
   if (item.children?.length) {
     const children = item.children
-      .map((c) => resolveMenuItem(c, allNav, t))
+      .map((c) => resolveMenuItem(c, descriptors, t))
       .filter((e): e is NavItem => e !== null && !isNavGroup(e));
     if (!children.length) return null;
-    const label = t(`nav.${item.id}`);
-    return { id: item.id, label, children };
+    return { id: item.id, label: t(`nav.${item.id}`), children };
   }
-  const entry = allNav.find((n) => n.id === item.id);
-  if (!entry) return null;
-  if (item.id === "dhcp-options" || item.id === "dhcp-reservations") {
+
+  const descriptor = descriptors.find((d) => d.id === item.id);
+  if (!descriptor) return null;
+
+  let to: string;
+  if (typeof descriptor.path === "function") {
     if (!item.router) return null;
-    const suffix = item.id === "dhcp-options" ? "options" : "reservations";
-    return { ...entry, to: `/dhcp/${item.router}/${suffix}` };
+    to = descriptor.path(item.router);
+  } else {
+    to = descriptor.path;
   }
-  return entry;
+
+  return {
+    id: descriptor.id,
+    to,
+    icon: descriptor.icon,
+    label: t(descriptor.labelKey),
+    end: descriptor.end ?? false,
+  };
+}
+
+function buildDefaultNav(descriptors: NavItemDescriptor[], t: (key: string) => string): NavItem[] {
+  return descriptors
+    .filter((d) => typeof d.path === "string")
+    .map((d) => ({
+      id: d.id,
+      to: d.path as string,
+      icon: d.icon,
+      label: t(d.labelKey),
+      end: d.end ?? false,
+    }));
 }
 
 function NavItemLink({ item }: { item: NavItem }) {
@@ -141,17 +151,26 @@ function NavGroupSection({ group }: { group: NavGroup }) {
   );
 }
 
-export default function Layout({ auth }: { auth: AuthProps }) {
+export default function Layout({
+  auth,
+  activePlugins,
+}: {
+  auth: AuthProps;
+  activePlugins: FrontendPlugin[];
+}) {
   const { t } = useTranslation();
   const uiConfig = useUiConfig();
 
-  const allNav = buildAllNav(t);
+  const descriptors: NavItemDescriptor[] = [
+    ...CORE_DESCRIPTORS,
+    ...activePlugins.flatMap((p) => p.navItems ?? []),
+  ];
 
   const NAV: NavEntry[] =
     uiConfig.menu === null
-      ? allNav.filter((n) => n.id !== "dhcp-options" && n.id !== "dhcp-reservations")
+      ? buildDefaultNav(descriptors, t)
       : uiConfig.menu
-          .map((item) => resolveMenuItem(item, allNav, t))
+          .map((item) => resolveMenuItem(item, descriptors, t))
           .filter((e): e is NavEntry => e !== null);
 
   const flatNav: NavItem[] = NAV.flatMap((e) => (isNavGroup(e) ? e.children : [e]));

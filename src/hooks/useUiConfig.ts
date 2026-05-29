@@ -15,9 +15,10 @@ export interface WidgetConfig {
 export interface UiConfig {
   menu: MenuItemConfig[] | null;
   home: { widgets: WidgetConfig[] } | null;
+  dhcp: { router: string } | null;
 }
 
-const DEFAULT_CONFIG: UiConfig = { menu: null, home: null };
+const DEFAULT_CONFIG: UiConfig = { menu: null, home: null, dhcp: null };
 
 async function fetchUiConfig(): Promise<UiConfig> {
   const res = await fetch(`${basePath()}/__config/ui`);
@@ -52,23 +53,31 @@ export function useRouterForPage(pageId: string): string | null {
   return findInMenu(config.menu, pageId)?.router ?? null;
 }
 
-export function useRouterType(routerId: string | null): string | null {
+async function fetchRouters(): Promise<{ name: string; type: string }[]> {
+  const res = await fetch(`${basePath()}/__config/routers`);
+  if (!res.ok) return [];
+  return res.json() as Promise<{ name: string; type: string }[]>;
+}
+
+export function useRouters(): { name: string; type: string }[] | undefined {
   const { data } = useQuery({
     queryKey: ["config", "routers"],
-    queryFn: async () => {
-      const res = await fetch(`${basePath()}/__config/routers`);
-      if (!res.ok) return [] as { name: string; type: string }[];
-      return res.json() as Promise<{ name: string; type: string }[]>;
-    },
+    queryFn: fetchRouters,
     staleTime: Infinity,
     retry: false,
   });
+  return data;
+}
+
+export function useRouterType(routerId: string | null): string | null {
+  const data = useRouters();
   if (!routerId || !data) return null;
   return data.find((r) => r.name === routerId)?.type ?? null;
 }
 
 export function useDhcpRouterId(): string | null {
   const config = useUiConfig();
+  if (config.dhcp?.router) return config.dhcp.router;
   if (!config.menu) return null;
   const item =
     findInMenu(config.menu, "dhcp-options") ?? findInMenu(config.menu, "dhcp-reservations");

@@ -1,10 +1,6 @@
+import { frontendPlugins } from "./frontendPlugins.ts";
 import type { HostListProvider } from "./hostListProvider.ts";
 
-const modules = import.meta.glob<{ hostListProvider: HostListProvider }>(
-  "./*/frontend/hostListProvider.ts",
-  { eager: true },
-);
-
-export const hostListProviders: HostListProvider[] = Object.values(modules)
-  .map((m) => m.hostListProvider)
+export const hostListProviders: HostListProvider[] = frontendPlugins
+  .map((p) => p.hostListProvider)
   .filter((p): p is HostListProvider => typeof p === "function");
