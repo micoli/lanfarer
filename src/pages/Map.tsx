@@ -14,6 +14,13 @@ const CLIENT_SPREAD = (170 * Math.PI) / 180;
 const CLIENT_ORBIT_MIN = 5.2; // strongest signal (-50 dBm)
 const CLIENT_ORBIT_MAX = 10.8; // weakest signal (-90 dBm)
 
+// Heights cycle through varied levels so neighbouring hotspots never overlap
+const HOTSPOT_HEIGHTS = [0, 2.2, -1.5, 3.0, 1.0, -2.5, 2.8, -0.8, 1.8, -1.2];
+
+function hotspotHeight(i: number): number {
+  return HOTSPOT_HEIGHTS[i % HOTSPOT_HEIGHTS.length];
+}
+
 function signalOrbit(dbm: number | undefined): number {
   if (dbm === undefined) return (CLIENT_ORBIT_MIN + CLIENT_ORBIT_MAX) / 2;
   const a = Math.max(50, Math.min(90, Math.abs(dbm)));
@@ -26,6 +33,23 @@ function signalHex(dbm: number): number {
   if (a <= 65) return 0xfacc15;
   if (a <= 75) return 0xfb923c;
   return 0xf87171;
+}
+
+function hslToHex(h: number, s: number, l: number): number {
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    return Math.round(255 * (l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1)));
+  };
+  return (f(0) << 16) | (f(8) << 8) | f(4);
+}
+
+function nameColor(name: string): number {
+  let h = 5381;
+  for (let i = 0; i < name.length; i++) {
+    h = ((h << 5) + h + name.charCodeAt(i)) >>> 0;
+  }
+  return hslToHex(h % 360, 0.65, 0.58);
 }
 
 function clientPositions(
@@ -85,11 +109,22 @@ export default function MapPage() {
     // ── Scene ────────────────────────────────────────────────────────────────
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0f172a);
-    scene.fog = new THREE.FogExp2(0x0f172a, 0.035);
+    scene.fog = new THREE.FogExp2(0x0f172a, 0.012);
 
     // ── Camera ───────────────────────────────────────────────────────────────
-    const camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 100);
-    camera.position.set(0, 9, 13);
+    // Compute initial position so all hotspots + clients are visible
+    const sceneXZ = hotspots.length === 0 ? 3 : HOTSPOT_RING + CLIENT_ORBIT_MIN + 2;
+    const usedAbsY =
+      hotspots.length > 0
+        ? Math.max(...hotspots.map((_, i) => Math.abs(hotspotHeight(i))))
+        : 0;
+    const fovHalfRad = (50 * Math.PI) / 180 / 2;
+    const camDist = (sceneXZ / Math.tan(fovHalfRad)) * 1.15;
+    const camY = usedAbsY + 4;
+    const camZ = Math.sqrt(Math.max(camDist * camDist - camY * camY, 1));
+
+    const camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 200);
+    camera.position.set(0, camY, camZ);
 
     // ── Renderers ────────────────────────────────────────────────────────────
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -127,16 +162,15 @@ export default function MapPage() {
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.06;
-    controls.autoRotate = true;
-    controls.autoRotateSpeed = 0.5;
+    controls.autoRotate = false;
     controls.minDistance = 4;
-    controls.maxDistance = 28;
+    controls.maxDistance = Math.max(camDist * 1.5, 40);
     controls.maxPolarAngle = Math.PI / 2.05;
 
     // ── Shared geometries ────────────────────────────────────────────────────
-    const geoSm = new THREE.SphereGeometry(0.18, 24, 12);
-    const geoMd = new THREE.SphereGeometry(0.35, 32, 16);
-    const geoBig = new THREE.SphereGeometry(0.52, 48, 24);
+    const geoSm = new THREE.SphereGeometry(0.18, 24, 12); // host (client)
+    const geoMd = new THREE.OctahedronGeometry(0.38, 0); // hotspot (AP)
+    const geoBig = new THREE.SphereGeometry(0.52, 48, 24); // LAN center
 
     function stdMat(color: number, emissiveIntensity = 0.3): THREE.MeshStandardMaterial {
       return new THREE.MeshStandardMaterial({
@@ -145,6 +179,8 @@ export default function MapPage() {
         emissiveIntensity,
         metalness: 0.15,
         roughness: 0.55,
+        transparent: true,
+        opacity: 1,
       });
     }
 
@@ -194,40 +230,69 @@ export default function MapPage() {
     halo.rotation.x = Math.PI / 2;
     mesh.add(halo);
 
-    // ── Edge materials ────────────────────────────────────────────────────────
-    const mainEdgeMat = new THREE.LineBasicMaterial({ color: 0x2d4a6b, linewidth: 1 });
-    const clientEdgeMat = new THREE.LineBasicMaterial({ color: 0x883300, linewidth: 1 });
 
     // ── Hotspots + clients ───────────────────────────────────────────────────
     const n = hotspots.length;
+
+    type Group = {
+      mats: THREE.MeshStandardMaterial[];
+      lineMats: THREE.LineBasicMaterial[];
+      labelEls: HTMLElement[];
+      meshes: THREE.Mesh[];
+    };
+    const groups: Group[] = [];
 
     hotspots.forEach((hs, i) => {
       const angle = -Math.PI / 2 + (2 * Math.PI * i) / Math.max(n, 1);
       const hx = HOTSPOT_RING * Math.cos(angle);
       const hz = HOTSPOT_RING * Math.sin(angle);
+      const hy = hotspotHeight(i);
 
-      const hColor = hs.kind === "bbox-wifi" ? 0x6366f1 : hs.online ? 0x22c55e : 0xef4444;
-      const hMesh = new THREE.Mesh(geoMd, stdMat(hColor, 0.35));
-      hMesh.position.set(hx, 0, hz);
+      const group: Group = { mats: [], lineMats: [], labelEls: [], meshes: [] };
+
+      const hColor = nameColor(hs.label);
+      const hMat = stdMat(hColor, 0.4);
+      const hMesh = new THREE.Mesh(geoMd, hMat);
+      hMesh.position.set(hx, hy, hz);
       hMesh.castShadow = true;
       hMesh.userData = {
         tooltip: `${hs.label}${hs.sublabel ? ` · ${hs.sublabel}` : ""} — ${hs.clients.length} client${hs.clients.length !== 1 ? "s" : ""}`,
+        groupIdx: i,
       };
       scene.add(hMesh);
       targets.push(hMesh);
+      group.mats.push(hMat);
+      group.meshes.push(hMesh);
 
-      const hlbl = css2dLabel(hs.label, hs.sublabel);
-      hlbl.position.set(0, -0.6, 0);
+      const hlblWrap = document.createElement("div");
+      hlblWrap.style.cssText = "display:flex;flex-direction:column;align-items:center;gap:1px;";
+      const hlblName = document.createElement("span");
+      hlblName.style.cssText =
+        "background:rgba(15,23,42,0.88);color:#e2e8f0;font:600 10px/1.3 monospace;padding:1px 5px;border-radius:3px;white-space:nowrap;";
+      hlblName.textContent = clip(hs.label, 20);
+      hlblWrap.appendChild(hlblName);
+      if (hs.sublabel) {
+        const sub = document.createElement("span");
+        sub.style.cssText =
+          "background:rgba(15,23,42,0.7);color:#64748b;font:9px/1.2 monospace;padding:0 4px;border-radius:3px;white-space:nowrap;";
+        sub.textContent = hs.sublabel;
+        hlblWrap.appendChild(sub);
+      }
+      const hlbl = new CSS2DObject(hlblWrap);
+      hlbl.position.set(0, -0.65, 0);
       hMesh.add(hlbl);
+      group.labelEls.push(hlblWrap);
 
-      // bbox → hotspot edge
+      // LAN → hotspot edge (3D)
+      const eMat = new THREE.LineBasicMaterial({ color: 0x2d4a6b, linewidth: 1 });
       const eGeo = new THREE.BufferGeometry().setFromPoints([
         new THREE.Vector3(0, 0, 0),
-        new THREE.Vector3(hx, 0, hz),
+        new THREE.Vector3(hx, hy, hz),
       ]);
-      scene.add(new THREE.Line(eGeo, mainEdgeMat));
+      scene.add(new THREE.Line(eGeo, eMat));
+      group.lineMats.push(eMat);
 
-      // clients — radius encodes signal strength (close = strong, far = weak)
+      // clients orbit at the same height as their hotspot
       const clientPos = clientPositions(
         hx,
         hz,
@@ -239,23 +304,39 @@ export default function MapPage() {
       hs.clients.forEach((c, j) => {
         const cp = clientPos[j];
         const cColor = c.signal !== undefined ? signalHex(c.signal) : 0x94a3b8;
-        const cMesh = new THREE.Mesh(geoSm, stdMat(cColor, 0.4));
-        cMesh.position.set(cp.x, 0, cp.z);
-        cMesh.userData = { tooltip: c.tooltip };
+        const cMat = stdMat(cColor, 0.4);
+        const cMesh = new THREE.Mesh(geoSm, cMat);
+        cMesh.position.set(cp.x, hy, cp.z);
+        cMesh.userData = { tooltip: c.tooltip, groupIdx: i };
         scene.add(cMesh);
         targets.push(cMesh);
+        group.mats.push(cMat);
+        group.meshes.push(cMesh);
 
         const displayName = c.hostname ?? c.mac.slice(-8);
-        const clbl = css2dLabel(clip(displayName, 14));
+        const clblWrap = document.createElement("div");
+        clblWrap.style.cssText =
+          "display:flex;flex-direction:column;align-items:center;gap:1px;";
+        const clblName = document.createElement("span");
+        clblName.style.cssText =
+          "background:rgba(15,23,42,0.88);color:#e2e8f0;font:600 10px/1.3 monospace;padding:1px 5px;border-radius:3px;white-space:nowrap;";
+        clblName.textContent = clip(displayName, 14);
+        clblWrap.appendChild(clblName);
+        const clbl = new CSS2DObject(clblWrap);
         clbl.position.set(0, -0.32, 0);
         cMesh.add(clbl);
+        group.labelEls.push(clblWrap);
 
+        const ceMat = new THREE.LineBasicMaterial({ color: 0x883300, linewidth: 1 });
         const ceGeo = new THREE.BufferGeometry().setFromPoints([
-          new THREE.Vector3(hx, 0, hz),
-          new THREE.Vector3(cp.x, 0, cp.z),
+          new THREE.Vector3(hx, hy, hz),
+          new THREE.Vector3(cp.x, hy, cp.z),
         ]);
-        scene.add(new THREE.Line(ceGeo, clientEdgeMat));
+        scene.add(new THREE.Line(ceGeo, ceMat));
+        group.lineMats.push(ceMat);
       });
+
+      groups.push(group);
     });
 
     // ── Resize ───────────────────────────────────────────────────────────────
@@ -284,8 +365,49 @@ export default function MapPage() {
       }
     };
     const onMouseLeave = () => setTooltip(null);
+
+    let selectedGroup = -1;
+    function applySelection(sel: number) {
+      selectedGroup = sel;
+      groups.forEach((g, gi) => {
+        const dim = sel !== -1 && gi !== sel;
+        const opacity = dim ? 0.15 : 1;
+        for (const m of g.mats) m.opacity = opacity;
+        for (const lm of g.lineMats) {
+          lm.opacity = opacity;
+          lm.transparent = dim;
+        }
+        for (const el of g.labelEls) el.style.opacity = dim ? "0.12" : "1";
+      });
+    }
+
+    let downX = 0;
+    let downY = 0;
+    const onMouseDown = (e: MouseEvent) => {
+      downX = e.clientX;
+      downY = e.clientY;
+    };
+
+    const onClick = (e: MouseEvent) => {
+      const dx = e.clientX - downX;
+      const dy = e.clientY - downY;
+      if (dx * dx + dy * dy > 25) return; // drag — ignore
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+      const hits = raycaster.intersectObjects(targets);
+      const hitGroupIdx =
+        hits.length > 0
+          ? ((hits[0].object as THREE.Mesh).userData.groupIdx as number | undefined) ?? -1
+          : -1;
+      applySelection(hitGroupIdx === selectedGroup ? -1 : hitGroupIdx);
+    };
+
+    renderer.domElement.addEventListener("mousedown", onMouseDown);
     renderer.domElement.addEventListener("mousemove", onMouseMove);
     renderer.domElement.addEventListener("mouseleave", onMouseLeave);
+    renderer.domElement.addEventListener("click", onClick);
 
     // ── Animation loop ────────────────────────────────────────────────────────
     let rafId = 0;
@@ -306,8 +428,10 @@ export default function MapPage() {
     return () => {
       cancelAnimationFrame(rafId);
       ro.disconnect();
+      renderer.domElement.removeEventListener("mousedown", onMouseDown);
       renderer.domElement.removeEventListener("mousemove", onMouseMove);
       renderer.domElement.removeEventListener("mouseleave", onMouseLeave);
+      renderer.domElement.removeEventListener("click", onClick);
       setTooltip(null);
       controls.dispose();
       scene.traverse((obj) => {
@@ -322,8 +446,9 @@ export default function MapPage() {
       geoMd.dispose();
       geoBig.dispose();
       haloGeo.dispose();
-      mainEdgeMat.dispose();
-      clientEdgeMat.dispose();
+      for (const g of groups) {
+        for (const lm of g.lineMats) lm.dispose();
+      }
       renderer.dispose();
       if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement);
       if (container.contains(labelRenderer.domElement))
@@ -332,9 +457,9 @@ export default function MapPage() {
   }, [hotspots]);
 
   return (
-    <div className="p-4 md:p-6 max-w-5xl mx-auto flex flex-col gap-4">
+    <div className="h-full flex flex-col gap-3 p-4">
       {/* Header */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 shrink-0">
         <MapIcon size={20} className="text-blue-400 shrink-0" />
         <h1 className="text-lg font-semibold text-slate-100 flex-1">{t("map.title")}</h1>
         <button
@@ -350,10 +475,7 @@ export default function MapPage() {
       </div>
 
       {/* Three.js canvas */}
-      <div
-        className="relative bg-slate-950 rounded-xl border border-slate-700 overflow-hidden"
-        style={{ height: 520 }}
-      >
+      <div className="relative flex-1 min-h-0 bg-slate-950 rounded-xl border border-slate-700 overflow-hidden">
         <div ref={containerRef} className="absolute inset-0" />
         {tooltip && (
           <div
@@ -369,22 +491,20 @@ export default function MapPage() {
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-400 px-1">
+      <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-400 px-1 shrink-0">
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-full inline-block bg-blue-500" />
           {t("map.legendBbox")}
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full inline-block bg-indigo-500" />
-          {t("map.legendBboxWifi")}
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full inline-block bg-green-500" />
+          <svg width="12" height="12" viewBox="0 0 12 12" className="shrink-0">
+            <polygon points="6,0 12,6 6,12 0,6" fill="#a78bfa" />
+          </svg>
           {t("map.legendHotspot")}
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full inline-block bg-red-500" />
-          {t("map.legendOffline")}
+          <span className="w-3 h-3 rounded-full inline-block bg-slate-400" />
+          {t("map.legendClient")}
         </span>
         <span className="flex items-center gap-1.5">
           <span

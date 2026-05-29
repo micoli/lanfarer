@@ -190,9 +190,8 @@
   "map": {
     "title": "Network Map",
     "legendBbox": "LAN",
-    "legendBboxWifi": "Bbox Wi-Fi",
-    "legendHotspot": "Hotspot (online)",
-    "legendOffline": "Hotspot (offline)",
+    "legendHotspot": "Access point",
+    "legendClient": "Connected host",
     "legendSignal": "Signal strength",
     "hint": "drag to rotate · scroll to zoom"
   },
