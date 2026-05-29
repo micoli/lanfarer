@@ -1,4 +1,8 @@
 import {
+  AlertTriangle,
+  Bookmark,
+  BookmarkPlus,
+  Check,
   ChevronDown,
   ChevronsUpDown,
   ChevronUp,
@@ -6,12 +10,19 @@ import {
   RefreshCw,
   Wifi,
   WifiOff,
+  X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { Host, HostConnexion } from "../../plugins/contracts.ts";
+import type { DhcpClient, Host, HostConnexion } from "../../plugins/contracts.ts";
+import {
+  useCreateDhcpClient,
+  useDhcpClients,
+  useIpCheck,
+} from "../../plugins/bbox/frontend/hooks/useBbox.ts";
 import { useHosts } from "../hooks/useHosts.ts";
 import { useVendor } from "../hooks/useVendor.ts";
+import { useDhcpRouterId } from "../hooks/useUiConfig.ts";
 
 import { exportCsv } from "../lib/exportCsv";
 
@@ -103,9 +114,119 @@ function Th({
   );
 }
 
-function HostRow({ host, i }: { host: Host; i: number }) {
+function HostRow({
+  host,
+  i,
+  dhcpRouterId,
+  reservationByMac,
+}: {
+  host: Host;
+  i: number;
+  dhcpRouterId: string | null;
+  reservationByMac: Map<string, DhcpClient>;
+}) {
   const { t } = useTranslation();
   const vendor = useVendor(host.mac ?? undefined);
+  const isReserved = host.mac ? reservationByMac.has(host.mac.toLowerCase()) : false;
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState<Omit<DhcpClient, "id">>({
+    enable: 1,
+    hostname: "",
+    macaddress: "",
+    ipaddress: "",
+    ip6address: "",
+  });
+  const create = useCreateDhcpClient(dhcpRouterId);
+  const { checking, conflict, clearConflict, check } = useIpCheck();
+
+  function openAdd() {
+    setDraft({
+      enable: 1,
+      hostname: host.hostname ?? "",
+      macaddress: host.mac ?? "",
+      ipaddress: host.ip ?? "",
+      ip6address: "",
+    });
+    clearConflict();
+    setAdding(true);
+  }
+
+  if (adding) {
+    return (
+      <>
+        <tr className="border-t border-slate-700/50 bg-slate-800/40">
+          <td className="px-4 py-2" colSpan={2}>
+            <input
+              className="input-cell w-full"
+              placeholder={t("common.hostname")}
+              value={draft.hostname}
+              onChange={(e) => setDraft({ ...draft, hostname: e.target.value })}
+            />
+          </td>
+          <td className="px-4 py-2">
+            <input
+              className="input-cell font-mono w-full"
+              placeholder="192.168.x.x"
+              value={draft.ipaddress}
+              onChange={(e) => {
+                setDraft({ ...draft, ipaddress: e.target.value });
+                clearConflict();
+              }}
+            />
+          </td>
+          <td className="px-4 py-2">
+            <input
+              className="input-cell font-mono w-full"
+              placeholder="aa:bb:cc:dd:ee:ff"
+              value={draft.macaddress}
+              onChange={(e) => {
+                setDraft({ ...draft, macaddress: e.target.value });
+                clearConflict();
+              }}
+            />
+          </td>
+          <td className="px-4 py-2" colSpan={4}>
+            <div className="flex gap-1.5 items-center">
+              <button
+                type="button"
+                title={conflict ? t("common.forceConflict") : t("hosts.createReservation")}
+                disabled={!draft.macaddress || !draft.ipaddress || create.isPending || checking}
+                onClick={() =>
+                  check(draft.ipaddress, draft.macaddress, () =>
+                    create.mutate(draft, { onSuccess: () => setAdding(false) })
+                  )
+                }
+                className={`p-1 rounded disabled:opacity-40 transition-colors ${conflict ? "text-amber-400 hover:text-amber-300" : "text-blue-400 hover:text-blue-300"}`}
+              >
+                {conflict ? <AlertTriangle size={14} /> : <Check size={14} />}
+              </button>
+              <button
+                type="button"
+                title={t("common.cancel")}
+                onClick={() => { setAdding(false); clearConflict(); }}
+                className="p-1 rounded text-slate-400 hover:text-slate-200 transition-colors"
+              >
+                <X size={14} />
+              </button>
+              {create.error && (
+                <span className="text-xs text-red-400">{(create.error as Error).message}</span>
+              )}
+            </div>
+          </td>
+        </tr>
+        {conflict && (
+          <tr className="bg-amber-500/10 border-t border-amber-500/20">
+            <td colSpan={8} className="px-4 py-1.5 text-xs text-amber-400 flex items-center gap-1.5">
+              <AlertTriangle size={12} />
+              {conflict}
+              {t("common.clickAgainToForce")}
+            </td>
+          </tr>
+        )}
+      </>
+    );
+  }
+
   return (
     <tr
       key={host.mac ?? i}
@@ -129,6 +250,24 @@ function HostRow({ host, i }: { host: Host; i: number }) {
       <td className="px-4 py-2.5 text-xs text-slate-500">
         {relativeTime(host.lastseen, t("hosts.justNow"))}
       </td>
+      <td className="px-4 py-2.5">
+        {dhcpRouterId && (
+          isReserved ? (
+            <span title={t("hosts.reservationActive")} className="p-1 inline-flex text-blue-400">
+              <Bookmark size={14} />
+            </span>
+          ) : (
+            <button
+              type="button"
+              title={t("hosts.addReservation")}
+              onClick={openAdd}
+              className="p-1 rounded text-slate-500 hover:text-blue-400 transition-colors"
+            >
+              <BookmarkPlus size={14} />
+            </button>
+          )
+        )}
+      </td>
     </tr>
   );
 }
@@ -136,6 +275,15 @@ function HostRow({ host, i }: { host: Host; i: number }) {
 export default function Hosts() {
   const { t, i18n } = useTranslation();
   const { data: hostsData, isLoading, progress, progressLabel, error, dataUpdatedAt, refresh } = useHosts();
+  const dhcpRouterId = useDhcpRouterId();
+  const { data: dhcpData } = useDhcpClients(dhcpRouterId);
+  const reservationByMac = useMemo(() => {
+    const map = new Map<string, DhcpClient>();
+    for (const c of dhcpData?.clients ?? []) {
+      map.set(c.macaddress.toLowerCase(), c);
+    }
+    return map;
+  }, [dhcpData]);
 
   const [filter, setFilter] = useState("");
   const [showActive, setShowActive] = useState<"all" | "active" | "inactive">("all");
@@ -374,18 +522,25 @@ export default function Hosts() {
                 sortDir={sortDir}
                 onSort={handleSort}
               />
+              <th className="px-2 py-3 font-medium">DHCP</th>
             </tr>
           </thead>
           <tbody>
             {filtered?.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-sm text-slate-500">
+                <td colSpan={8} className="px-4 py-8 text-center text-sm text-slate-500">
                   {t("hosts.noHosts")}
                 </td>
               </tr>
             )}
             {filtered?.map((h, i) => (
-              <HostRow key={h.mac ?? i} host={h} i={i} />
+              <HostRow
+                key={h.mac ?? i}
+                host={h}
+                i={i}
+                dhcpRouterId={dhcpRouterId}
+                reservationByMac={reservationByMac}
+              />
             ))}
           </tbody>
         </table>

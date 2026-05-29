@@ -11,7 +11,6 @@ interface HostsState {
   dataUpdatedAt: number;
 }
 
-const REFETCH_INTERVAL = 30_000;
 
 export function useHosts() {
   const [state, setState] = useState<HostsState>({
@@ -54,10 +53,8 @@ export function useHosts() {
 
   useEffect(() => {
     connect();
-    const interval = setInterval(connect, REFETCH_INTERVAL);
     return () => {
       esRef.current?.close();
-      clearInterval(interval);
     };
   }, [connect]);
 
