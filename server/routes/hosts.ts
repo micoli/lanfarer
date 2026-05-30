@@ -33,6 +33,31 @@ function sseWrite(res: http.ServerResponse, event: string, data: unknown) {
   res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 }
 
+export async function fetchAllHosts(plugins: RouterPlugin[]): Promise<HostsData> {
+  const hostsPlugins = plugins.filter((p) => p.fetchHosts);
+  const byMac = new Map<string, Host>();
+
+  await Promise.allSettled(
+    hostsPlugins.map(async (p) => {
+      const { hosts } = await p.fetchHosts!();
+      for (const host of hosts) {
+        const key = host.mac.toUpperCase();
+        const existing = byMac.get(key);
+        if (!existing) {
+          byMac.set(key, host);
+        } else {
+          byMac.set(
+            key,
+            score(host) >= score(existing) ? merge(host, existing) : merge(existing, host),
+          );
+        }
+      }
+    }),
+  );
+
+  return { hosts: [...byMac.values()] };
+}
+
 export async function handleHosts(
   _req: http.IncomingMessage,
   res: http.ServerResponse,

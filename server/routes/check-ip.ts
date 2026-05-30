@@ -4,13 +4,7 @@ import { promisify } from "node:util";
 
 const execAsync = promisify(exec);
 
-export async function handleCheckIp(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
-  const ip = new URL(req.url ?? "/", "http://localhost").searchParams.get("ip") ?? "";
-  if (!/^\d{1,3}(?:\.\d{1,3}){3}$/.test(ip)) {
-    res.writeHead(400, { "content-type": "application/json" });
-    res.end(JSON.stringify({ error: "Invalid IP" }));
-    return;
-  }
+export async function checkIp(ip: string): Promise<{ reachable: boolean; mac: string | null }> {
   let reachable = false;
   let mac: string | null = null;
   try {
@@ -24,6 +18,17 @@ export async function handleCheckIp(req: http.IncomingMessage, res: http.ServerR
       if (m) mac = m[1].toLowerCase();
     } catch { /* arp unavailable */ }
   }
+  return { reachable, mac };
+}
+
+export async function handleCheckIp(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+  const ip = new URL(req.url ?? "/", "http://localhost").searchParams.get("ip") ?? "";
+  if (!/^\d{1,3}(?:\.\d{1,3}){3}$/.test(ip)) {
+    res.writeHead(400, { "content-type": "application/json" });
+    res.end(JSON.stringify({ error: "Invalid IP" }));
+    return;
+  }
+  const result = await checkIp(ip);
   res.writeHead(200, { "content-type": "application/json" });
-  res.end(JSON.stringify({ reachable, mac }));
+  res.end(JSON.stringify(result));
 }

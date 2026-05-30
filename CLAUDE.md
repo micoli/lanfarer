@@ -31,7 +31,7 @@ make down     # stop containers
 make logs     # follow logs
 ```
 
-No test suite exists in this project.
+No test suite exists in this project. **For local API testing, use the CLI** (`cli/api.ts`) — see the Local API CLI section below.
 
 ## Environment
 
@@ -125,6 +125,44 @@ Leaf items that require a router (dhcp-*, hosts, hotspots, wifi) must include `r
 ### Formatting
 
 Biome is the formatter/linter (not ESLint/Prettier). Config: 2-space indent, double quotes, trailing commas (ES5), 100-char line width. Run `npm run check` to auto-fix before committing.
+
+## Local API CLI
+
+`cli/api.ts` — CLI auto-authentifié pour tester toutes les routes localement.
+
+```bash
+npm run api -- help                          # liste des commandes
+
+# Routes serveur
+npm run api -- health                        # GET /__health
+npm run api -- hosts                         # GET /__hosts
+npm run api -- routers                       # GET /__config/routers
+npm run api -- ui-config                     # GET /__config/ui
+npm run api -- map                           # GET /__map/topology
+npm run api -- scan [subnet]                 # GET /__scan (SSE)
+npm run api -- ping 192.168.1.1,192.168.1.2 # GET /__ping (SSE)
+npm run api -- check-ip 192.168.1.1         # GET /__check-ip
+npm run api -- oui aa:bb:cc:dd:ee:ff        # GET /__oui
+
+# Plugins bbox
+npm run api -- bbox bbox-main hosts
+npm run api -- bbox bbox-main device
+npm run api -- bbox bbox-main wan/stats
+npm run api -- bbox bbox-main dhcp/clients
+npm run api -- bbox bbox-main dhcp/config PUT '{"body":...}'
+
+# Plugins airport / kuwfi / nestwifi
+npm run api -- airport status
+npm run api -- airport ap-name hosts
+npm run api -- kuwfi status
+
+# Requête brute
+npm run api -- raw /devices/api-proxy/bbox-proxy/bbox-main/dhcp/clients POST '{"ip":"..."}'
+```
+
+**Pas de serveur requis** : le CLI appelle directement les fonctions internes (imports TypeScript), sans HTTP vers localhost.
+
+**Auth** : si `users:` est configuré dans `config.yaml`, ajouter `cli_password: <mot-de-passe>` (+ `cli_user:` si nécessaire). La session est mise en cache dans `.cli-session`.
 
 ## Bbox API References
 

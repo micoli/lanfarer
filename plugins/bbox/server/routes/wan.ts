@@ -4,18 +4,9 @@ import type { WanStatsData } from "../../../contracts.ts";
 import { bboxCall } from "../client.ts";
 import { sendJson, sendError } from "../utils.ts";
 
-export async function handleWan(
-  _req: http.IncomingMessage,
-  res: http.ServerResponse,
-  spec: BboxRouterSpec,
-): Promise<void> {
+export async function fetchBboxWan(spec: BboxRouterSpec): Promise<WanStatsData> {
   const result = await bboxCall(spec, "GET", "/api/v1/wan/ip/stats");
-
-  if (result.statusCode !== 200) {
-    sendError(res, 502, "Failed to fetch WAN stats from bbox");
-    return;
-  }
-
+  if (result.statusCode !== 200) throw new Error(`bbox wan/stats returned ${result.statusCode}`);
   const arr = result.data as Array<{ wan?: { ip?: { stats?: Record<string, unknown> } } }>;
   const s = arr?.[0]?.wan?.ip?.stats ?? {};
 
@@ -29,6 +20,17 @@ export async function handleWan(
     };
   }
 
-  const data: WanStatsData = { rx: side("rx"), tx: side("tx") };
-  sendJson(res, 200, data);
+  return { rx: side("rx"), tx: side("tx") };
+}
+
+export async function handleWan(
+  _req: http.IncomingMessage,
+  res: http.ServerResponse,
+  spec: BboxRouterSpec,
+): Promise<void> {
+  try {
+    sendJson(res, 200, await fetchBboxWan(spec));
+  } catch {
+    sendError(res, 502, "Failed to fetch WAN stats from bbox");
+  }
 }

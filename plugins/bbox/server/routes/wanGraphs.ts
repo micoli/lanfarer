@@ -32,25 +32,28 @@ function extractPoints(raw: unknown): WanGraphPoint[] {
   return points;
 }
 
+export async function fetchBboxWanGraphs(spec: BboxRouterSpec): Promise<WanGraphsData> {
+  const [downResult, upResult] = await Promise.all([
+    bboxCall(spec, "GET", "/api/v1/graphs/wan/downstream/hour"),
+    bboxCall(spec, "GET", "/api/v1/graphs/wan/upstream/hour"),
+  ]);
+  if (downResult.statusCode !== 200 || upResult.statusCode !== 200) {
+    throw new Error(`bbox wan/graphs returned ${downResult.statusCode}/${upResult.statusCode}`);
+  }
+  return {
+    down: extractPoints(downResult.data),
+    up: extractPoints(upResult.data),
+  };
+}
+
 export async function handleWanGraphs(
   _req: http.IncomingMessage,
   res: http.ServerResponse,
   spec: BboxRouterSpec,
 ): Promise<void> {
-  const [downResult, upResult] = await Promise.all([
-    bboxCall(spec, "GET", "/api/v1/graphs/wan/downstream/hour"),
-    bboxCall(spec, "GET", "/api/v1/graphs/wan/upstream/hour"),
-  ]);
-
-  if (downResult.statusCode !== 200 || upResult.statusCode !== 200) {
+  try {
+    sendJson(res, 200, await fetchBboxWanGraphs(spec));
+  } catch {
     sendError(res, 502, "Failed to fetch WAN graphs from bbox");
-    return;
   }
-
-  const data: WanGraphsData = {
-    down: extractPoints(downResult.data),
-    up: extractPoints(upResult.data),
-  };
-
-  sendJson(res, 200, data);
 }

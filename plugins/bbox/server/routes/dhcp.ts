@@ -14,7 +14,18 @@ import { readJsonBody, sendJson, sendError, sendStatus } from "../utils.ts";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function extractClients(data: unknown): DhcpClient[] {
+export function prepareDhcpClientBody(body: Record<string, unknown>): Record<string, unknown> {
+  return {
+    enable: body.enable ?? 1,
+    device: body.macaddress ?? "",
+    ipaddress: body.ipaddress ?? "",
+    ip6address: body.ip6address ?? "",
+    macaddress: body.macaddress ?? "",
+    hostname: body.hostname ?? "",
+  };
+}
+
+export function extractClients(data: unknown): DhcpClient[] {
   if (!Array.isArray(data)) return [];
   if (data.length === 0) return [];
   const first = data[0] as Record<string, unknown>;
@@ -36,7 +47,7 @@ function extractClients(data: unknown): DhcpClient[] {
   }));
 }
 
-function extractConfig(data: unknown): DhcpConfig {
+export function extractConfig(data: unknown): DhcpConfig {
   const arr = data as Array<{ dhcp?: Record<string, unknown> }>;
   const dhcp = arr?.[0]?.dhcp ?? {};
   return {
@@ -47,7 +58,7 @@ function extractConfig(data: unknown): DhcpConfig {
   };
 }
 
-function extractOptions(data: unknown): DhcpOptionsData {
+export function extractOptions(data: unknown): DhcpOptionsData {
   const arr = data as Array<{ dhcp?: Record<string, unknown> }>;
   const dhcp = arr?.[0]?.dhcp ?? {};
   const options = (dhcp.options as DhcpOption[] | undefined) ?? [];
@@ -98,16 +109,7 @@ export async function handleDhcp(
     }
     if (method === "POST") {
       const body = await readJsonBody(req);
-      // BBox requires `device` as alias for macaddress on create
-      const bboxBody = {
-        enable: body.enable ?? 1,
-        device: body.macaddress ?? "",
-        ipaddress: body.ipaddress ?? "",
-        ip6address: body.ip6address ?? "",
-        macaddress: body.macaddress ?? "",
-        hostname: body.hostname ?? "",
-      };
-      const r = await bboxCall(spec, "POST", "/api/v1/dhcp/clients", bboxBody);
+      const r = await bboxCall(spec, "POST", "/api/v1/dhcp/clients", prepareDhcpClientBody(body));
       sendStatus(res, r.statusCode < 300 ? 204 : r.statusCode);
       return;
     }
@@ -119,15 +121,7 @@ export async function handleDhcp(
     const id = clientMatch[1];
     if (method === "PUT") {
       const body = await readJsonBody(req);
-      const bboxBody = {
-        enable: body.enable ?? 1,
-        device: body.macaddress ?? "",
-        ipaddress: body.ipaddress ?? "",
-        ip6address: body.ip6address ?? "",
-        macaddress: body.macaddress ?? "",
-        hostname: body.hostname ?? "",
-      };
-      const r = await bboxCall(spec, "PUT", `/api/v1/dhcp/clients/${id}`, bboxBody);
+      const r = await bboxCall(spec, "PUT", `/api/v1/dhcp/clients/${id}`, prepareDhcpClientBody(body));
       sendStatus(res, r.statusCode < 300 ? 204 : r.statusCode);
       return;
     }

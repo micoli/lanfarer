@@ -81,7 +81,7 @@ function isHassIngress(req: http.IncomingMessage): boolean {
 export function requireAuth(req: http.IncomingMessage, res: http.ServerResponse): boolean {
   if (!isAuthEnabled() || isHassIngress(req)) return true;
   const token = parseSessionCookie(req.headers.cookie);
-  const session = token ? getSession(token) : null;
+  const session = token ? getSession(token as string) : null;
   if (!session) {
     json(res, 401, { error: "unauthenticated" });
     return false;

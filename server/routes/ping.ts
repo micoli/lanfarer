@@ -6,7 +6,7 @@ const execAsync = promisify(exec);
 const MAX_IPS = 20;
 const INTERVAL_MS = 3000;
 
-async function pingOnce(ip: string): Promise<number | null> {
+export async function pingOnce(ip: string): Promise<number | null> {
   try {
     const timeoutFlag = process.platform === "darwin" ? "-t" : "-W";
     const { stdout } = await execAsync(`ping -c 1 ${timeoutFlag} 2 "${ip}"`, { timeout: 4000 });

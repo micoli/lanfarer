@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "lint": "biome lint --write src",
     "format": "biome format --write src",
-    "check": "biome check --write src"
+    "check": "biome check --write src",
+    "api": "tsx cli/api.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
