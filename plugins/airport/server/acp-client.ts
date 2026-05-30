@@ -390,7 +390,7 @@ class AcpClient {
     // Stage 3: SRP-1536 client computation
     // Server's modulus matches SRP.params[1536].N (per node-acp source)
     const params = SRP.params[1536];
-    const clientSecret = crypto.randomBytes(24);
+    const clientSecret = crypto.randomBytes(32);
     const srpc = new SrpClient(params, data2.salt, Buffer.from("admin"), Buffer.from(this.password), clientSecret);
     srpc.setB(data2.publicKey);
     const A = srpc.computeA();
@@ -563,7 +563,8 @@ export async function fetchAcpWireless(host: string, password: string): Promise<
 
 function buildMacToLease(dhSL: unknown): Map<string, { ip: string; hostname: string }> {
   const map = new Map<string, { ip: string; hostname: string }>();
-  const leases = ((dhSL as { leases?: unknown[] })?.leases ?? []) as Record<string, unknown>[];
+  const raw = Array.isArray(dhSL) ? dhSL : ((dhSL as { leases?: unknown[] })?.leases ?? []);
+  const leases = raw as Record<string, unknown>[];
   for (const l of leases) {
     const mac = formatMac(l.macAddress);
     if (mac) map.set(mac, { ip: String(l.ipAddress ?? ""), hostname: String(l.hostname ?? "") });

@@ -44,10 +44,7 @@ async function ensureAuth(): Promise<void> {
   const cliUser = config.cli_user as string | undefined;
   const cliPass = config.cli_password as string | undefined;
 
-  if (!cliUser || !cliPass) {
-    console.warn("[auth] Auth activée mais cli_password absent de config.yaml — continuons sans session.");
-    return;
-  }
+  if (!cliUser || !cliPass) return;
 
   const newToken = await login(cliUser, cliPass);
   if (!newToken) die("[auth] Login échoué.");

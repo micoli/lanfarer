@@ -1,7 +1,26 @@
 import fs from "node:fs";
+import { exec } from "node:child_process";
+import { promisify } from "node:util";
 import { parse as parseYaml } from "yaml";
 import { CONFIG_FILE } from "../../../server/config.ts";
 import { checkAcpOnline, fetchAcpHosts } from "./acp-client.ts";
+
+const execAsync = promisify(exec);
+
+export async function fetchLocalArpMap(): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  try {
+    const { stdout } = await execAsync("arp -a -n");
+    for (const line of stdout.split("\n")) {
+      const m = line.match(/\((\d+\.\d+\.\d+\.\d+)\)\s+at\s+([0-9a-f:-]{11,17})/i);
+      if (!m) continue;
+      const ip = m[1];
+      const mac = m[2].split(/[:-]/).map((b) => b.padStart(2, "0")).join(":").toUpperCase();
+      map.set(mac, ip);
+    }
+  } catch { /* arp unavailable */ }
+  return map;
+}
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -47,7 +66,13 @@ export async function fetchAirportRouter(cfg: AirportRouterConfig): Promise<Airp
     result.online = await checkAcpOnline(cfg.ip);
     if (!result.online) return result;
 
-    const { hosts } = await fetchAcpHosts(cfg.ip, cfg.password ?? "");
+    const [{ hosts }, arpMap] = await Promise.all([
+      fetchAcpHosts(cfg.ip, cfg.password ?? ""),
+      fetchLocalArpMap(),
+    ]);
+    for (const h of hosts) {
+      if (!h.ip) h.ip = arpMap.get(h.mac.toUpperCase()) ?? "";
+    }
     result.hosts.push(...hosts);
   } catch {
     result.online = false;

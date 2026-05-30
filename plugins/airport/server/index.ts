@@ -6,6 +6,7 @@ import {
   fetchAirportRouter,
   fetchAirportWifiSettings,
   fetchAllAirportRouters,
+  fetchLocalArpMap,
   loadAirportConfig,
 } from "./fetcher.ts";
 import { fetchAcpRawProps, fetchAcpWireless } from "./acp-client.ts";
@@ -98,7 +99,15 @@ export const plugin: RouterPlugin = {
         }
 
         if (subpath === "wireless") {
-          const data = await fetchAcpWireless(cfg.ip, cfg.password ?? "");
+          const [data, arpMap] = await Promise.all([
+            fetchAcpWireless(cfg.ip, cfg.password ?? ""),
+            fetchLocalArpMap(),
+          ]);
+          for (const ap of data.accessPoints) {
+            for (const c of ap.clients) {
+              if (!c.ip) c.ip = arpMap.get(c.mac.toUpperCase()) ?? "";
+            }
+          }
           sendJson(res, 200, data);
           return;
         }
