@@ -1,117 +1,137 @@
-import { basePath } from "../../../../src/lib/basePath.ts";
-import { BboxApiError } from "../../../../src/lib/api/client.ts";
-import type {
-  DeviceData,
-  DhcpClient,
-  DhcpClientsData,
-  DhcpConfigData,
-  DhcpOptionsData,
-  HostsData,
-  WanGraphsData,
-  WanStatsData,
-  WirelessData,
-} from "../../../contracts.ts";
+import { apiClient, apiFetch } from "../../../../src/lib/api/client.ts";
+import type { components } from "../../../../src/lib/api/schema.d.ts";
 
-// DhcpConfigUpdate is not in contracts.ts — define it inline
-type DhcpConfigUpdateBody = {
-  enable?: number;
-  minaddress?: string;
-  maxaddress?: string;
-  leasetime?: number;
-};
-
-async function bboxFetch<T>(
-  routerId: string,
-  method: string,
-  resource: string,
-  body?: Record<string, unknown>
-): Promise<T> {
-  const url = `${basePath()}/devices/api-proxy/bbox/${routerId}${resource}`;
-  const init: RequestInit = { method };
-  if (body !== undefined) {
-    init.headers = { "content-type": "application/json" };
-    init.body = JSON.stringify(body);
-  }
-  const res = await fetch(url, init);
-  if (!res.ok) throw new BboxApiError(res.status, `Erreur API ${res.status}`);
-  if (res.status === 204 || res.headers.get("content-length") === "0") return undefined as T;
-  return res.json() as Promise<T>;
-}
+type DhcpClient = components["schemas"]["DhcpClient"];
+type DhcpClientWrite = components["schemas"]["DhcpClientWrite"];
+type DhcpConfigUpdate = components["schemas"]["DhcpConfigUpdate"];
 
 export const bboxApi = {
-  getDevice(routerId: string): Promise<DeviceData> {
-    return bboxFetch<DeviceData>(routerId, "GET", "/device");
+  getDevice(routerId: string) {
+    return apiFetch(
+      apiClient.GET("/devices/api-proxy/bbox/{routerId}/device", { params: { path: { routerId } } }),
+    );
   },
 
-  getWanStats(routerId: string): Promise<WanStatsData> {
-    return bboxFetch<WanStatsData>(routerId, "GET", "/wan/stats");
+  getWanStats(routerId: string) {
+    return apiFetch(
+      apiClient.GET("/devices/api-proxy/bbox/{routerId}/wan/stats", { params: { path: { routerId } } }),
+    );
   },
 
-  getWanGraphs(routerId: string): Promise<WanGraphsData> {
-    return bboxFetch<WanGraphsData>(routerId, "GET", "/wan/graphs");
+  getWanGraphs(routerId: string) {
+    return apiFetch(
+      apiClient.GET("/devices/api-proxy/bbox/{routerId}/wan/graphs", { params: { path: { routerId } } }),
+    );
   },
 
-  getWireless(routerId: string): Promise<WirelessData> {
-    return bboxFetch<WirelessData>(routerId, "GET", "/wireless");
+  getWireless(routerId: string) {
+    return apiFetch(
+      apiClient.GET("/devices/api-proxy/bbox/{routerId}/wireless", { params: { path: { routerId } } }),
+    );
   },
 
-  getWifiSettings(routerId: string): Promise<unknown> {
-    return bboxFetch<unknown>(routerId, "GET", "/wifi-settings");
+  getWifiSettings(routerId: string) {
+    return apiFetch(
+      apiClient.GET("/devices/api-proxy/bbox/{routerId}/wifi-settings", { params: { path: { routerId } } }),
+    );
   },
 
-  getDhcpConfig(routerId: string): Promise<DhcpConfigData> {
-    return bboxFetch<DhcpConfigData>(routerId, "GET", "/dhcp/config");
+  getDhcpConfig(routerId: string) {
+    return apiFetch(
+      apiClient.GET("/devices/api-proxy/bbox/{routerId}/dhcp/config", { params: { path: { routerId } } }),
+    );
   },
 
-  updateDhcpConfig(routerId: string, config: DhcpConfigUpdateBody): Promise<void> {
-    return bboxFetch<void>(routerId, "PUT", "/dhcp/config", config as Record<string, unknown>);
+  updateDhcpConfig(routerId: string, config: DhcpConfigUpdate): Promise<void> {
+    return apiFetch(
+      apiClient.PUT("/devices/api-proxy/bbox/{routerId}/dhcp/config", {
+        params: { path: { routerId } },
+        body: config,
+      }),
+    ) as Promise<void>;
   },
 
-  getHosts(routerId: string): Promise<HostsData> {
-    return bboxFetch<HostsData>(routerId, "GET", "/hosts");
+  getHosts(routerId: string) {
+    return apiFetch(
+      apiClient.GET("/devices/api-proxy/bbox/{routerId}/hosts", { params: { path: { routerId } } }),
+    );
   },
 
-  getDhcpOptions(routerId: string): Promise<DhcpOptionsData> {
-    return bboxFetch<DhcpOptionsData>(routerId, "GET", "/dhcp/options");
+  getDhcpOptions(routerId: string) {
+    return apiFetch(
+      apiClient.GET("/devices/api-proxy/bbox/{routerId}/dhcp/options", { params: { path: { routerId } } }),
+    );
   },
 
   createDhcpOption(routerId: string, option: number, value: string): Promise<void> {
-    return bboxFetch<void>(routerId, "POST", "/dhcp/options", { option, value });
+    return apiFetch(
+      apiClient.POST("/devices/api-proxy/bbox/{routerId}/dhcp/options", {
+        params: { path: { routerId } },
+        body: { option, value },
+      }),
+    ) as Promise<void>;
   },
 
   updateDhcpOption(routerId: string, id: number, option: number, value: string): Promise<void> {
-    return bboxFetch<void>(routerId, "PUT", `/dhcp/options/${id}`, { option, value });
+    return apiFetch(
+      apiClient.PUT("/devices/api-proxy/bbox/{routerId}/dhcp/options/{id}", {
+        params: { path: { routerId, id } },
+        body: { option, value },
+      }),
+    ) as Promise<void>;
   },
 
   deleteDhcpOption(routerId: string, id: number): Promise<void> {
-    return bboxFetch<void>(routerId, "DELETE", `/dhcp/options/${id}`);
+    return apiFetch(
+      apiClient.DELETE("/devices/api-proxy/bbox/{routerId}/dhcp/options/{id}", {
+        params: { path: { routerId, id } },
+      }),
+    ) as Promise<void>;
   },
 
-  getDhcpClients(routerId: string): Promise<DhcpClientsData> {
-    return bboxFetch<DhcpClientsData>(routerId, "GET", "/dhcp/clients");
+  getDhcpClients(routerId: string) {
+    return apiFetch(
+      apiClient.GET("/devices/api-proxy/bbox/{routerId}/dhcp/clients", { params: { path: { routerId } } }),
+    );
   },
 
   createDhcpClient(routerId: string, client: Omit<DhcpClient, "id">): Promise<void> {
-    return bboxFetch<void>(routerId, "POST", "/dhcp/clients", {
+    const body: DhcpClientWrite = {
       enable: client.enable,
       macaddress: client.macaddress,
       ipaddress: client.ipaddress,
       ip6address: client.ip6address,
       hostname: client.hostname,
-    });
+    };
+    return apiFetch(
+      apiClient.POST("/devices/api-proxy/bbox/{routerId}/dhcp/clients", {
+        params: { path: { routerId } },
+        body,
+      }),
+    ) as Promise<void>;
   },
 
   updateDhcpClient(routerId: string, id: number, client: Partial<Omit<DhcpClient, "id">>): Promise<void> {
-    return bboxFetch<void>(routerId, "PUT", `/dhcp/clients/${id}`, {
+    const body: DhcpClientWrite = {
       enable: client.enable ?? 1,
       macaddress: client.macaddress ?? "",
       ipaddress: client.ipaddress ?? "",
       ip6address: client.ip6address ?? "",
       hostname: client.hostname ?? "",
-    });
+    };
+    return apiFetch(
+      apiClient.PUT("/devices/api-proxy/bbox/{routerId}/dhcp/clients/{id}", {
+        params: { path: { routerId, id } },
+        body,
+      }),
+    ) as Promise<void>;
   },
 
   deleteDhcpClient(routerId: string, id: number): Promise<void> {
-    return bboxFetch<void>(routerId, "DELETE", `/dhcp/clients/${id}`);
+    return apiFetch(
+      apiClient.DELETE("/devices/api-proxy/bbox/{routerId}/dhcp/clients/{id}", {
+        params: { path: { routerId, id } },
+      }),
+    ) as Promise<void>;
   },
 };

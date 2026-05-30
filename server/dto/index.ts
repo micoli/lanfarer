@@ -652,3 +652,106 @@ export class NestWifiRouterResult {
   @ApiProperty({ type: () => NestWifiHost, isArray: true })
   hosts!: NestWifiHost[];
 }
+
+// ── Airport wireless (ACP-specific format) ────────────────────────────────────
+
+export class AirportWifiClient {
+  @ApiProperty({ type: String })
+  mac!: string;
+
+  @ApiProperty({ type: String })
+  ip!: string;
+
+  @ApiProperty({ type: String })
+  hostname!: string;
+
+  @ApiProperty({ type: Number, description: "RSSI en dBm" })
+  rssi_dbm!: number;
+
+  @ApiProperty({ type: Number, description: "Débit Tx en Mbps" })
+  txrate_mbps!: number;
+}
+
+export class AirportAccessPoint {
+  @ApiProperty({ type: String })
+  ifname!: string;
+
+  @ApiProperty({ type: String })
+  ssid!: string;
+
+  @ApiProperty({ enum: ["2.4G", "5G"] })
+  band!: "2.4G" | "5G";
+
+  @ApiProperty({ type: Number })
+  channel!: number;
+
+  @ApiProperty({ type: () => AirportWifiClient, isArray: true })
+  clients!: AirportWifiClient[];
+}
+
+export class AirportWirelessData {
+  @ApiProperty({ type: Boolean })
+  online!: boolean;
+
+  @ApiProperty({ type: () => AirportAccessPoint, isArray: true })
+  accessPoints!: AirportAccessPoint[];
+}
+
+// ── Airport wifi-settings ─────────────────────────────────────────────────────
+
+export class AirportWifiInterface {
+  @ApiProperty({ type: Number })
+  ifIndex!: number;
+
+  @ApiProperty({ type: String })
+  description!: string;
+
+  @ApiProperty({ type: Number })
+  clientCount!: number;
+}
+
+export class AirportWifiSettings {
+  @ApiProperty({ type: () => AirportWifiInterface, isArray: true })
+  interfaces!: AirportWifiInterface[];
+}
+
+// ── Airport device info ───────────────────────────────────────────────────────
+
+export class AirportDeviceInfo {
+  @ApiProperty({ type: String, required: false, description: "Adresse MAC LAN" })
+  laMA?: string;
+
+  @ApiProperty({ type: String, required: false, description: "Adresse MAC Radio" })
+  raMA?: string;
+
+  @ApiProperty({ type: String, required: false, description: "Adresse MAC WAN" })
+  waMA?: string;
+
+  @ApiProperty({ type: String, isArray: true, required: false })
+  features?: string[];
+}
+
+// ── Cudy devlist ──────────────────────────────────────────────────────────────
+
+export class CudyDevlistEntry {
+  @ApiProperty({ type: String, description: "Nom de l'interface réseau (ex: ra0, eth0)" })
+  iface!: string;
+
+  @ApiProperty({ type: String })
+  ip!: string;
+
+  @ApiProperty({ type: String })
+  mac!: string;
+
+  @ApiProperty({ type: Number, description: "Débit Tx en kbps" })
+  tx_kbps!: number;
+
+  @ApiProperty({ type: Number, description: "Débit Rx en kbps" })
+  rx_kbps!: number;
+
+  @ApiProperty({ type: String, nullable: true })
+  signal!: string | null;
+
+  @ApiProperty({ type: String, description: "Durée de connexion (ex: 00:01:23)" })
+  duration!: string;
+}

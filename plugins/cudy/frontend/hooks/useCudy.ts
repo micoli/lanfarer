@@ -1,16 +1,11 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { basePath } from "../../../../src/lib/basePath.ts";
-import type { CudyBandwidthData, Host, HostConnexion, HostsData, WirelessData } from "../../../contracts.ts";
+import { apiClient, apiFetch } from "../../../../src/lib/api/client.ts";
+import type { components } from "../../../../src/lib/api/schema.d.ts";
+import type { HostConnexion } from "../../../contracts.ts";
 
-interface DevlistEntry {
-  iface: string;
-  ip: string;
-  mac: string;
-  tx_kbps: number;
-  rx_kbps: number;
-  signal: string | null;
-  duration: string;
-}
+type CudyBandwidthData = components["schemas"]["CudyBandwidthData"];
+type WirelessData = components["schemas"]["WirelessData"];
+type CudyDevlistEntry = components["schemas"]["CudyDevlistEntry"];
 
 export interface CudyRouterWireless {
   name: string;
@@ -21,11 +16,7 @@ export interface CudyRouterWireless {
 function useCudyRouterList() {
   return useQuery({
     queryKey: ["cudy", "list"],
-    queryFn: async () => {
-      const res = await fetch(`${basePath()}/devices/api-proxy/cudy/status`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json() as Promise<{ routers: { name: string; ip: string }[] }>;
-    },
+    queryFn: () => apiFetch(apiClient.GET("/devices/api-proxy/cudy/status")),
     staleTime: 60_000,
   });
 }
@@ -33,36 +24,40 @@ function useCudyRouterList() {
 export function useCudyBandwidth(routerName: string | null) {
   return useQuery<CudyBandwidthData>({
     queryKey: ["cudy", "bandwidth", routerName],
-    queryFn: async () => {
-      const res = await fetch(`${basePath()}/devices/api-proxy/cudy/${routerName}/bandwidth`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json() as Promise<CudyBandwidthData>;
-    },
+    queryFn: () =>
+      apiFetch(
+        apiClient.GET("/devices/api-proxy/cudy/{routerId}/bandwidth", {
+          params: { path: { routerId: routerName! } },
+        }),
+      ),
     refetchInterval: 30_000,
     enabled: routerName !== null,
   });
 }
 
 export function useCudyHosts(routerId: string | null) {
-  return useQuery<HostsData>({
+  return useQuery({
     queryKey: ["cudy", "hosts", routerId],
     queryFn: async () => {
-      const res = await fetch(`${basePath()}/devices/api-proxy/cudy/${routerId}/devlist`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const entries = (await res.json()) as DevlistEntry[];
+      const entries = await apiFetch(
+        apiClient.GET("/devices/api-proxy/cudy/{routerId}/devlist", {
+          params: { path: { routerId: routerId! } },
+        }),
+      ) as CudyDevlistEntry[];
       const toConnexion = (iface: string): HostConnexion => {
         if (/5g/i.test(iface)) return "wifi 5G";
         if (/2\.4g|wifi/i.test(iface)) return "wifi 2.4G";
         return "wired";
       };
-      const hosts: Host[] = entries.map((e) => ({
-        mac: e.mac,
-        ip: e.ip,
-        hostname: "",
-        active: true,
-        connexion: toConnexion(e.iface),
-      }));
-      return { hosts };
+      return {
+        hosts: entries.map((e) => ({
+          mac: e.mac,
+          ip: e.ip,
+          hostname: "",
+          active: true,
+          connexion: toConnexion(e.iface),
+        })),
+      };
     },
     refetchInterval: 30_000,
     enabled: routerId !== null,
@@ -77,11 +72,11 @@ export function useCudyClients() {
     queries: routers.map((router) => ({
       queryKey: ["cudy", "wireless", router.name],
       queryFn: async (): Promise<CudyRouterWireless> => {
-        const res = await fetch(
-          `${basePath()}/devices/api-proxy/cudy/${router.name}/wireless`
+        const wireless = await apiFetch(
+          apiClient.GET("/devices/api-proxy/cudy/{routerId}/wireless", {
+            params: { path: { routerId: router.name } },
+          }),
         );
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const wireless = (await res.json()) as WirelessData;
         return { name: router.name, ip: router.ip, wireless };
       },
       refetchInterval: 30_000,

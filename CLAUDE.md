@@ -54,6 +54,17 @@ A standalone Node.js server that replaces both the Vite dev server and nginx in 
 - Router list: `GET /__config/routers` → `[{ name, type }]` — all enabled routers from config.yaml
 - UI config: `GET /__config/ui` → menu and widget configuration
 
+### OpenAPI contract (mandatory)
+
+**Any addition, modification, or deletion of a server route MUST go through OpenAPI first:**
+
+1. Edit `server/openapi-plugins.yaml` (plugin routes) or `openapi.yaml` (core routes) to declare the route
+2. Run `npm run generate-openapi` to regenerate `src/lib/api/schema.d.ts`
+3. Implement the route in the server controller
+4. Use the auto-generated typed client (`src/lib/api/server.ts`) in the frontend — **never call `fetch` or any HTTP client directly**
+
+The frontend contract is: hooks call the typed client from `src/lib/api/server.ts`, not raw URLs.
+
 ### Plugin system (`plugins/`)
 
 Each plugin lives in `plugins/<name>/` with two sub-trees:

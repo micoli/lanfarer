@@ -12,7 +12,7 @@ paths:
 
   # ── BBox plugin ────────────────────────────────────────────────────────────
 
-  /devices/api-proxy/bbox-proxy/{routerId}/wireless:
+  /devices/api-proxy/bbox/{routerId}/wireless:
     get:
       tags: [bbox]
       operationId: getBboxWireless
@@ -27,7 +27,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/WirelessData"
 
-  /devices/api-proxy/bbox-proxy/{routerId}/hosts:
+  /devices/api-proxy/bbox/{routerId}/hosts:
     get:
       tags: [bbox]
       operationId: getBboxHosts
@@ -42,7 +42,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/HostsData"
 
-  /devices/api-proxy/bbox-proxy/{routerId}/device:
+  /devices/api-proxy/bbox/{routerId}/device:
     get:
       tags: [bbox]
       operationId: getBboxDevice
@@ -57,7 +57,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/DeviceData"
 
-  /devices/api-proxy/bbox-proxy/{routerId}/wan/stats:
+  /devices/api-proxy/bbox/{routerId}/wan/stats:
     get:
       tags: [bbox]
       operationId: getBboxWanStats
@@ -72,7 +72,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/WanStatsData"
 
-  /devices/api-proxy/bbox-proxy/{routerId}/wan/graphs:
+  /devices/api-proxy/bbox/{routerId}/wan/graphs:
     get:
       tags: [bbox]
       operationId: getBboxWanGraphs
@@ -90,7 +90,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/WanGraphsData"
 
-  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/config:
+  /devices/api-proxy/bbox/{routerId}/dhcp/config:
     get:
       tags: [bbox]
       operationId: getBboxDhcpConfig
@@ -120,7 +120,7 @@ paths:
         "204":
           description: OK
 
-  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/clients:
+  /devices/api-proxy/bbox/{routerId}/dhcp/clients:
     get:
       tags: [bbox]
       operationId: getBboxDhcpClients
@@ -150,7 +150,7 @@ paths:
         "204":
           description: Créé
 
-  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/clients/{id}:
+  /devices/api-proxy/bbox/{routerId}/dhcp/clients/{id}:
     put:
       tags: [bbox]
       operationId: updateBboxDhcpClient
@@ -186,7 +186,7 @@ paths:
         "204":
           description: Supprimé
 
-  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/options:
+  /devices/api-proxy/bbox/{routerId}/dhcp/options:
     get:
       tags: [bbox]
       operationId: getBboxDhcpOptions
@@ -216,7 +216,7 @@ paths:
         "204":
           description: Créé
 
-  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/options/{id}:
+  /devices/api-proxy/bbox/{routerId}/dhcp/options/{id}:
     put:
       tags: [bbox]
       operationId: updateBboxDhcpOption
@@ -252,7 +252,7 @@ paths:
         "204":
           description: Supprimé
 
-  /devices/api-proxy/bbox-proxy/{routerId}/wifi-settings:
+  /devices/api-proxy/bbox/{routerId}/wifi-settings:
     get:
       tags: [bbox]
       operationId: getBboxWifiSettings
@@ -269,7 +269,7 @@ paths:
 
   # ── Cudy plugin ────────────────────────────────────────────────────────────
 
-  /devices/api-proxy/cudy-proxy/status:
+  /devices/api-proxy/cudy/status:
     get:
       tags: [cudy]
       operationId: getCudyStatus
@@ -282,7 +282,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/RouterStatusResponse"
 
-  /devices/api-proxy/cudy-proxy/{routerId}/wireless:
+  /devices/api-proxy/cudy/{routerId}/wireless:
     get:
       tags: [cudy]
       operationId: getCudyWireless
@@ -299,7 +299,7 @@ paths:
         "404":
           description: Routeur introuvable
 
-  /devices/api-proxy/cudy-proxy/{routerId}/bandwidth:
+  /devices/api-proxy/cudy/{routerId}/bandwidth:
     get:
       tags: [cudy]
       operationId: getCudyBandwidth
@@ -319,9 +319,30 @@ paths:
         "404":
           description: Routeur introuvable
 
+  /devices/api-proxy/cudy/{routerId}/devlist:
+    get:
+      tags: [cudy]
+      operationId: getCudyDevlist
+      summary: Liste des appareils connectés via LuCI (iface, ip, mac, débit)
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CudyDevlistEntry"
+        "404":
+          description: Routeur introuvable
+        "502":
+          description: Login LuCI échoué ou endpoint indisponible
+
   # ── Airport plugin ─────────────────────────────────────────────────────────
 
-  /devices/api-proxy/airport-proxy/status:
+  /devices/api-proxy/airport/status:
     get:
       tags: [airport]
       operationId: getAirportStatus
@@ -334,7 +355,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/RouterStatusResponse"
 
-  /devices/api-proxy/airport-proxy/{routerId}/hosts:
+  /devices/api-proxy/airport/{routerId}/hosts:
     get:
       tags: [airport]
       operationId: getAirportHosts
@@ -353,11 +374,11 @@ paths:
         "500":
           description: Erreur de communication ACP
 
-  /devices/api-proxy/airport-proxy/{routerId}/wireless:
+  /devices/api-proxy/airport/{routerId}/wireless:
     get:
       tags: [airport]
       operationId: getAirportWireless
-      summary: Clients Wi-Fi connectés à un AirPort (contrat WirelessData)
+      summary: Clients Wi-Fi connectés à un AirPort (données ACP brutes)
       parameters:
         - $ref: "#/components/parameters/routerId"
       responses:
@@ -366,15 +387,15 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WirelessData"
+                $ref: "#/components/schemas/AirportWirelessData"
         "404":
           description: Routeur introuvable
 
-  /devices/api-proxy/airport-proxy/{routerId}/wifi-settings:
+  /devices/api-proxy/airport/{routerId}/wifi-settings:
     get:
       tags: [airport]
       operationId: getAirportWifiSettings
-      summary: Paramètres Wi-Fi de l'AirPort
+      summary: Paramètres Wi-Fi de l'AirPort (interfaces ACP)
       parameters:
         - $ref: "#/components/parameters/routerId"
       responses:
@@ -383,15 +404,15 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WirelessData"
+                $ref: "#/components/schemas/AirportWifiSettings"
         "404":
           description: Routeur introuvable
 
-  /devices/api-proxy/airport-proxy/{routerId}/device-info:
+  /devices/api-proxy/airport/{routerId}/device-info:
     get:
       tags: [airport]
       operationId: getAirportDeviceInfo
-      summary: Informations sur l'appareil AirPort (via mDNS)
+      summary: Informations sur l'appareil AirPort (via mDNS/ACP)
       parameters:
         - $ref: "#/components/parameters/routerId"
       responses:
@@ -400,11 +421,11 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: "#/components/schemas/AirportDeviceInfo"
 
   # ── KuWFi plugin ───────────────────────────────────────────────────────────
 
-  /devices/api-proxy/kuwfi-proxy/status:
+  /devices/api-proxy/kuwfi/status:
     get:
       tags: [kuwfi]
       operationId: getKuwfiStatus
@@ -417,7 +438,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/RouterStatusResponse"
 
-  /devices/api-proxy/kuwfi-proxy/{routerId}:
+  /devices/api-proxy/kuwfi/{routerId}:
     get:
       tags: [kuwfi]
       operationId: getKuwfiRouter
@@ -434,7 +455,7 @@ paths:
         "404":
           description: Routeur introuvable
 
-  /devices/api-proxy/kuwfi-proxy/{routerId}/bandwidth:
+  /devices/api-proxy/kuwfi/{routerId}/bandwidth:
     get:
       tags: [kuwfi]
       operationId: getKuwfiBandwidth

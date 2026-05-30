@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { basePath } from "../lib/basePath.ts";
+import { apiClient } from "../lib/api/client.ts";
 
 interface AuthState {
   loading: boolean;
@@ -21,10 +21,9 @@ export function useAuth(): UseAuth {
 
   const check = useCallback(async () => {
     try {
-      const res = await fetch(`${basePath()}/__auth/me`);
-      if (res.ok) {
-        const data = (await res.json()) as { username: string | null; authEnabled: boolean };
-        setState({ loading: false, authEnabled: data.authEnabled, username: data.username });
+      const { data, response } = await apiClient.GET("/__auth/me");
+      if (response.ok && data) {
+        setState({ loading: false, authEnabled: data.authEnabled, username: data.username ?? null });
       } else {
         setState({ loading: false, authEnabled: true, username: null });
       }
@@ -39,24 +38,22 @@ export function useAuth(): UseAuth {
 
   const login = useCallback(async (username: string, password: string): Promise<string | null> => {
     try {
-      const res = await fetch(`${basePath()}/__auth/login`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ username, password }),
+      const { data, response, error } = await apiClient.POST("/__auth/login", {
+        body: { username, password },
       });
-      if (res.ok) {
-        setState({ loading: false, authEnabled: true, username });
+      if (response.ok && data) {
+        setState({ loading: false, authEnabled: true, username: data.username });
         return null;
       }
-      const data = (await res.json()) as { error?: string };
-      return data.error ?? "error";
+      const err = error as { error?: string } | undefined;
+      return err?.error ?? "error";
     } catch {
       return "error";
     }
   }, []);
 
   const logout = useCallback(async () => {
-    await fetch(`${basePath()}/__auth/logout`, { method: "POST" });
+    await apiClient.POST("/__auth/logout", {});
     setState({ loading: false, authEnabled: true, username: null });
   }, []);
 

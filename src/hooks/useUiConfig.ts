@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { basePath } from "../lib/basePath.ts";
+import { apiClient } from "../lib/api/client.ts";
 
 export interface MenuItemConfig {
   id: string;
@@ -20,16 +20,13 @@ export interface UiConfig {
 
 const DEFAULT_CONFIG: UiConfig = { menu: null, home: null, dhcp: null };
 
-async function fetchUiConfig(): Promise<UiConfig> {
-  const res = await fetch(`${basePath()}/__config/ui`);
-  if (!res.ok) return DEFAULT_CONFIG;
-  return (await res.json()) as UiConfig;
-}
-
 export function useUiConfig(): UiConfig {
   const { data } = useQuery({
     queryKey: ["ui-config"],
-    queryFn: fetchUiConfig,
+    queryFn: async () => {
+      const { data } = await apiClient.GET("/__config/ui");
+      return (data as UiConfig | undefined) ?? DEFAULT_CONFIG;
+    },
     staleTime: Infinity,
     retry: false,
   });
@@ -53,16 +50,13 @@ export function useRouterForPage(pageId: string): string | null {
   return findInMenu(config.menu, pageId)?.router ?? null;
 }
 
-async function fetchRouters(): Promise<{ name: string; type: string }[]> {
-  const res = await fetch(`${basePath()}/__config/routers`);
-  if (!res.ok) return [];
-  return res.json() as Promise<{ name: string; type: string }[]>;
-}
-
 export function useRouters(): { name: string; type: string }[] | undefined {
   const { data } = useQuery({
     queryKey: ["config", "routers"],
-    queryFn: fetchRouters,
+    queryFn: async () => {
+      const { data } = await apiClient.GET("/__config/routers");
+      return data ?? [];
+    },
     staleTime: Infinity,
     retry: false,
   });

@@ -27,42 +27,43 @@ async function generate() {
 
   // All DTO classes must be registered so $refs from openapi-plugins.yaml resolve
   const pluginOnlyModels = Object.values(Dto).filter(
-    (v) => typeof v === "function" && v.prototype,
-  ) as Parameters<typeof SwaggerModule.createDocument>[2]["extraModels"];
+    (v) => typeof v === "function" && (v as { prototype?: unknown }).prototype !== undefined,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ) as any[];
 
   const document = SwaggerModule.createDocument(app, config, { extraModels: pluginOnlyModels });
 
   // Merge plugin paths and parameters from openapi-plugins.yaml
   const pluginsRaw = fs.readFileSync(PLUGINS_YAML, "utf8");
-  const plugins = parse(pluginsRaw) as {
-    paths?: Record<string, unknown>;
-    components?: {
-      parameters?: Record<string, unknown>;
-      schemas?: Record<string, unknown>;
-    };
-  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const plugins = parse(pluginsRaw) as any;
 
-  document.paths = { ...document.paths, ...plugins.paths };
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  document.paths = { ...document.paths, ...(plugins.paths ?? {}) };
 
   document.components ??= {};
 
   if (plugins.components?.parameters) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     document.components.parameters = {
       ...document.components.parameters,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       ...plugins.components.parameters,
     };
   }
 
   if (plugins.components?.schemas) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     document.components.schemas = {
       ...document.components.schemas,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       ...plugins.components.schemas,
     };
   }
 
   // Remove internal NestJS paths (SPA fallback etc.)
   for (const p of Object.keys(document.paths ?? {})) {
-    if (!p.startsWith("/__") && !p.startsWith("/devices/") && !p.startsWith("/__auth")) {
+    if (!p.startsWith("/__") && !p.startsWith("/devices/")) {
       // biome-ignore lint/performance/noDelete: removing from swagger doc
       delete document.paths[p];
     }

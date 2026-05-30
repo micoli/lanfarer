@@ -1,18 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { bboxApi } from "../api/bbox.ts";
-import type {
-  DeviceData,
-  DhcpClient,
-  DhcpClientsData,
-  DhcpConfigData,
-  DhcpOptionsData,
-  HostsData,
-  WanGraphsData,
-  WanStatsData,
-  WirelessData,
-} from "../../../contracts.ts";
+import type { components } from "../../../../src/lib/api/schema.d.ts";
 import { serverApi } from "../../../../src/lib/api/server.ts";
+
+type DeviceData = components["schemas"]["DeviceData"];
+type DhcpClient = components["schemas"]["DhcpClient"];
+type DhcpClientsData = components["schemas"]["DhcpClientsData"];
+type DhcpConfigData = components["schemas"]["DhcpConfigData"];
+type DhcpConfigUpdate = components["schemas"]["DhcpConfigUpdate"];
+type DhcpOptionsData = components["schemas"]["DhcpOptionsData"];
+type HostsData = components["schemas"]["HostsData"];
+type WanGraphsData = components["schemas"]["WanGraphsData"];
+type WanStatsData = components["schemas"]["WanStatsData"];
+type WirelessData = components["schemas"]["WirelessData"];
 
 export function useIpCheck() {
   const [checking, setChecking] = useState(false);
@@ -137,12 +138,7 @@ export function useDeleteDhcpClient(routerId: string | null) {
 export function useUpdateDhcpConfig(routerId: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (config: {
-      enable?: number;
-      minaddress?: string;
-      maxaddress?: string;
-      leasetime?: number;
-    }) => {
+    mutationFn: (config: DhcpConfigUpdate) => {
       if (!routerId) return Promise.reject(new Error("No DHCP router configured"));
       return bboxApi.updateDhcpConfig(routerId, config);
     },

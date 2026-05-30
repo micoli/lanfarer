@@ -1,107 +1,80 @@
 import { useQuery } from "@tanstack/react-query";
-import { basePath } from "../../../../src/lib/basePath.ts";
-import type { Host, HostsData } from "../../../contracts.ts";
+import { apiClient, apiFetch } from "../../../../src/lib/api/client.ts";
+import type { components } from "../../../../src/lib/api/schema.d.ts";
+import type { HostsData } from "../../../contracts.ts";
 
-export interface AcpDeviceInfo {
-  laMA?: string;
-  raMA?: string;
-  waMA?: string;
-  features?: string[];
+type AirportRouterDetail = components["schemas"]["AirportRouterDetail"];
+type AirportWirelessData = components["schemas"]["AirportWirelessData"];
+type AirportWifiSettings = components["schemas"]["AirportWifiSettings"];
+type AirportDeviceInfo = components["schemas"]["AirportDeviceInfo"];
+
+export type { AirportWifiSettings };
+export type AirportWifiInterface = components["schemas"]["AirportWifiInterface"];
+export type AirportWifiClient = components["schemas"]["AirportWifiClient"];
+export type AirportAccessPoint = components["schemas"]["AirportAccessPoint"];
+export type { AirportWirelessData };
+
+export interface AirportHostsData extends HostsData {
+  online: boolean;
 }
 
 export function useAirportDeviceInfo(routerId: string | null) {
-  return useQuery<AcpDeviceInfo>({
+  return useQuery<AirportDeviceInfo>({
     queryKey: ["airport", "device-info", routerId],
-    queryFn: async () => {
-      const res = await fetch(`${basePath()}/devices/api-proxy/airport/${routerId}/device-info`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json() as Promise<AcpDeviceInfo>;
-    },
+    queryFn: () =>
+      apiFetch(
+        apiClient.GET("/devices/api-proxy/airport/{routerId}/device-info", {
+          params: { path: { routerId: routerId! } },
+        }),
+      ),
     staleTime: 300_000,
     enabled: routerId !== null,
   });
 }
 
-export interface AirportWifiInterface {
-  ifIndex: number;
-  description: string;
-  clientCount: number;
-}
-
-export interface AirportWifiSettings {
-  interfaces: AirportWifiInterface[];
-}
-
 export function useAirportWifiSettings(routerId: string | null) {
   return useQuery<AirportWifiSettings>({
     queryKey: ["airport", "wifi-settings", routerId],
-    queryFn: async () => {
-      const res = await fetch(`${basePath()}/devices/api-proxy/airport/${routerId}/wifi-settings`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json() as Promise<AirportWifiSettings>;
-    },
+    queryFn: () =>
+      apiFetch(
+        apiClient.GET("/devices/api-proxy/airport/{routerId}/wifi-settings", {
+          params: { path: { routerId: routerId! } },
+        }),
+      ),
     staleTime: 60_000,
     enabled: routerId !== null,
   });
 }
 
-export interface AirportWifiClient {
-  mac: string;
-  ip: string;
-  hostname: string;
-  rssi_dbm: number;
-  txrate_mbps: number;
-}
-
-export interface AirportAccessPoint {
-  ifname: string;
-  ssid: string;
-  band: "2.4G" | "5G";
-  channel: number;
-  clients: AirportWifiClient[];
-}
-
-export interface AirportWirelessData {
-  online: boolean;
-  accessPoints: AirportAccessPoint[];
-}
-
 export function useAirportWireless(routerId: string | null) {
   return useQuery<AirportWirelessData>({
     queryKey: ["airport", "wireless", routerId],
-    queryFn: async () => {
-      const res = await fetch(`${basePath()}/devices/api-proxy/airport/${routerId}/wireless`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json() as Promise<AirportWirelessData>;
-    },
+    queryFn: () =>
+      apiFetch(
+        apiClient.GET("/devices/api-proxy/airport/{routerId}/wireless", {
+          params: { path: { routerId: routerId! } },
+        }),
+      ),
     refetchInterval: 30_000,
     enabled: routerId !== null,
   });
-}
-
-interface AirportArpEntry {
-  mac: string;
-  ip: string;
-  wireless: boolean;
-}
-
-export interface AirportHostsData extends HostsData {
-  online: boolean;
 }
 
 export function useAirportHosts(routerId: string | null) {
   return useQuery<AirportHostsData>({
     queryKey: ["airport", "hosts", routerId],
     queryFn: async () => {
-      const res = await fetch(`${basePath()}/devices/api-proxy/airport/${routerId}/hosts`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const body = (await res.json()) as { online: boolean; hosts: AirportArpEntry[] };
-      const hosts: Host[] = body.hosts.map((e) => ({
+      const body = await apiFetch(
+        apiClient.GET("/devices/api-proxy/airport/{routerId}/hosts", {
+          params: { path: { routerId: routerId! } },
+        }),
+      ) as AirportRouterDetail;
+      const hosts = body.hosts.map((e) => ({
         mac: e.mac,
         ip: e.ip,
-        hostname: "",
+        hostname: e.hostname,
         active: true,
-        connexion: e.wireless ? "wifi 2.4G" : "wired",
+        connexion: e.wireless ? ("wifi 2.4G" as const) : ("wired" as const),
       }));
       return { online: body.online, hosts };
     },

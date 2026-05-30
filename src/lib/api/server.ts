@@ -3,8 +3,9 @@ import type { components } from "./schema.d.ts";
 
 export type HealthResponse = components["schemas"]["HealthResponse"];
 export type CheckIpResponse = components["schemas"]["CheckIpResponse"];
-export type ScanHost = components["schemas"]["ScanHost"];
-export type HostDetail = components["schemas"]["HostDetail"];
+// SSE event types — used by NetworkScan.tsx and useHosts.ts
+export type ScanHost = components["schemas"]["ScanHostEvent"];
+export type HostDetail = components["schemas"]["HostDetailEvent"];
 
 export const serverApi = {
   health(): Promise<HealthResponse> {

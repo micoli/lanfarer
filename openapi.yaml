@@ -236,7 +236,7 @@ paths:
       security: *a2
       summary: Liste tous les routeurs activés dans config.yaml
       tags: *a3
-  /devices/api-proxy/bbox-proxy/{routerId}/wireless:
+  /devices/api-proxy/bbox/{routerId}/wireless:
     get:
       tags:
         - bbox
@@ -251,7 +251,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WirelessData"
-  /devices/api-proxy/bbox-proxy/{routerId}/hosts:
+  /devices/api-proxy/bbox/{routerId}/hosts:
     get:
       tags:
         - bbox
@@ -266,7 +266,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HostsData"
-  /devices/api-proxy/bbox-proxy/{routerId}/device:
+  /devices/api-proxy/bbox/{routerId}/device:
     get:
       tags:
         - bbox
@@ -281,7 +281,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DeviceData"
-  /devices/api-proxy/bbox-proxy/{routerId}/wan/stats:
+  /devices/api-proxy/bbox/{routerId}/wan/stats:
     get:
       tags:
         - bbox
@@ -296,7 +296,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WanStatsData"
-  /devices/api-proxy/bbox-proxy/{routerId}/wan/graphs:
+  /devices/api-proxy/bbox/{routerId}/wan/graphs:
     get:
       tags:
         - bbox
@@ -314,7 +314,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WanGraphsData"
-  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/config:
+  /devices/api-proxy/bbox/{routerId}/dhcp/config:
     get:
       tags:
         - bbox
@@ -345,7 +345,7 @@ paths:
       responses:
         "204":
           description: OK
-  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/clients:
+  /devices/api-proxy/bbox/{routerId}/dhcp/clients:
     get:
       tags:
         - bbox
@@ -376,7 +376,7 @@ paths:
       responses:
         "204":
           description: Créé
-  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/clients/{id}:
+  /devices/api-proxy/bbox/{routerId}/dhcp/clients/{id}:
     put:
       tags:
         - bbox
@@ -413,7 +413,7 @@ paths:
       responses:
         "204":
           description: Supprimé
-  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/options:
+  /devices/api-proxy/bbox/{routerId}/dhcp/options:
     get:
       tags:
         - bbox
@@ -444,7 +444,7 @@ paths:
       responses:
         "204":
           description: Créé
-  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/options/{id}:
+  /devices/api-proxy/bbox/{routerId}/dhcp/options/{id}:
     put:
       tags:
         - bbox
@@ -481,7 +481,7 @@ paths:
       responses:
         "204":
           description: Supprimé
-  /devices/api-proxy/bbox-proxy/{routerId}/wifi-settings:
+  /devices/api-proxy/bbox/{routerId}/wifi-settings:
     get:
       tags:
         - bbox
@@ -496,7 +496,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WirelessData"
-  /devices/api-proxy/cudy-proxy/status:
+  /devices/api-proxy/cudy/status:
     get:
       tags:
         - cudy
@@ -509,7 +509,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RouterStatusResponse"
-  /devices/api-proxy/cudy-proxy/{routerId}/wireless:
+  /devices/api-proxy/cudy/{routerId}/wireless:
     get:
       tags:
         - cudy
@@ -526,7 +526,7 @@ paths:
                 $ref: "#/components/schemas/WirelessData"
         "404":
           description: Routeur introuvable
-  /devices/api-proxy/cudy-proxy/{routerId}/bandwidth:
+  /devices/api-proxy/cudy/{routerId}/bandwidth:
     get:
       tags:
         - cudy
@@ -546,7 +546,28 @@ paths:
                 $ref: "#/components/schemas/CudyBandwidthData"
         "404":
           description: Routeur introuvable
-  /devices/api-proxy/airport-proxy/status:
+  /devices/api-proxy/cudy/{routerId}/devlist:
+    get:
+      tags:
+        - cudy
+      operationId: getCudyDevlist
+      summary: Liste des appareils connectés via LuCI (iface, ip, mac, débit)
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CudyDevlistEntry"
+        "404":
+          description: Routeur introuvable
+        "502":
+          description: Login LuCI échoué ou endpoint indisponible
+  /devices/api-proxy/airport/status:
     get:
       tags:
         - airport
@@ -559,7 +580,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RouterStatusResponse"
-  /devices/api-proxy/airport-proxy/{routerId}/hosts:
+  /devices/api-proxy/airport/{routerId}/hosts:
     get:
       tags:
         - airport
@@ -578,12 +599,12 @@ paths:
           description: Routeur introuvable
         "500":
           description: Erreur de communication ACP
-  /devices/api-proxy/airport-proxy/{routerId}/wireless:
+  /devices/api-proxy/airport/{routerId}/wireless:
     get:
       tags:
         - airport
       operationId: getAirportWireless
-      summary: Clients Wi-Fi connectés à un AirPort (contrat WirelessData)
+      summary: Clients Wi-Fi connectés à un AirPort (données ACP brutes)
       parameters:
         - $ref: "#/components/parameters/routerId"
       responses:
@@ -592,15 +613,15 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WirelessData"
+                $ref: "#/components/schemas/AirportWirelessData"
         "404":
           description: Routeur introuvable
-  /devices/api-proxy/airport-proxy/{routerId}/wifi-settings:
+  /devices/api-proxy/airport/{routerId}/wifi-settings:
     get:
       tags:
         - airport
       operationId: getAirportWifiSettings
-      summary: Paramètres Wi-Fi de l'AirPort
+      summary: Paramètres Wi-Fi de l'AirPort (interfaces ACP)
       parameters:
         - $ref: "#/components/parameters/routerId"
       responses:
@@ -609,15 +630,15 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WirelessData"
+                $ref: "#/components/schemas/AirportWifiSettings"
         "404":
           description: Routeur introuvable
-  /devices/api-proxy/airport-proxy/{routerId}/device-info:
+  /devices/api-proxy/airport/{routerId}/device-info:
     get:
       tags:
         - airport
       operationId: getAirportDeviceInfo
-      summary: Informations sur l'appareil AirPort (via mDNS)
+      summary: Informations sur l'appareil AirPort (via mDNS/ACP)
       parameters:
         - $ref: "#/components/parameters/routerId"
       responses:
@@ -626,8 +647,8 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-  /devices/api-proxy/kuwfi-proxy/status:
+                $ref: "#/components/schemas/AirportDeviceInfo"
+  /devices/api-proxy/kuwfi/status:
     get:
       tags:
         - kuwfi
@@ -640,7 +661,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RouterStatusResponse"
-  /devices/api-proxy/kuwfi-proxy/{routerId}:
+  /devices/api-proxy/kuwfi/{routerId}:
     get:
       tags:
         - kuwfi
@@ -657,7 +678,7 @@ paths:
                 $ref: "#/components/schemas/KuwfiRouterResult"
         "404":
           description: Routeur introuvable
-  /devices/api-proxy/kuwfi-proxy/{routerId}/bandwidth:
+  /devices/api-proxy/kuwfi/{routerId}/bandwidth:
     get:
       tags:
         - kuwfi
@@ -969,6 +990,67 @@ components:
         - band
         - channel
         - clients
+    AirportWifiClient:
+      type: object
+      properties:
+        mac:
+          type: string
+        ip:
+          type: string
+        hostname:
+          type: string
+        rssi_dbm:
+          type: number
+          description: RSSI en dBm
+        txrate_mbps:
+          type: number
+          description: Débit Tx en Mbps
+      required:
+        - mac
+        - ip
+        - hostname
+        - rssi_dbm
+        - txrate_mbps
+    AirportAccessPoint:
+      type: object
+      properties:
+        ifname:
+          type: string
+        ssid:
+          type: string
+        band:
+          type: string
+          enum:
+            - 2.4G
+            - 5G
+        channel:
+          type: number
+        clients:
+          type: array
+          items:
+            $ref: "#/components/schemas/AirportWifiClient"
+      required:
+        - ifname
+        - ssid
+        - band
+        - channel
+        - clients
+    AirportDeviceInfo:
+      type: object
+      properties:
+        laMA:
+          type: string
+          description: Adresse MAC LAN
+        raMA:
+          type: string
+          description: Adresse MAC Radio
+        waMA:
+          type: string
+          description: Adresse MAC WAN
+        features:
+          type: array
+          items:
+            type: string
     AirportHost:
       type: object
       properties:
@@ -997,6 +1079,40 @@ components:
       required:
         - online
         - hosts
+    AirportWifiInterface:
+      type: object
+      properties:
+        ifIndex:
+          type: number
+        description:
+          type: string
+        clientCount:
+          type: number
+      required:
+        - ifIndex
+        - description
+        - clientCount
+    AirportWifiSettings:
+      type: object
+      properties:
+        interfaces:
+          type: array
+          items:
+            $ref: "#/components/schemas/AirportWifiInterface"
+      required:
+        - interfaces
+    AirportWirelessData:
+      type: object
+      properties:
+        online:
+          type: boolean
+        accessPoints:
+          type: array
+          items:
+            $ref: "#/components/schemas/AirportAccessPoint"
+      required:
+        - online
+        - accessPoints
     CudyBandwidthPoint:
       type: object
       properties:
@@ -1029,6 +1145,36 @@ components:
       required:
         - ra0
         - rai0
+    CudyDevlistEntry:
+      type: object
+      properties:
+        iface:
+          type: string
+          description: "Nom de l'interface réseau (ex: ra0, eth0)"
+        ip:
+          type: string
+        mac:
+          type: string
+        tx_kbps:
+          type: number
+          description: Débit Tx en kbps
+        rx_kbps:
+          type: number
+          description: Débit Rx en kbps
+        signal:
+          type: string
+          nullable: true
+        duration:
+          type: string
+          description: "Durée de connexion (ex: 00:01:23)"
+      required:
+        - iface
+        - ip
+        - mac
+        - tx_kbps
+        - rx_kbps
+        - signal
+        - duration
     DeviceUsing:
       type: object
       properties:

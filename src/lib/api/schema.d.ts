@@ -229,7 +229,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/{routerId}/wireless": {
+    "/devices/api-proxy/bbox/{routerId}/wireless": {
         parameters: {
             query?: never;
             header?: never;
@@ -246,7 +246,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/{routerId}/hosts": {
+    "/devices/api-proxy/bbox/{routerId}/hosts": {
         parameters: {
             query?: never;
             header?: never;
@@ -263,7 +263,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/{routerId}/device": {
+    "/devices/api-proxy/bbox/{routerId}/device": {
         parameters: {
             query?: never;
             header?: never;
@@ -280,7 +280,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/{routerId}/wan/stats": {
+    "/devices/api-proxy/bbox/{routerId}/wan/stats": {
         parameters: {
             query?: never;
             header?: never;
@@ -297,7 +297,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/{routerId}/wan/graphs": {
+    "/devices/api-proxy/bbox/{routerId}/wan/graphs": {
         parameters: {
             query?: never;
             header?: never;
@@ -318,7 +318,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/{routerId}/dhcp/config": {
+    "/devices/api-proxy/bbox/{routerId}/dhcp/config": {
         parameters: {
             query?: never;
             header?: never;
@@ -336,7 +336,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/{routerId}/dhcp/clients": {
+    "/devices/api-proxy/bbox/{routerId}/dhcp/clients": {
         parameters: {
             query?: never;
             header?: never;
@@ -354,7 +354,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/{routerId}/dhcp/clients/{id}": {
+    "/devices/api-proxy/bbox/{routerId}/dhcp/clients/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -372,7 +372,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/{routerId}/dhcp/options": {
+    "/devices/api-proxy/bbox/{routerId}/dhcp/options": {
         parameters: {
             query?: never;
             header?: never;
@@ -390,7 +390,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/{routerId}/dhcp/options/{id}": {
+    "/devices/api-proxy/bbox/{routerId}/dhcp/options/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -408,7 +408,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/{routerId}/wifi-settings": {
+    "/devices/api-proxy/bbox/{routerId}/wifi-settings": {
         parameters: {
             query?: never;
             header?: never;
@@ -425,7 +425,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/cudy-proxy/status": {
+    "/devices/api-proxy/cudy/status": {
         parameters: {
             query?: never;
             header?: never;
@@ -442,7 +442,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/cudy-proxy/{routerId}/wireless": {
+    "/devices/api-proxy/cudy/{routerId}/wireless": {
         parameters: {
             query?: never;
             header?: never;
@@ -459,7 +459,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/cudy-proxy/{routerId}/bandwidth": {
+    "/devices/api-proxy/cudy/{routerId}/bandwidth": {
         parameters: {
             query?: never;
             header?: never;
@@ -480,7 +480,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/airport-proxy/status": {
+    "/devices/api-proxy/cudy/{routerId}/devlist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Liste des appareils connectés via LuCI (iface, ip, mac, débit) */
+        get: operations["getCudyDevlist"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/devices/api-proxy/airport/status": {
         parameters: {
             query?: never;
             header?: never;
@@ -497,7 +514,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/airport-proxy/{routerId}/hosts": {
+    "/devices/api-proxy/airport/{routerId}/hosts": {
         parameters: {
             query?: never;
             header?: never;
@@ -514,14 +531,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/airport-proxy/{routerId}/wireless": {
+    "/devices/api-proxy/airport/{routerId}/wireless": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Clients Wi-Fi connectés à un AirPort (contrat WirelessData) */
+        /** Clients Wi-Fi connectés à un AirPort (données ACP brutes) */
         get: operations["getAirportWireless"];
         put?: never;
         post?: never;
@@ -531,14 +548,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/airport-proxy/{routerId}/wifi-settings": {
+    "/devices/api-proxy/airport/{routerId}/wifi-settings": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Paramètres Wi-Fi de l'AirPort */
+        /** Paramètres Wi-Fi de l'AirPort (interfaces ACP) */
         get: operations["getAirportWifiSettings"];
         put?: never;
         post?: never;
@@ -548,14 +565,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/airport-proxy/{routerId}/device-info": {
+    "/devices/api-proxy/airport/{routerId}/device-info": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Informations sur l'appareil AirPort (via mDNS) */
+        /** Informations sur l'appareil AirPort (via mDNS/ACP) */
         get: operations["getAirportDeviceInfo"];
         put?: never;
         post?: never;
@@ -565,7 +582,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/kuwfi-proxy/status": {
+    "/devices/api-proxy/kuwfi/status": {
         parameters: {
             query?: never;
             header?: never;
@@ -582,7 +599,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/kuwfi-proxy/{routerId}": {
+    "/devices/api-proxy/kuwfi/{routerId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -599,7 +616,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/kuwfi-proxy/{routerId}/bandwidth": {
+    "/devices/api-proxy/kuwfi/{routerId}/bandwidth": {
         parameters: {
             query?: never;
             header?: never;
@@ -759,6 +776,32 @@ export interface components {
             standard?: string;
             width?: number;
         };
+        AirportWifiClient: {
+            mac: string;
+            ip: string;
+            hostname: string;
+            /** @description RSSI en dBm */
+            rssi_dbm: number;
+            /** @description Débit Tx en Mbps */
+            txrate_mbps: number;
+        };
+        AirportAccessPoint: {
+            ifname: string;
+            ssid: string;
+            /** @enum {string} */
+            band: "2.4G" | "5G";
+            channel: number;
+            clients: components["schemas"]["AirportWifiClient"][];
+        };
+        AirportDeviceInfo: {
+            /** @description Adresse MAC LAN */
+            laMA?: string;
+            /** @description Adresse MAC Radio */
+            raMA?: string;
+            /** @description Adresse MAC WAN */
+            waMA?: string;
+            features?: string[];
+        };
         AirportHost: {
             mac: string;
             ip: string;
@@ -768,6 +811,18 @@ export interface components {
         AirportRouterDetail: {
             online: boolean;
             hosts: components["schemas"]["AirportHost"][];
+        };
+        AirportWifiInterface: {
+            ifIndex: number;
+            description: string;
+            clientCount: number;
+        };
+        AirportWifiSettings: {
+            interfaces: components["schemas"]["AirportWifiInterface"][];
+        };
+        AirportWirelessData: {
+            online: boolean;
+            accessPoints: components["schemas"]["AirportAccessPoint"][];
         };
         CudyBandwidthPoint: {
             /** @description Unix timestamp (secondes) */
@@ -782,6 +837,19 @@ export interface components {
             ra0: components["schemas"]["CudyBandwidthPoint"][];
             /** @description Interface 5 GHz */
             rai0: components["schemas"]["CudyBandwidthPoint"][];
+        };
+        CudyDevlistEntry: {
+            /** @description Nom de l'interface réseau (ex: ra0, eth0) */
+            iface: string;
+            ip: string;
+            mac: string;
+            /** @description Débit Tx en kbps */
+            tx_kbps: number;
+            /** @description Débit Rx en kbps */
+            rx_kbps: number;
+            signal: string | null;
+            /** @description Durée de connexion (ex: 00:01:23) */
+            duration: string;
         };
         DeviceUsing: {
             ipv4: boolean;
@@ -1716,6 +1784,42 @@ export interface operations {
             };
         };
     };
+    getCudyDevlist: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                routerId: components["parameters"]["routerId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CudyDevlistEntry"][];
+                };
+            };
+            /** @description Routeur introuvable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Login LuCI échoué ou endpoint indisponible */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getAirportStatus: {
         parameters: {
             query?: never;
@@ -1789,7 +1893,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["WirelessData"];
+                    "application/json": components["schemas"]["AirportWirelessData"];
                 };
             };
             /** @description Routeur introuvable */
@@ -1818,7 +1922,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["WirelessData"];
+                    "application/json": components["schemas"]["AirportWifiSettings"];
                 };
             };
             /** @description Routeur introuvable */
@@ -1847,7 +1951,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["AirportDeviceInfo"];
                 };
             };
         };
