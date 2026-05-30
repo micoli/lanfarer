@@ -1,204 +1,247 @@
-openapi: "3.1.0"
-info:
-  title: fast5688b-gui server API
-  version: "2.0.0"
-  description: |
-    API exposée par le serveur Node.js fast5688b.
-    Toutes les routes plugin suivent le schéma :
-      /devices/api-proxy/{type}-proxy/{routerId}/{resource}
-
-servers:
-  - url: http://localhost:5176
-
+openapi: 3.0.0
 paths:
-
-  # ── Routes propres du serveur ──────────────────────────────────────────────
-
   /__health:
     get:
-      operationId: getHealth
-      summary: État du serveur et de la session BBox
+      operationId: HealthController_health
+      parameters: []
       responses:
         "200":
-          description: OK
+          description: ""
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
-
-  /__check-ip:
-    get:
-      operationId: checkIp
-      summary: Vérifie si une IP est joignable et résout son adresse MAC
-      parameters:
-        - name: ip
-          in: query
-          required: true
-          schema:
-            type: string
-            pattern: '^\d{1,3}(\.\d{1,3}){3}$'
-            example: "192.168.1.10"
+      summary: État du serveur et de la session BBox
+      tags:
+        - server
+  /__auth/login:
+    post:
+      operationId: AuthController_loginRoute
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
       responses:
         "200":
-          description: Résultat du ping et de l'ARP
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "400":
+          description: Corps de requête invalide
+        "401":
+          description: Identifiants incorrects
+      summary: Authentification par login/mot de passe
+      tags: &a1
+        - auth
+  /__auth/logout:
+    post:
+      operationId: AuthController_logoutRoute
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                properties:
+                  ok:
+                    type: boolean
+      security:
+        - session: []
+      summary: Déconnexion — invalide le cookie de session
+      tags: *a1
+  /__auth/me:
+    get:
+      operationId: AuthController_meRoute
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeResponse"
+        "401":
+          description: Non authentifié
+      security:
+        - session: []
+      summary: Identité de l'utilisateur courant
+      tags: *a1
+  /__scan:
+    get:
+      description: |-
+        Retourne un flux Server-Sent Events.
+        - `progress` — `{ done, total }` avancement
+        - `host` — hôte découvert (ping + MAC + vendor)
+        - `host-detail` — détails (ports ouverts, mDNS, SMB)
+        - `done` — fin du scan
+        - `error` — erreur fatale
+      operationId: ScanController_scan
+      parameters:
+        - name: subnet
+          required: false
+          in: query
+          description: CIDR à scanner (ex. 192.168.1.0/24). Détecté automatiquement si absent.
+          schema:
+            example: 192.168.1.0/24
+      responses:
+        "200":
+          description: Flux SSE text/event-stream
+      security:
+        - session: []
+      summary: Scan réseau — flux SSE
+      tags:
+        - server
+  /__ping:
+    get:
+      description: |-
+        Envoie des pings ICMP en boucle. Événement `ping` émis à chaque cycle :
+        `{ ip: string, rtt: number | null }[]` — null si l'hôte est injoignable.
+      operationId: PingController_ping
+      parameters:
+        - name: ips
+          required: true
+          in: query
+          description: Liste d'IP séparées par des virgules
+          schema:
+            example: 192.168.1.1,192.168.1.10
+      responses:
+        "200":
+          description: Flux SSE text/event-stream
+        "400":
+          description: Aucune IP fournie
+      security:
+        - session: []
+      summary: Ping continu — flux SSE
+      tags:
+        - server
+  /__hosts:
+    get:
+      description: |-
+        Retourne un flux Server-Sent Events.
+        - `progress` — `{ pct: number, label: string }` avancement
+        - `result` — `{ hosts: Host[] }` résultat final
+      operationId: HostsController_hosts
+      parameters: []
+      responses:
+        "200":
+          description: Flux SSE text/event-stream
+      security:
+        - session: []
+      summary: Flux SSE d'hôtes réseau agrégés depuis tous les plugins
+      tags:
+        - server
+  /__map/topology:
+    get:
+      description: |-
+        Agrège les données Wi-Fi de tous les plugins configurés (bbox, cudy, airport, kuwfi…)
+        et retourne une structure normalisée. Les hostnames sont résolus côté serveur.
+      operationId: MapController_topology
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MapTopology"
+      security:
+        - session: []
+      summary: Topologie réseau agrégée pour la carte
+      tags:
+        - map
+  /__check-ip:
+    get:
+      operationId: CheckIpController_checkIp
+      parameters:
+        - name: ip
+          required: true
+          in: query
+          description: Adresse IPv4 à tester
+          schema:
+            type: string
+            pattern: ^\d{1,3}(\.\d{1,3}){3}$
+      responses:
+        "200":
+          description: ""
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CheckIpResponse"
         "400":
           description: Format d'IP invalide
+      security:
+        - session: []
+      summary: Vérifie si une IP est joignable et résout son adresse MAC
+      tags:
+        - server
+  /__oui:
+    get:
+      operationId: OuiController_oui
+      parameters:
+        - name: mac
+          required: true
+          in: query
+          description: Adresse MAC complète (tous formats acceptés)
+          schema:
+            example: AA:BB:CC:DD:EE:FF
+      responses:
+        "200":
+          description: ""
           content:
             application/json:
               schema:
-                type: object
-                required: [error]
-                properties:
-                  error:
-                    type: string
-
-  /__scan:
+                $ref: "#/components/schemas/OuiResponse"
+        "400":
+          description: Paramètre mac manquant ou invalide
+      security:
+        - session: []
+      summary: Résolution du fabricant depuis les 3 premiers octets d'une adresse MAC
+      tags:
+        - server
+  /__config/ui:
     get:
-      operationId: scanNetwork
-      summary: Flux SSE de scan réseau
-      description: |
-        Retourne un flux Server-Sent Events. Événements émis :
-        - `progress` — avancement du scan
-        - `host` — hôte découvert (ping + MAC + vendor)
-        - `host-detail` — détails d'un hôte (ports, ping stats, mDNS, SMB)
-        - `done` — fin du scan
-        - `error` — erreur fatale
-      parameters:
-        - name: subnet
-          in: query
-          required: false
-          description: CIDR à scanner (ex. 192.168.1.0/24). Détecté automatiquement si absent.
-          schema:
-            type: string
-            example: "192.168.1.0/24"
+      operationId: RouterConfigController_uiConfig
+      parameters: []
       responses:
         "200":
-          description: Flux SSE
+          description: ""
           content:
-            text/event-stream:
+            application/json:
               schema:
-                type: string
-              x-sse-events:
-                progress:
-                  schema:
-                    $ref: "#/components/schemas/ScanProgress"
-                host:
-                  schema:
-                    $ref: "#/components/schemas/ScanHost"
-                host-detail:
-                  schema:
-                    $ref: "#/components/schemas/HostDetail"
-                done:
-                  schema:
-                    type: object
-                error:
-                  schema:
-                    type: object
-                    properties:
-                      message:
-                        type: string
-
+                $ref: "#/components/schemas/UiConfig"
+      security: &a2
+        - session: []
+      summary: Configuration UI (menu latéral, widgets, DHCP)
+      tags: &a3
+        - config
   /__config/routers:
     get:
-      operationId: getConfigRouters
-      summary: Liste tous les routeurs configurés (tous types)
+      operationId: RouterConfigController_routers
+      parameters: []
       responses:
         "200":
-          description: OK
+          description: ""
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: "#/components/schemas/RouterEntry"
-
-  /__map/topology:
+      security: *a2
+      summary: Liste tous les routeurs activés dans config.yaml
+      tags: *a3
+  /devices/api-proxy/bbox-proxy/{routerId}/wireless:
     get:
-      operationId: getMapTopology
-      summary: Topologie réseau agrégée pour la carte
-      description: |
-        Agrège les données Wi-Fi de tous les plugins configurés (bbox, cudy, etc.)
-        et retourne une structure normalisée. Les hostnames sont résolus côté serveur.
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MapTopology"
-
-  # ── Cudy plugin ────────────────────────────────────────────────────────────
-
-  /devices/api-proxy/cudy/status:
-    get:
-      operationId: getCudyStatus
-      summary: Liste des routeurs Cudy configurés
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [configured, routers]
-                properties:
-                  configured:
-                    type: integer
-                  routers:
-                    type: array
-                    items:
-                      type: object
-                      required: [name, ip]
-                      properties:
-                        name: { type: string }
-                        ip: { type: string }
-
-  /devices/api-proxy/cudy/{routerId}/wireless:
-    get:
-      operationId: getCudyWireless
-      summary: Clients Wi-Fi connectés à un AP Cudy (contrat commun WirelessData)
-      parameters:
-        - $ref: "#/components/parameters/routerId"
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WirelessData"
-        "404":
-          description: Routeur introuvable
-
-  /devices/api-proxy/cudy/{routerId}/bandwidth:
-    get:
-      operationId: getCudyBandwidth
-      summary: Débit Wi-Fi des interfaces ra0 (2.4 GHz) et rai0 (5 GHz)
-      description: |
-        Calcule les débits instantanés par dérivation des volumes cumulatifs
-        retournés par LuCI (/admin/status/bandwidth).
-        Valeurs en kbps.
-      parameters:
-        - $ref: "#/components/parameters/routerId"
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CudyBandwidthData"
-        "404":
-          description: Routeur introuvable
-
-  # ── BBox plugin ────────────────────────────────────────────────────────────
-
-  /devices/api-proxy/bbox/{routerId}/wireless:
-    get:
+      tags:
+        - bbox
       operationId: getBboxWireless
-      summary: Clients Wi-Fi connectés à la BBox (contrat commun WirelessData)
+      summary: Clients Wi-Fi connectés à la BBox
       parameters:
         - $ref: "#/components/parameters/routerId"
       responses:
@@ -208,11 +251,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WirelessData"
-
-  /devices/api-proxy/bbox/{routerId}/hosts:
+  /devices/api-proxy/bbox-proxy/{routerId}/hosts:
     get:
-      operationId: getHosts
-      summary: Appareils connectés au réseau local
+      tags:
+        - bbox
+      operationId: getBboxHosts
+      summary: Appareils connectés au réseau local (bbox)
       parameters:
         - $ref: "#/components/parameters/routerId"
       responses:
@@ -222,11 +266,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HostsData"
-
-  /devices/api-proxy/bbox/{routerId}/device:
+  /devices/api-proxy/bbox-proxy/{routerId}/device:
     get:
-      operationId: getDevice
-      summary: Informations sur le routeur (modèle, firmware, uptime…)
+      tags:
+        - bbox
+      operationId: getBboxDevice
+      summary: Informations sur le routeur BBox (modèle, firmware, uptime…)
       parameters:
         - $ref: "#/components/parameters/routerId"
       responses:
@@ -236,11 +281,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DeviceData"
-
-  /devices/api-proxy/bbox/{routerId}/wan/stats:
+  /devices/api-proxy/bbox-proxy/{routerId}/wan/stats:
     get:
-      operationId: getWanStats
-      summary: Statistiques de trafic WAN instantanées (débit, octets cumulés)
+      tags:
+        - bbox
+      operationId: getBboxWanStats
+      summary: Statistiques de trafic WAN instantanées
       parameters:
         - $ref: "#/components/parameters/routerId"
       responses:
@@ -250,15 +296,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WanStatsData"
-
-  /devices/api-proxy/bbox/{routerId}/wan/graphs:
+  /devices/api-proxy/bbox-proxy/{routerId}/wan/graphs:
     get:
-      operationId: getWanGraphs
+      tags:
+        - bbox
+      operationId: getBboxWanGraphs
       summary: Historique de débit WAN sur la dernière heure
       description: |
-        Agrège les endpoints Bbox /api/v1/graphs/wan/downstream/hour et upstream/hour.
+        Agrège les endpoints Bbox downstream/hour et upstream/hour.
         Chaque point contient un timestamp Unix (secondes) et une valeur en kbps.
-        Le premier point de chaque série est le plus ancien.
       parameters:
         - $ref: "#/components/parameters/routerId"
       responses:
@@ -268,10 +314,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WanGraphsData"
-
-  /devices/api-proxy/bbox/{routerId}/dhcp/config:
+  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/config:
     get:
-      operationId: getDhcpConfig
+      tags:
+        - bbox
+      operationId: getBboxDhcpConfig
       summary: Configuration du serveur DHCP
       parameters:
         - $ref: "#/components/parameters/routerId"
@@ -283,7 +330,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/DhcpConfigData"
     put:
-      operationId: updateDhcpConfig
+      tags:
+        - bbox
+      operationId: updateBboxDhcpConfig
       summary: Met à jour la configuration DHCP
       parameters:
         - $ref: "#/components/parameters/routerId"
@@ -296,10 +345,11 @@ paths:
       responses:
         "204":
           description: OK
-
-  /devices/api-proxy/bbox/{routerId}/dhcp/clients:
+  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/clients:
     get:
-      operationId: getDhcpClients
+      tags:
+        - bbox
+      operationId: getBboxDhcpClients
       summary: Liste des réservations DHCP statiques
       parameters:
         - $ref: "#/components/parameters/routerId"
@@ -311,7 +361,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/DhcpClientsData"
     post:
-      operationId: createDhcpClient
+      tags:
+        - bbox
+      operationId: createBboxDhcpClient
       summary: Crée une réservation DHCP
       parameters:
         - $ref: "#/components/parameters/routerId"
@@ -324,10 +376,11 @@ paths:
       responses:
         "204":
           description: Créé
-
-  /devices/api-proxy/bbox/{routerId}/dhcp/clients/{id}:
+  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/clients/{id}:
     put:
-      operationId: updateDhcpClient
+      tags:
+        - bbox
+      operationId: updateBboxDhcpClient
       summary: Met à jour une réservation DHCP
       parameters:
         - $ref: "#/components/parameters/routerId"
@@ -346,7 +399,9 @@ paths:
         "204":
           description: OK
     delete:
-      operationId: deleteDhcpClient
+      tags:
+        - bbox
+      operationId: deleteBboxDhcpClient
       summary: Supprime une réservation DHCP
       parameters:
         - $ref: "#/components/parameters/routerId"
@@ -358,10 +413,11 @@ paths:
       responses:
         "204":
           description: Supprimé
-
-  /devices/api-proxy/bbox/{routerId}/dhcp/options:
+  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/options:
     get:
-      operationId: getDhcpOptions
+      tags:
+        - bbox
+      operationId: getBboxDhcpOptions
       summary: Options DHCP configurées et disponibles
       parameters:
         - $ref: "#/components/parameters/routerId"
@@ -373,7 +429,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/DhcpOptionsData"
     post:
-      operationId: createDhcpOption
+      tags:
+        - bbox
+      operationId: createBboxDhcpOption
       summary: Crée une option DHCP
       parameters:
         - $ref: "#/components/parameters/routerId"
@@ -386,10 +444,11 @@ paths:
       responses:
         "204":
           description: Créé
-
-  /devices/api-proxy/bbox/{routerId}/dhcp/options/{id}:
+  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/options/{id}:
     put:
-      operationId: updateDhcpOption
+      tags:
+        - bbox
+      operationId: updateBboxDhcpOption
       summary: Met à jour une option DHCP
       parameters:
         - $ref: "#/components/parameters/routerId"
@@ -408,7 +467,9 @@ paths:
         "204":
           description: OK
     delete:
-      operationId: deleteDhcpOption
+      tags:
+        - bbox
+      operationId: deleteBboxDhcpOption
       summary: Supprime une option DHCP
       parameters:
         - $ref: "#/components/parameters/routerId"
@@ -420,51 +481,314 @@ paths:
       responses:
         "204":
           description: Supprimé
-
+  /devices/api-proxy/bbox-proxy/{routerId}/wifi-settings:
+    get:
+      tags:
+        - bbox
+      operationId: getBboxWifiSettings
+      summary: Paramètres Wi-Fi (SSID, mot de passe, bande)
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WirelessData"
+  /devices/api-proxy/cudy-proxy/status:
+    get:
+      tags:
+        - cudy
+      operationId: getCudyStatus
+      summary: Liste des routeurs Cudy configurés
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RouterStatusResponse"
+  /devices/api-proxy/cudy-proxy/{routerId}/wireless:
+    get:
+      tags:
+        - cudy
+      operationId: getCudyWireless
+      summary: Clients Wi-Fi connectés à un AP Cudy
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WirelessData"
+        "404":
+          description: Routeur introuvable
+  /devices/api-proxy/cudy-proxy/{routerId}/bandwidth:
+    get:
+      tags:
+        - cudy
+      operationId: getCudyBandwidth
+      summary: Débit Wi-Fi des interfaces ra0 (2.4 GHz) et rai0 (5 GHz)
+      description: |
+        Calcule les débits instantanés par dérivation des volumes cumulatifs.
+        Valeurs en kbps.
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CudyBandwidthData"
+        "404":
+          description: Routeur introuvable
+  /devices/api-proxy/airport-proxy/status:
+    get:
+      tags:
+        - airport
+      operationId: getAirportStatus
+      summary: Liste des AirPort configurés
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RouterStatusResponse"
+  /devices/api-proxy/airport-proxy/{routerId}/hosts:
+    get:
+      tags:
+        - airport
+      operationId: getAirportHosts
+      summary: Hôtes connectés à un AirPort (via table ARP ACP)
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AirportRouterDetail"
+        "404":
+          description: Routeur introuvable
+        "500":
+          description: Erreur de communication ACP
+  /devices/api-proxy/airport-proxy/{routerId}/wireless:
+    get:
+      tags:
+        - airport
+      operationId: getAirportWireless
+      summary: Clients Wi-Fi connectés à un AirPort (contrat WirelessData)
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WirelessData"
+        "404":
+          description: Routeur introuvable
+  /devices/api-proxy/airport-proxy/{routerId}/wifi-settings:
+    get:
+      tags:
+        - airport
+      operationId: getAirportWifiSettings
+      summary: Paramètres Wi-Fi de l'AirPort
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WirelessData"
+        "404":
+          description: Routeur introuvable
+  /devices/api-proxy/airport-proxy/{routerId}/device-info:
+    get:
+      tags:
+        - airport
+      operationId: getAirportDeviceInfo
+      summary: Informations sur l'appareil AirPort (via mDNS)
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /devices/api-proxy/kuwfi-proxy/status:
+    get:
+      tags:
+        - kuwfi
+      operationId: getKuwfiStatus
+      summary: Liste des APs KuWFi configurés
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RouterStatusResponse"
+  /devices/api-proxy/kuwfi-proxy/{routerId}:
+    get:
+      tags:
+        - kuwfi
+      operationId: getKuwfiRouter
+      summary: Données complètes d'un AP KuWFi (accessPoints + clients)
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KuwfiRouterResult"
+        "404":
+          description: Routeur introuvable
+  /devices/api-proxy/kuwfi-proxy/{routerId}/bandwidth:
+    get:
+      tags:
+        - kuwfi
+      operationId: getKuwfiBandwidth
+      summary: Débit Wi-Fi par bande (2.4 GHz et 5 GHz) en kbps
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KuwfiBandwidthData"
+        "404":
+          description: Routeur introuvable
+  /devices/api-proxy/nestwifi-proxy/status:
+    get:
+      tags:
+        - nestwifi
+      operationId: getNestWifiStatus
+      summary: Liste des appareils NestWifi configurés
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RouterStatusResponse"
+  /devices/api-proxy/nestwifi-proxy/{routerId}:
+    get:
+      tags:
+        - nestwifi
+      operationId: getNestWifiRouter
+      summary: Hôtes détectés par un AP NestWifi (via ARP local)
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NestWifiRouterResult"
+        "404":
+          description: Routeur introuvable
+info:
+  title: fast5688b-gui server API
+  description: |-
+    API exposée par le serveur Node.js fast5688b.
+    Toutes les routes plugin suivent le schéma :
+      /devices/api-proxy/{type}-proxy/{routerId}/{resource}
+  version: 2.0.0
+  contact: {}
+tags: []
+servers:
+  - url: http://localhost:5176
 components:
-  parameters:
-    routerId:
-      name: routerId
-      in: path
-      required: true
-      schema:
-        type: string
-        example: "bbox-main"
-
+  securitySchemes:
+    cookie:
+      type: apiKey
+      in: cookie
+      name: session
   schemas:
-
-    # ── Config ────────────────────────────────────────────────────────────────
-
-    RouterEntry:
+    HealthResponse:
       type: object
-      required: [name, type]
       properties:
-        name:
+        ok:
+          type: boolean
+        hasSession:
+          type: boolean
+        target:
           type: string
-          example: "bbox-main"
-        type:
+          example: https://mabbox.bytel.fr
+      required:
+        - ok
+        - hasSession
+        - target
+    LoginRequest:
+      type: object
+      properties:
+        username:
           type: string
-          enum: [bbox, cudy]
-
-    # ── Map topology ─────────────────────────────────────────────────────────
-
+          example: admin
+        password:
+          type: string
+          example: secret
+      required:
+        - username
+        - password
+    LoginResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        username:
+          type: string
+          example: admin
+      required:
+        - ok
+        - username
+    MeResponse:
+      type: object
+      properties:
+        username:
+          type: string
+          nullable: true
+          example: admin
+        authEnabled:
+          type: boolean
+      required:
+        - username
+        - authEnabled
     MapClient:
       type: object
-      required: [mac]
       properties:
         mac:
           type: string
-          example: "AA:BB:CC:DD:EE:FF"
+          example: AA:BB:CC:DD:EE:FF
         hostname:
           type: string
-          example: "my-device"
+        ip:
+          type: string
+          example: 192.168.1.10
         signal_dbm:
-          type: integer
+          type: number
           example: -65
-
+      required:
+        - mac
     MapAccessPoint:
       type: object
-      required: [id, label, kind, online, clients]
       properties:
         id:
           type: string
@@ -474,235 +798,210 @@ components:
           type: string
         kind:
           type: string
-          example: "bbox-wifi"
+          example: bbox-wifi
         online:
           type: boolean
         clients:
           type: array
           items:
             $ref: "#/components/schemas/MapClient"
-
+      required:
+        - id
+        - label
+        - kind
+        - online
+        - clients
     MapTopology:
       type: object
-      required: [accessPoints]
       properties:
         accessPoints:
           type: array
           items:
             $ref: "#/components/schemas/MapAccessPoint"
-
-    # ── Routes propres ─────────────────────────────────────────────────────────
-
-    HealthResponse:
-      type: object
-      required: [ok, hasSession, target]
-      properties:
-        ok:
-          type: boolean
-        hasSession:
-          type: boolean
-        target:
-          type: string
-          example: "https://mabbox.bytel.fr"
-
+      required:
+        - accessPoints
     CheckIpResponse:
       type: object
-      required: [reachable, mac]
       properties:
         reachable:
           type: boolean
         mac:
-          type: ["string", "null"]
-
-    ScanProgress:
+          type: string
+          nullable: true
+          example: aa:bb:cc:dd:ee:ff
+      required:
+        - reachable
+        - mac
+    OuiResponse:
       type: object
-      required: [done, total]
       properties:
-        done:
-          type: integer
-        total:
-          type: integer
-
-    ScanHost:
-      type: object
-      required: [ip, mac, hostname, vendor, ping]
-      properties:
-        ip:
-          type: string
-        mac:
-          type: string
-        hostname:
-          type: string
         vendor:
           type: string
-        ping:
-          type: boolean
-
-    HostDetail:
+          nullable: true
+          example: Apple, Inc.
+      required:
+        - vendor
+    UiMenuItem:
       type: object
-      required: [ip, openPorts, mdnsName, smbName, smbDomain]
       properties:
-        ip:
+        id:
           type: string
-        pingStats:
-          oneOf:
-            - type: "null"
-            - type: object
-              required: [min, avg, max]
-              properties:
-                min:
-                  type: number
-                avg:
-                  type: number
-                max:
-                  type: number
-        openPorts:
+        router:
+          type: string
+          example: bbox-main
+        children:
           type: array
           items:
-            type: integer
-        mdnsName:
+            $ref: "#/components/schemas/UiMenuItem"
+      required:
+        - id
+    UiWidget:
+      type: object
+      properties:
+        type:
           type: string
-        smbName:
+        id:
           type: string
-        smbDomain:
+      required:
+        - type
+        - id
+    UiHomeConfig:
+      type: object
+      properties:
+        widgets:
+          type: array
+          items:
+            $ref: "#/components/schemas/UiWidget"
+      required:
+        - widgets
+    UiDhcpConfig:
+      type: object
+      properties:
+        router:
           type: string
-
-    # ── Cross-plugin: wireless ─────────────────────────────────────────────────
-
+      required:
+        - router
+    UiConfig:
+      type: object
+      properties:
+        menu:
+          nullable: true
+          type: array
+          items:
+            $ref: "#/components/schemas/UiMenuItem"
+        home:
+          nullable: true
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/UiHomeConfig"
+        dhcp:
+          nullable: true
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/UiDhcpConfig"
+      required:
+        - menu
+        - home
+        - dhcp
+    RouterEntry:
+      type: object
+      properties:
+        name:
+          type: string
+          example: bbox-main
+        type:
+          type: string
+          example: bbox
+      required:
+        - name
+        - type
     WirelessClient:
       type: object
-      required: [mac, signal_dbm, tx_kbps, rx_kbps, inactive_ms]
       properties:
         mac:
           type: string
+          example: AA:BB:CC:DD:EE:FF
         signal_dbm:
-          type: integer
-          description: Signal strength in dBm (negative)
+          type: number
+          description: Signal en dBm (négatif)
+          example: -65
         tx_kbps:
           type: number
-          description: Transmit rate in kbps
+          description: Débit Tx en kbps
         rx_kbps:
           type: number
-          description: Receive rate in kbps
+          description: Débit Rx en kbps
         inactive_ms:
-          type: integer
-          description: Time since last activity in milliseconds
-
+          type: number
+          description: Inactivité en ms
+      required:
+        - mac
+        - signal_dbm
+        - tx_kbps
+        - rx_kbps
+        - inactive_ms
     AccessPoint:
       type: object
-      required: [ssid, band, channel, clients]
       properties:
         ssid:
           type: string
         band:
           type: string
-          enum: ["2.4G", "5G"]
+          enum:
+            - 2.4G
+            - 5G
         channel:
-          type: integer
+          type: number
         clients:
           type: array
           items:
             $ref: "#/components/schemas/WirelessClient"
-
-    WirelessData:
+        bssid:
+          type: string
+        password:
+          type: string
+        standard:
+          type: string
+        width:
+          type: number
+      required:
+        - ssid
+        - band
+        - channel
+        - clients
+    AirportHost:
       type: object
-      required: [online, accessPoints]
-      properties:
-        online:
-          type: boolean
-        accessPoints:
-          type: array
-          items:
-            $ref: "#/components/schemas/AccessPoint"
-
-    # ── Cross-plugin: host list ────────────────────────────────────────────────
-
-    Host:
-      type: object
-      required: [mac, ip, hostname, active]
       properties:
         mac:
           type: string
         ip:
           type: string
-        ip6:
-          type: string
         hostname:
           type: string
-        active:
+        wireless:
           type: boolean
-        type:
-          type: string
-        lastseen:
-          type: integer
-          description: Unix timestamp (seconds)
-
-    HostsData:
+      required:
+        - mac
+        - ip
+        - hostname
+        - wireless
+    AirportRouterDetail:
       type: object
-      required: [hosts]
       properties:
+        online:
+          type: boolean
         hosts:
           type: array
           items:
-            $ref: "#/components/schemas/Host"
-
-    # ── BBox device / WAN ──────────────────────────────────────────────────────
-
-    DeviceData:
-      type: object
-      required: [modelname, serialnumber, firmware, firmwareDate, uptime, boots, using]
-      properties:
-        modelname:
-          type: string
-        serialnumber:
-          type: string
-        firmware:
-          type: string
-        firmwareDate:
-          type: string
-        uptime:
-          type: integer
-          description: Uptime in seconds
-        boots:
-          type: integer
-        using:
-          type: object
-          required: [ipv4, ipv6, ftth]
-          properties:
-            ipv4: { type: boolean }
-            ipv6: { type: boolean }
-            ftth: { type: boolean }
-
-    WanGraphPoint:
-      type: object
-      required: [ts, value]
-      properties:
-        ts:
-          type: integer
-          description: Unix timestamp (secondes)
-        value:
-          type: number
-          description: Débit en kbps
-
-    WanGraphsData:
-      type: object
-      required: [down, up]
-      properties:
-        down:
-          type: array
-          items:
-            $ref: "#/components/schemas/WanGraphPoint"
-        up:
-          type: array
-          items:
-            $ref: "#/components/schemas/WanGraphPoint"
-
+            $ref: "#/components/schemas/AirportHost"
+      required:
+        - online
+        - hosts
     CudyBandwidthPoint:
       type: object
-      required: [ts, up, down]
       properties:
         ts:
-          type: integer
+          type: number
           description: Unix timestamp (secondes)
         up:
           type: number
@@ -710,10 +1009,12 @@ components:
         down:
           type: number
           description: Débit descendant en kbps
-
+      required:
+        - ts
+        - up
+        - down
     CudyBandwidthData:
       type: object
-      required: [ra0, rai0]
       properties:
         ra0:
           description: Interface 2.4 GHz
@@ -725,35 +1026,55 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/CudyBandwidthPoint"
-
-    WanStatsSide:
+      required:
+        - ra0
+        - rai0
+    DeviceUsing:
       type: object
-      required: [bytes, bandwidth, contractualBandwidth, occupation]
       properties:
-        bytes: { type: integer }
-        bandwidth: { type: number }
-        contractualBandwidth: { type: number }
-        occupation: { type: number }
-
-    WanStatsData:
+        ipv4:
+          type: boolean
+        ipv6:
+          type: boolean
+        ftth:
+          type: boolean
+      required:
+        - ipv4
+        - ipv6
+        - ftth
+    DeviceData:
       type: object
-      required: [rx, tx]
       properties:
-        rx:
-          $ref: "#/components/schemas/WanStatsSide"
-        tx:
-          $ref: "#/components/schemas/WanStatsSide"
-
-    # ── BBox DHCP ──────────────────────────────────────────────────────────────
-
+        modelname:
+          type: string
+        serialnumber:
+          type: string
+        firmware:
+          type: string
+        firmwareDate:
+          type: string
+        uptime:
+          type: number
+          description: Uptime en secondes
+        boots:
+          type: number
+        using:
+          $ref: "#/components/schemas/DeviceUsing"
+      required:
+        - modelname
+        - serialnumber
+        - firmware
+        - firmwareDate
+        - uptime
+        - boots
+        - using
     DhcpClient:
       type: object
-      required: [id, enable, hostname, macaddress, ipaddress, ip6address]
       properties:
         id:
-          type: integer
+          type: number
         enable:
-          type: integer
+          type: number
         hostname:
           type: string
         macaddress:
@@ -762,13 +1083,18 @@ components:
           type: string
         ip6address:
           type: string
-
+      required:
+        - id
+        - enable
+        - hostname
+        - macaddress
+        - ipaddress
+        - ip6address
     DhcpClientWrite:
       type: object
-      required: [enable, macaddress, ipaddress, ip6address, hostname]
       properties:
         enable:
-          type: integer
+          type: number
         macaddress:
           type: string
         ipaddress:
@@ -777,83 +1103,101 @@ components:
           type: string
         hostname:
           type: string
-
-    DhcpConfig:
-      type: object
-      required: [enable, minaddress, maxaddress, leasetime]
-      properties:
-        enable:
-          type: integer
-        minaddress:
-          type: string
-        maxaddress:
-          type: string
-        leasetime:
-          type: integer
-
-    DhcpConfigUpdate:
-      type: object
-      properties:
-        enable:
-          type: integer
-        minaddress:
-          type: string
-        maxaddress:
-          type: string
-        leasetime:
-          type: integer
-
+      required:
+        - enable
+        - macaddress
+        - ipaddress
+        - ip6address
+        - hostname
     DhcpClientsData:
       type: object
-      required: [clients]
       properties:
         clients:
           type: array
           items:
             $ref: "#/components/schemas/DhcpClient"
-
+      required:
+        - clients
+    DhcpConfig:
+      type: object
+      properties:
+        enable:
+          type: number
+        minaddress:
+          type: string
+          example: 192.168.1.2
+        maxaddress:
+          type: string
+          example: 192.168.1.254
+        leasetime:
+          type: number
+          description: Durée de bail en secondes
+      required:
+        - enable
+        - minaddress
+        - maxaddress
+        - leasetime
     DhcpConfigData:
       type: object
-      required: [config]
       properties:
         config:
           $ref: "#/components/schemas/DhcpConfig"
-
+      required:
+        - config
+    DhcpConfigUpdate:
+      type: object
+      properties:
+        enable:
+          type: number
+        minaddress:
+          type: string
+        maxaddress:
+          type: string
+        leasetime:
+          type: number
     DhcpOption:
       type: object
-      required: [id, option, value]
       properties:
         id:
-          type: integer
+          type: number
         option:
-          type: integer
+          type: number
         value:
           type: string
-
-    DhcpOptionWrite:
-      type: object
-      required: [option, value]
-      properties:
-        option:
-          type: integer
-        value:
-          type: string
-
+      required:
+        - id
+        - option
+        - value
     DhcpOptionCapability:
       type: object
-      required: [id, type, description]
       properties:
         id:
-          type: integer
+          type: number
         type:
           type: string
-          enum: [INT, IP, STRING, BOOL]
+          enum:
+            - INT
+            - IP
+            - STRING
+            - BOOL
         description:
           type: string
-
+      required:
+        - id
+        - type
+        - description
+    DhcpOptionWrite:
+      type: object
+      properties:
+        option:
+          type: number
+        value:
+          type: string
+      required:
+        - option
+        - value
     DhcpOptionsData:
       type: object
-      required: [options, optionsstatic, capabilities]
       properties:
         options:
           type: array
@@ -867,3 +1211,344 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DhcpOptionCapability"
+      required:
+        - options
+        - optionsstatic
+        - capabilities
+    Host:
+      type: object
+      properties:
+        mac:
+          type: string
+          example: AA:BB:CC:DD:EE:FF
+        ip:
+          type: string
+          example: 192.168.1.10
+        ip6:
+          type: string
+        hostname:
+          type: string
+        active:
+          type: boolean
+        type:
+          type: string
+        connexion:
+          type: string
+          enum:
+            - wired
+            - wifi 2.4G
+            - wifi 5G
+        ssid:
+          type: string
+        lastseen:
+          type: number
+          description: Unix timestamp (secondes)
+      required:
+        - mac
+        - ip
+        - hostname
+        - active
+    HostDetailEvent:
+      type: object
+      properties:
+        ip:
+          type: string
+        openPorts:
+          type: array
+          items:
+            type: number
+        mdnsName:
+          type: string
+        smbName:
+          type: string
+        smbDomain:
+          type: string
+      required:
+        - ip
+        - openPorts
+        - mdnsName
+        - smbName
+        - smbDomain
+    HostsData:
+      type: object
+      properties:
+        hosts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Host"
+      required:
+        - hosts
+    HostsProgressEvent:
+      type: object
+      properties:
+        pct:
+          type: number
+          description: Pourcentage d'avancement (0-100)
+        label:
+          type: string
+          description: Nom du plugin en cours
+      required:
+        - pct
+        - label
+    KuwfiClient:
+      type: object
+      properties:
+        mac:
+          type: string
+        ip:
+          type: string
+        signal_dbm:
+          type: number
+        band:
+          type: string
+          enum:
+            - 2.4G
+            - 5G
+        ssid:
+          type: string
+      required:
+        - mac
+        - ip
+        - signal_dbm
+        - band
+        - ssid
+    KuwfiAccessPoint:
+      type: object
+      properties:
+        ssid:
+          type: string
+        band:
+          type: string
+          enum:
+            - 2.4G
+            - 5G
+        channel:
+          type: number
+        clients:
+          type: array
+          items:
+            $ref: "#/components/schemas/KuwfiClient"
+      required:
+        - ssid
+        - band
+        - channel
+        - clients
+    KuwfiBandwidthPoint:
+      type: object
+      properties:
+        ts:
+          type: number
+          description: Unix timestamp (secondes)
+        up:
+          type: number
+          description: Débit montant en kbps
+        down:
+          type: number
+          description: Débit descendant en kbps
+      required:
+        - ts
+        - up
+        - down
+    KuwfiBandwidthData:
+      type: object
+      properties:
+        band24:
+          description: Bande 2.4 GHz
+          type: array
+          items:
+            $ref: "#/components/schemas/KuwfiBandwidthPoint"
+        band5:
+          description: Bande 5 GHz
+          type: array
+          items:
+            $ref: "#/components/schemas/KuwfiBandwidthPoint"
+      required:
+        - band24
+        - band5
+    KuwfiRouterResult:
+      type: object
+      properties:
+        name:
+          type: string
+        ip:
+          type: string
+        online:
+          type: boolean
+        firmware:
+          type: string
+        uptime:
+          type: number
+        accessPoints:
+          type: array
+          items:
+            $ref: "#/components/schemas/KuwfiAccessPoint"
+      required:
+        - name
+        - ip
+        - online
+        - firmware
+        - uptime
+        - accessPoints
+    NestWifiHost:
+      type: object
+      properties:
+        mac:
+          type: string
+        ip:
+          type: string
+        hostname:
+          type: string
+      required:
+        - mac
+        - ip
+        - hostname
+    NestWifiRouterResult:
+      type: object
+      properties:
+        name:
+          type: string
+        ip:
+          type: string
+        online:
+          type: boolean
+        hosts:
+          type: array
+          items:
+            $ref: "#/components/schemas/NestWifiHost"
+      required:
+        - name
+        - ip
+        - online
+        - hosts
+    PingResult:
+      type: object
+      properties:
+        ip:
+          type: string
+        rtt:
+          type: number
+          nullable: true
+          description: RTT en ms, null si injoignable
+      required:
+        - ip
+        - rtt
+    RouterStatusEntry:
+      type: object
+      properties:
+        name:
+          type: string
+        ip:
+          type: string
+      required:
+        - name
+        - ip
+    RouterStatusResponse:
+      type: object
+      properties:
+        routers:
+          type: array
+          items:
+            $ref: "#/components/schemas/RouterStatusEntry"
+      required:
+        - routers
+    ScanHostEvent:
+      type: object
+      properties:
+        ip:
+          type: string
+        mac:
+          type: string
+        hostname:
+          type: string
+        vendor:
+          type: string
+        ping:
+          type: boolean
+      required:
+        - ip
+        - mac
+        - hostname
+        - vendor
+        - ping
+    ScanProgressEvent:
+      type: object
+      properties:
+        done:
+          type: number
+        total:
+          type: number
+      required:
+        - done
+        - total
+    WanGraphPoint:
+      type: object
+      properties:
+        ts:
+          type: number
+          description: Unix timestamp (secondes)
+        value:
+          type: number
+          description: Débit en kbps
+      required:
+        - ts
+        - value
+    WanGraphsData:
+      type: object
+      properties:
+        down:
+          type: array
+          items:
+            $ref: "#/components/schemas/WanGraphPoint"
+        up:
+          type: array
+          items:
+            $ref: "#/components/schemas/WanGraphPoint"
+      required:
+        - down
+        - up
+    WanStatsSide:
+      type: object
+      properties:
+        bytes:
+          type: number
+        bandwidth:
+          type: number
+        contractualBandwidth:
+          type: number
+        occupation:
+          type: number
+      required:
+        - bytes
+        - bandwidth
+        - contractualBandwidth
+        - occupation
+    WanStatsData:
+      type: object
+      properties:
+        rx:
+          $ref: "#/components/schemas/WanStatsSide"
+        tx:
+          $ref: "#/components/schemas/WanStatsSide"
+      required:
+        - rx
+        - tx
+    WirelessData:
+      type: object
+      properties:
+        online:
+          type: boolean
+        accessPoints:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccessPoint"
+      required:
+        - online
+        - accessPoints
+  parameters:
+    routerId:
+      name: routerId
+      in: path
+      required: true
+      schema:
+        type: string
+        example: bbox-main

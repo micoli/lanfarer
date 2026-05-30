@@ -1,6 +1,15 @@
 import { Controller, Get, Post, Req, Res } from "@nestjs/common";
+import {
+  ApiTags,
+  ApiOperation,
+  ApiOkResponse,
+  ApiBody,
+  ApiResponse,
+  ApiCookieAuth,
+} from "@nestjs/swagger";
 import type { Request, Response } from "express";
 import { login, getSession, deleteSession, parseSessionCookie, isAuthEnabled } from "../auth.ts";
+import { LoginRequest, LoginResponse, MeResponse } from "../dto/index.ts";
 
 function readBody(req: Request): Promise<string> {
   return new Promise((resolve) => {
@@ -14,9 +23,15 @@ function isHassIngress(req: Request): boolean {
   return !!req.headers["x-hass-user-id"];
 }
 
+@ApiTags("auth")
 @Controller("__auth")
 export class AuthController {
   @Post("login")
+  @ApiOperation({ summary: "Authentification par login/mot de passe" })
+  @ApiBody({ type: LoginRequest })
+  @ApiOkResponse({ type: LoginResponse })
+  @ApiResponse({ status: 400, description: "Corps de requête invalide" })
+  @ApiResponse({ status: 401, description: "Identifiants incorrects" })
   async loginRoute(@Req() req: Request, @Res() res: Response): Promise<void> {
     const text = await readBody(req);
     let username: string;
@@ -38,6 +53,9 @@ export class AuthController {
   }
 
   @Post("logout")
+  @ApiOperation({ summary: "Déconnexion — invalide le cookie de session" })
+  @ApiCookieAuth("session")
+  @ApiOkResponse({ schema: { properties: { ok: { type: "boolean" } } } })
   logoutRoute(@Req() req: Request, @Res() res: Response): void {
     const token = parseSessionCookie(req.headers.cookie);
     if (token) deleteSession(token);
@@ -46,6 +64,10 @@ export class AuthController {
   }
 
   @Get("me")
+  @ApiOperation({ summary: "Identité de l'utilisateur courant" })
+  @ApiCookieAuth("session")
+  @ApiOkResponse({ type: MeResponse })
+  @ApiResponse({ status: 401, description: "Non authentifié" })
   meRoute(@Req() req: Request, @Res() res: Response): void {
     if (!isAuthEnabled() || isHassIngress(req)) {
       res.json({ username: null, authEnabled: false });

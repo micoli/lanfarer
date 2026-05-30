@@ -1,0 +1,484 @@
+components:
+  parameters:
+    routerId:
+      name: routerId
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "bbox-main"
+
+paths:
+
+  # ── BBox plugin ────────────────────────────────────────────────────────────
+
+  /devices/api-proxy/bbox-proxy/{routerId}/wireless:
+    get:
+      tags: [bbox]
+      operationId: getBboxWireless
+      summary: Clients Wi-Fi connectés à la BBox
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WirelessData"
+
+  /devices/api-proxy/bbox-proxy/{routerId}/hosts:
+    get:
+      tags: [bbox]
+      operationId: getBboxHosts
+      summary: Appareils connectés au réseau local (bbox)
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HostsData"
+
+  /devices/api-proxy/bbox-proxy/{routerId}/device:
+    get:
+      tags: [bbox]
+      operationId: getBboxDevice
+      summary: Informations sur le routeur BBox (modèle, firmware, uptime…)
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceData"
+
+  /devices/api-proxy/bbox-proxy/{routerId}/wan/stats:
+    get:
+      tags: [bbox]
+      operationId: getBboxWanStats
+      summary: Statistiques de trafic WAN instantanées
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WanStatsData"
+
+  /devices/api-proxy/bbox-proxy/{routerId}/wan/graphs:
+    get:
+      tags: [bbox]
+      operationId: getBboxWanGraphs
+      summary: Historique de débit WAN sur la dernière heure
+      description: |
+        Agrège les endpoints Bbox downstream/hour et upstream/hour.
+        Chaque point contient un timestamp Unix (secondes) et une valeur en kbps.
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WanGraphsData"
+
+  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/config:
+    get:
+      tags: [bbox]
+      operationId: getBboxDhcpConfig
+      summary: Configuration du serveur DHCP
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DhcpConfigData"
+    put:
+      tags: [bbox]
+      operationId: updateBboxDhcpConfig
+      summary: Met à jour la configuration DHCP
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DhcpConfigUpdate"
+      responses:
+        "204":
+          description: OK
+
+  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/clients:
+    get:
+      tags: [bbox]
+      operationId: getBboxDhcpClients
+      summary: Liste des réservations DHCP statiques
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DhcpClientsData"
+    post:
+      tags: [bbox]
+      operationId: createBboxDhcpClient
+      summary: Crée une réservation DHCP
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DhcpClientWrite"
+      responses:
+        "204":
+          description: Créé
+
+  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/clients/{id}:
+    put:
+      tags: [bbox]
+      operationId: updateBboxDhcpClient
+      summary: Met à jour une réservation DHCP
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DhcpClientWrite"
+      responses:
+        "204":
+          description: OK
+    delete:
+      tags: [bbox]
+      operationId: deleteBboxDhcpClient
+      summary: Supprime une réservation DHCP
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Supprimé
+
+  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/options:
+    get:
+      tags: [bbox]
+      operationId: getBboxDhcpOptions
+      summary: Options DHCP configurées et disponibles
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DhcpOptionsData"
+    post:
+      tags: [bbox]
+      operationId: createBboxDhcpOption
+      summary: Crée une option DHCP
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DhcpOptionWrite"
+      responses:
+        "204":
+          description: Créé
+
+  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/options/{id}:
+    put:
+      tags: [bbox]
+      operationId: updateBboxDhcpOption
+      summary: Met à jour une option DHCP
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DhcpOptionWrite"
+      responses:
+        "204":
+          description: OK
+    delete:
+      tags: [bbox]
+      operationId: deleteBboxDhcpOption
+      summary: Supprime une option DHCP
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Supprimé
+
+  /devices/api-proxy/bbox-proxy/{routerId}/wifi-settings:
+    get:
+      tags: [bbox]
+      operationId: getBboxWifiSettings
+      summary: Paramètres Wi-Fi (SSID, mot de passe, bande)
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WirelessData"
+
+  # ── Cudy plugin ────────────────────────────────────────────────────────────
+
+  /devices/api-proxy/cudy-proxy/status:
+    get:
+      tags: [cudy]
+      operationId: getCudyStatus
+      summary: Liste des routeurs Cudy configurés
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RouterStatusResponse"
+
+  /devices/api-proxy/cudy-proxy/{routerId}/wireless:
+    get:
+      tags: [cudy]
+      operationId: getCudyWireless
+      summary: Clients Wi-Fi connectés à un AP Cudy
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WirelessData"
+        "404":
+          description: Routeur introuvable
+
+  /devices/api-proxy/cudy-proxy/{routerId}/bandwidth:
+    get:
+      tags: [cudy]
+      operationId: getCudyBandwidth
+      summary: Débit Wi-Fi des interfaces ra0 (2.4 GHz) et rai0 (5 GHz)
+      description: |
+        Calcule les débits instantanés par dérivation des volumes cumulatifs.
+        Valeurs en kbps.
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CudyBandwidthData"
+        "404":
+          description: Routeur introuvable
+
+  # ── Airport plugin ─────────────────────────────────────────────────────────
+
+  /devices/api-proxy/airport-proxy/status:
+    get:
+      tags: [airport]
+      operationId: getAirportStatus
+      summary: Liste des AirPort configurés
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RouterStatusResponse"
+
+  /devices/api-proxy/airport-proxy/{routerId}/hosts:
+    get:
+      tags: [airport]
+      operationId: getAirportHosts
+      summary: Hôtes connectés à un AirPort (via table ARP ACP)
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AirportRouterDetail"
+        "404":
+          description: Routeur introuvable
+        "500":
+          description: Erreur de communication ACP
+
+  /devices/api-proxy/airport-proxy/{routerId}/wireless:
+    get:
+      tags: [airport]
+      operationId: getAirportWireless
+      summary: Clients Wi-Fi connectés à un AirPort (contrat WirelessData)
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WirelessData"
+        "404":
+          description: Routeur introuvable
+
+  /devices/api-proxy/airport-proxy/{routerId}/wifi-settings:
+    get:
+      tags: [airport]
+      operationId: getAirportWifiSettings
+      summary: Paramètres Wi-Fi de l'AirPort
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WirelessData"
+        "404":
+          description: Routeur introuvable
+
+  /devices/api-proxy/airport-proxy/{routerId}/device-info:
+    get:
+      tags: [airport]
+      operationId: getAirportDeviceInfo
+      summary: Informations sur l'appareil AirPort (via mDNS)
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+
+  # ── KuWFi plugin ───────────────────────────────────────────────────────────
+
+  /devices/api-proxy/kuwfi-proxy/status:
+    get:
+      tags: [kuwfi]
+      operationId: getKuwfiStatus
+      summary: Liste des APs KuWFi configurés
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RouterStatusResponse"
+
+  /devices/api-proxy/kuwfi-proxy/{routerId}:
+    get:
+      tags: [kuwfi]
+      operationId: getKuwfiRouter
+      summary: Données complètes d'un AP KuWFi (accessPoints + clients)
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KuwfiRouterResult"
+        "404":
+          description: Routeur introuvable
+
+  /devices/api-proxy/kuwfi-proxy/{routerId}/bandwidth:
+    get:
+      tags: [kuwfi]
+      operationId: getKuwfiBandwidth
+      summary: Débit Wi-Fi par bande (2.4 GHz et 5 GHz) en kbps
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KuwfiBandwidthData"
+        "404":
+          description: Routeur introuvable
+
+  # ── NestWifi plugin ────────────────────────────────────────────────────────
+
+  /devices/api-proxy/nestwifi-proxy/status:
+    get:
+      tags: [nestwifi]
+      operationId: getNestWifiStatus
+      summary: Liste des appareils NestWifi configurés
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RouterStatusResponse"
+
+  /devices/api-proxy/nestwifi-proxy/{routerId}:
+    get:
+      tags: [nestwifi]
+      operationId: getNestWifiRouter
+      summary: Hôtes détectés par un AP NestWifi (via ARP local)
+      parameters:
+        - $ref: "#/components/parameters/routerId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NestWifiRouterResult"
+        "404":
+          description: Routeur introuvable

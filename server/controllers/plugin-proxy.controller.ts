@@ -1,10 +1,13 @@
 import { All, Controller, Inject, Next, Req, Res, UseGuards } from "@nestjs/common";
+import { ApiExcludeController } from "@nestjs/swagger";
 import type { NextFunction, Request, Response } from "express";
 import type http from "node:http";
 import { AuthGuard } from "../auth.guard.ts";
 import type { RouterPlugin } from "../plugin.ts";
 import { PLUGINS_TOKEN } from "../plugins.token.ts";
 
+// Routes documentées dans server/openapi-plugins.yaml — catch-all non annotable individuellement
+@ApiExcludeController()
 @Controller("devices/api-proxy")
 @UseGuards(AuthGuard)
 export class PluginProxyController {
