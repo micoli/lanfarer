@@ -30,7 +30,7 @@ function usekuwfiRouterList() {
   return useQuery({
     queryKey: ["kuwfi", "list"],
     queryFn: async () => {
-      const res = await fetch(`${basePath()}/devices/api-proxy/kuwfi-proxy/status`);
+      const res = await fetch(`${basePath()}/devices/api-proxy/kuwfi/status`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json() as Promise<{ routers: { name: string; ip: string }[] }>;
     },
@@ -42,7 +42,7 @@ export function useKuwfiBandwidth(routerId: string | null) {
   return useQuery<KuwfiBandwidthData>({
     queryKey: ["kuwfi", "bandwidth", routerId],
     queryFn: async () => {
-      const res = await fetch(`${basePath()}/devices/api-proxy/kuwfi-proxy/${routerId}/bandwidth`);
+      const res = await fetch(`${basePath()}/devices/api-proxy/kuwfi/${routerId}/bandwidth`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json() as Promise<KuwfiBandwidthData>;
     },
@@ -55,7 +55,7 @@ export function useKuwfiHosts(routerId: string | null) {
   return useQuery<HostsData>({
     queryKey: ["kuwfi", "hosts", routerId],
     queryFn: async () => {
-      const res = await fetch(`${basePath()}/devices/api-proxy/kuwfi-proxy/${routerId}`);
+      const res = await fetch(`${basePath()}/devices/api-proxy/kuwfi/${routerId}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as KuwfiRouterData;
       const toConnexion = (band: "2.4G" | "5G"): HostConnexion =>
@@ -85,7 +85,7 @@ export function useKuwfiClients() {
     queries: routers.map((router) => ({
       queryKey: ["kuwfi", "router", router.name],
       queryFn: async (): Promise<KuwfiRouterData> => {
-        const res = await fetch(`${basePath()}/devices/api-proxy/kuwfi-proxy/${router.name}`);
+        const res = await fetch(`${basePath()}/devices/api-proxy/kuwfi/${router.name}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json() as Promise<KuwfiRouterData>;
       },

@@ -49,7 +49,7 @@ export const plugin: RouterPlugin = {
   },
 
 
-  matches: (url) => url.startsWith("/devices/api-proxy/cudy-proxy/"),
+  matches: (url) => url.startsWith("/devices/api-proxy/cudy/"),
 
   handle: (req: http.IncomingMessage, res: http.ServerResponse) => handleCudy(req, res),
 

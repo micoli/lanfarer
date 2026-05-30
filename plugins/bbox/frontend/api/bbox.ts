@@ -26,7 +26,7 @@ async function bboxFetch<T>(
   resource: string,
   body?: Record<string, unknown>
 ): Promise<T> {
-  const url = `${basePath()}/devices/api-proxy/bbox-proxy/${routerId}${resource}`;
+  const url = `${basePath()}/devices/api-proxy/bbox/${routerId}${resource}`;
   const init: RequestInit = { method };
   if (body !== undefined) {
     init.headers = { "content-type": "application/json" };

@@ -3,7 +3,7 @@ import type { RouterPlugin } from "../../../server/plugin.ts";
 import type { HostConnexion, MapAccessPoint, MapClient } from "../../contracts.ts";
 import { fetchAllKuwfiRouters, fetchKuwfiBandwidth, fetchKuwfiRouter, loadKuwfiConfig } from "./fetcher.ts";
 
-const PREFIX = "/devices/api-proxy/kuwfi-proxy/";
+const PREFIX = "/devices/api-proxy/kuwfi/";
 
 function sendJson(res: http.ServerResponse, status: number, data: unknown): void {
   const body = JSON.stringify(data);

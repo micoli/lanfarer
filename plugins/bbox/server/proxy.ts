@@ -8,8 +8,8 @@ function defaultSpec(): BboxRouterSpec {
 }
 
 function parseRouterPath(url: string): { routerId: string; rawPath: string } | null {
-  // URL format: /devices/api-proxy/bbox-proxy/bbox/{routerId}/api/v1/...
-  const afterPrefix = url.slice("/devices/api-proxy/bbox-proxy/bbox/".length);
+  // URL format: /devices/api-proxy/bbox/bbox/{routerId}/api/v1/...
+  const afterPrefix = url.slice("/devices/api-proxy/bbox/bbox/".length);
   const slashIdx = afterPrefix.indexOf("/");
   const routerId = slashIdx === -1 ? afterPrefix.split("?")[0] : afterPrefix.slice(0, slashIdx);
   if (!routerId) return null;
@@ -34,7 +34,7 @@ export async function bboxApiProxy(
   const parsed = parseRouterPath(url);
   if (!parsed) {
     res.writeHead(400, { "content-type": "application/json" });
-    res.end(JSON.stringify({ error: "Missing routerId in devices/api-proxy/bbox-proxy/bbox path" }));
+    res.end(JSON.stringify({ error: "Missing routerId in devices/api-proxy/bbox/bbox path" }));
     return;
   }
   const { routerId, rawPath } = parsed;

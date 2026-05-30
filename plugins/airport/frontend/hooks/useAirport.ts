@@ -13,7 +13,7 @@ export function useAirportDeviceInfo(routerId: string | null) {
   return useQuery<AcpDeviceInfo>({
     queryKey: ["airport", "device-info", routerId],
     queryFn: async () => {
-      const res = await fetch(`${basePath()}/devices/api-proxy/airport-proxy/${routerId}/device-info`);
+      const res = await fetch(`${basePath()}/devices/api-proxy/airport/${routerId}/device-info`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json() as Promise<AcpDeviceInfo>;
     },
@@ -36,7 +36,7 @@ export function useAirportWifiSettings(routerId: string | null) {
   return useQuery<AirportWifiSettings>({
     queryKey: ["airport", "wifi-settings", routerId],
     queryFn: async () => {
-      const res = await fetch(`${basePath()}/devices/api-proxy/airport-proxy/${routerId}/wifi-settings`);
+      const res = await fetch(`${basePath()}/devices/api-proxy/airport/${routerId}/wifi-settings`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json() as Promise<AirportWifiSettings>;
     },
@@ -70,7 +70,7 @@ export function useAirportWireless(routerId: string | null) {
   return useQuery<AirportWirelessData>({
     queryKey: ["airport", "wireless", routerId],
     queryFn: async () => {
-      const res = await fetch(`${basePath()}/devices/api-proxy/airport-proxy/${routerId}/wireless`);
+      const res = await fetch(`${basePath()}/devices/api-proxy/airport/${routerId}/wireless`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json() as Promise<AirportWirelessData>;
     },
@@ -93,7 +93,7 @@ export function useAirportHosts(routerId: string | null) {
   return useQuery<AirportHostsData>({
     queryKey: ["airport", "hosts", routerId],
     queryFn: async () => {
-      const res = await fetch(`${basePath()}/devices/api-proxy/airport-proxy/${routerId}/hosts`);
+      const res = await fetch(`${basePath()}/devices/api-proxy/airport/${routerId}/hosts`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const body = (await res.json()) as { online: boolean; hosts: AirportArpEntry[] };
       const hosts: Host[] = body.hosts.map((e) => ({

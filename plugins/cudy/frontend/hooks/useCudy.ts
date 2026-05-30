@@ -22,7 +22,7 @@ function useCudyRouterList() {
   return useQuery({
     queryKey: ["cudy", "list"],
     queryFn: async () => {
-      const res = await fetch(`${basePath()}/devices/api-proxy/cudy-proxy/status`);
+      const res = await fetch(`${basePath()}/devices/api-proxy/cudy/status`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json() as Promise<{ routers: { name: string; ip: string }[] }>;
     },
@@ -34,7 +34,7 @@ export function useCudyBandwidth(routerName: string | null) {
   return useQuery<CudyBandwidthData>({
     queryKey: ["cudy", "bandwidth", routerName],
     queryFn: async () => {
-      const res = await fetch(`${basePath()}/devices/api-proxy/cudy-proxy/${routerName}/bandwidth`);
+      const res = await fetch(`${basePath()}/devices/api-proxy/cudy/${routerName}/bandwidth`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json() as Promise<CudyBandwidthData>;
     },
@@ -47,7 +47,7 @@ export function useCudyHosts(routerId: string | null) {
   return useQuery<HostsData>({
     queryKey: ["cudy", "hosts", routerId],
     queryFn: async () => {
-      const res = await fetch(`${basePath()}/devices/api-proxy/cudy-proxy/${routerId}/devlist`);
+      const res = await fetch(`${basePath()}/devices/api-proxy/cudy/${routerId}/devlist`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const entries = (await res.json()) as DevlistEntry[];
       const toConnexion = (iface: string): HostConnexion => {
@@ -78,7 +78,7 @@ export function useCudyClients() {
       queryKey: ["cudy", "wireless", router.name],
       queryFn: async (): Promise<CudyRouterWireless> => {
         const res = await fetch(
-          `${basePath()}/devices/api-proxy/cudy-proxy/${router.name}/wireless`
+          `${basePath()}/devices/api-proxy/cudy/${router.name}/wireless`
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const wireless = (await res.json()) as WirelessData;

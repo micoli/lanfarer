@@ -133,7 +133,7 @@ paths:
 
   # ── Cudy plugin ────────────────────────────────────────────────────────────
 
-  /devices/api-proxy/cudy-proxy/status:
+  /devices/api-proxy/cudy/status:
     get:
       operationId: getCudyStatus
       summary: Liste des routeurs Cudy configurés
@@ -157,7 +157,7 @@ paths:
                         name: { type: string }
                         ip: { type: string }
 
-  /devices/api-proxy/cudy-proxy/{routerId}/wireless:
+  /devices/api-proxy/cudy/{routerId}/wireless:
     get:
       operationId: getCudyWireless
       summary: Clients Wi-Fi connectés à un AP Cudy (contrat commun WirelessData)
@@ -173,7 +173,7 @@ paths:
         "404":
           description: Routeur introuvable
 
-  /devices/api-proxy/cudy-proxy/{routerId}/bandwidth:
+  /devices/api-proxy/cudy/{routerId}/bandwidth:
     get:
       operationId: getCudyBandwidth
       summary: Débit Wi-Fi des interfaces ra0 (2.4 GHz) et rai0 (5 GHz)
@@ -195,7 +195,7 @@ paths:
 
   # ── BBox plugin ────────────────────────────────────────────────────────────
 
-  /devices/api-proxy/bbox-proxy/{routerId}/wireless:
+  /devices/api-proxy/bbox/{routerId}/wireless:
     get:
       operationId: getBboxWireless
       summary: Clients Wi-Fi connectés à la BBox (contrat commun WirelessData)
@@ -209,7 +209,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/WirelessData"
 
-  /devices/api-proxy/bbox-proxy/{routerId}/hosts:
+  /devices/api-proxy/bbox/{routerId}/hosts:
     get:
       operationId: getHosts
       summary: Appareils connectés au réseau local
@@ -223,7 +223,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/HostsData"
 
-  /devices/api-proxy/bbox-proxy/{routerId}/device:
+  /devices/api-proxy/bbox/{routerId}/device:
     get:
       operationId: getDevice
       summary: Informations sur le routeur (modèle, firmware, uptime…)
@@ -237,7 +237,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/DeviceData"
 
-  /devices/api-proxy/bbox-proxy/{routerId}/wan/stats:
+  /devices/api-proxy/bbox/{routerId}/wan/stats:
     get:
       operationId: getWanStats
       summary: Statistiques de trafic WAN instantanées (débit, octets cumulés)
@@ -251,7 +251,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/WanStatsData"
 
-  /devices/api-proxy/bbox-proxy/{routerId}/wan/graphs:
+  /devices/api-proxy/bbox/{routerId}/wan/graphs:
     get:
       operationId: getWanGraphs
       summary: Historique de débit WAN sur la dernière heure
@@ -269,7 +269,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/WanGraphsData"
 
-  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/config:
+  /devices/api-proxy/bbox/{routerId}/dhcp/config:
     get:
       operationId: getDhcpConfig
       summary: Configuration du serveur DHCP
@@ -297,7 +297,7 @@ paths:
         "204":
           description: OK
 
-  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/clients:
+  /devices/api-proxy/bbox/{routerId}/dhcp/clients:
     get:
       operationId: getDhcpClients
       summary: Liste des réservations DHCP statiques
@@ -325,7 +325,7 @@ paths:
         "204":
           description: Créé
 
-  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/clients/{id}:
+  /devices/api-proxy/bbox/{routerId}/dhcp/clients/{id}:
     put:
       operationId: updateDhcpClient
       summary: Met à jour une réservation DHCP
@@ -359,7 +359,7 @@ paths:
         "204":
           description: Supprimé
 
-  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/options:
+  /devices/api-proxy/bbox/{routerId}/dhcp/options:
     get:
       operationId: getDhcpOptions
       summary: Options DHCP configurées et disponibles
@@ -387,7 +387,7 @@ paths:
         "204":
           description: Créé
 
-  /devices/api-proxy/bbox-proxy/{routerId}/dhcp/options/{id}:
+  /devices/api-proxy/bbox/{routerId}/dhcp/options/{id}:
     put:
       operationId: updateDhcpOption
       summary: Met à jour une option DHCP

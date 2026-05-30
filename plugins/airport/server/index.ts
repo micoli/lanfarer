@@ -11,7 +11,7 @@ import {
 import { fetchAcpRawProps, fetchAcpWireless } from "./acp-client.ts";
 import { acpProbe, fetchAcpDeviceInfo } from "./acp.ts";
 
-const PREFIX = "/devices/api-proxy/airport-proxy/";
+const PREFIX = "/devices/api-proxy/airport/";
 
 function sendJson(res: http.ServerResponse, status: number, data: unknown): void {
   const body = JSON.stringify(data);

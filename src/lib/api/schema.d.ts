@@ -101,7 +101,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/cudy-proxy/status": {
+    "/devices/api-proxy/cudy/status": {
         parameters: {
             query?: never;
             header?: never;
@@ -118,7 +118,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/cudy-proxy/{routerId}/wireless": {
+    "/devices/api-proxy/cudy/{routerId}/wireless": {
         parameters: {
             query?: never;
             header?: never;
@@ -135,7 +135,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/cudy-proxy/{routerId}/bandwidth": {
+    "/devices/api-proxy/cudy/{routerId}/bandwidth": {
         parameters: {
             query?: never;
             header?: never;
@@ -157,7 +157,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/{routerId}/wireless": {
+    "/devices/api-proxy/bbox/{routerId}/wireless": {
         parameters: {
             query?: never;
             header?: never;
@@ -174,7 +174,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/{routerId}/hosts": {
+    "/devices/api-proxy/bbox/{routerId}/hosts": {
         parameters: {
             query?: never;
             header?: never;
@@ -191,7 +191,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/{routerId}/device": {
+    "/devices/api-proxy/bbox/{routerId}/device": {
         parameters: {
             query?: never;
             header?: never;
@@ -208,7 +208,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/{routerId}/wan/stats": {
+    "/devices/api-proxy/bbox/{routerId}/wan/stats": {
         parameters: {
             query?: never;
             header?: never;
@@ -225,7 +225,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/{routerId}/wan/graphs": {
+    "/devices/api-proxy/bbox/{routerId}/wan/graphs": {
         parameters: {
             query?: never;
             header?: never;
@@ -247,7 +247,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/{routerId}/dhcp/config": {
+    "/devices/api-proxy/bbox/{routerId}/dhcp/config": {
         parameters: {
             query?: never;
             header?: never;
@@ -265,7 +265,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/{routerId}/dhcp/clients": {
+    "/devices/api-proxy/bbox/{routerId}/dhcp/clients": {
         parameters: {
             query?: never;
             header?: never;
@@ -283,7 +283,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/{routerId}/dhcp/clients/{id}": {
+    "/devices/api-proxy/bbox/{routerId}/dhcp/clients/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -301,7 +301,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/{routerId}/dhcp/options": {
+    "/devices/api-proxy/bbox/{routerId}/dhcp/options": {
         parameters: {
             query?: never;
             header?: never;
@@ -319,7 +319,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices/api-proxy/bbox-proxy/{routerId}/dhcp/options/{id}": {
+    "/devices/api-proxy/bbox/{routerId}/dhcp/options/{id}": {
         parameters: {
             query?: never;
             header?: never;

@@ -15,7 +15,7 @@ export async function handleCudy(req: http.IncomingMessage, res: http.ServerResp
   const url = req.url ?? "/";
 
   // Status endpoint: list configured routers
-  if (url === "/devices/api-proxy/cudy-proxy/status" && req.method === "GET") {
+  if (url === "/devices/api-proxy/cudy/status" && req.method === "GET") {
     const configs = loadCudyConfig();
     sendJson(res, 200, {
       configured: configs.length,
@@ -25,8 +25,8 @@ export async function handleCudy(req: http.IncomingMessage, res: http.ServerResp
   }
 
   // Per-router endpoints
-  if (url.startsWith("/devices/api-proxy/cudy-proxy/") && req.method === "GET") {
-    const afterPrefix = url.slice("/devices/api-proxy/cudy-proxy/".length);
+  if (url.startsWith("/devices/api-proxy/cudy/") && req.method === "GET") {
+    const afterPrefix = url.slice("/devices/api-proxy/cudy/".length);
     const parts = afterPrefix.split("/");
     const routerId = parts[0];
     const subpath = parts[1] ?? "wireless";

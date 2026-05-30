@@ -12,7 +12,7 @@ import { handleWan } from "./routes/wan.ts";
 import { handleWanGraphs } from "./routes/wanGraphs.ts";
 import { sendError } from "./utils.ts";
 
-const PREFIX = "/devices/api-proxy/bbox-proxy/";
+const PREFIX = "/devices/api-proxy/bbox/";
 
 function parseRoute(url: string): { routerId: string; subpath: string } | null {
   if (!url.startsWith(PREFIX)) return null;
@@ -90,7 +90,7 @@ export const plugin: RouterPlugin = {
   async handle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
     const parsed = parseRoute(req.url ?? "/");
     if (!parsed) {
-      sendError(res, 400, "Missing routerId in bbox-proxy path");
+      sendError(res, 400, "Missing routerId in bbox path");
       return;
     }
 
