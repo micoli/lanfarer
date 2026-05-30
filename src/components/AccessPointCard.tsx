@@ -140,18 +140,19 @@ function ClientRow({
   client,
   hostname,
   ip,
-  isReserved,
+  reservation,
   dhcpRouterId,
   colCount,
 }: {
   client: WirelessClient;
   hostname?: string;
   ip?: string;
-  isReserved: boolean;
+  reservation: DhcpClient | undefined;
   dhcpRouterId: string | null;
   colCount: number;
 }) {
   const { t } = useTranslation();
+  const isReserved = !!reservation;
   const vendor = useVendor(client.mac);
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState<Omit<DhcpClient, "id">>({
@@ -262,6 +263,9 @@ function ClientRow({
         ) : (
           <span className="text-xs text-slate-500 italic">{t("hosts.noName")}</span>
         )}
+        {reservation?.hostname && reservation.hostname !== hostname && (
+          <div className="text-xs text-blue-400 mt-0.5">{reservation.hostname}</div>
+        )}
         <div className="font-mono text-xs text-slate-500 mt-0.5">{client.mac}</div>
         {vendor && <div className="text-xs text-slate-500 mt-0.5">{vendor}</div>}
       </td>
@@ -277,6 +281,9 @@ function ClientRow({
           >
             {isReserved ? "static" : "DHCP"}
           </span>
+        )}
+        {reservation?.ipaddress && reservation.ipaddress !== ip && (
+          <div className="font-mono text-xs text-blue-400 mt-0.5">{reservation.ipaddress}</div>
         )}
       </td>
       <td className="px-4 py-2.5 text-xs text-slate-500">{formatRate(client.tx_kbps)}</td>
@@ -320,7 +327,7 @@ export function AccessPointCard({
   hostnames: (mac: string) => string | undefined;
   ips: (mac: string) => string | undefined;
   dhcpRouterId?: string | null;
-  reservedMacs?: Set<string>;
+  reservedMacs?: Map<string, DhcpClient>;
 }) {
   const { t } = useTranslation();
   const nav = useHotspotNav();
@@ -372,7 +379,7 @@ export function AccessPointCard({
               client={c}
               hostname={hostnames(c.mac)}
               ip={ips(c.mac)}
-              isReserved={reservedMacs?.has(c.mac.toLowerCase()) ?? false}
+              reservation={reservedMacs?.get(c.mac.toLowerCase())}
               dhcpRouterId={dhcpRouterId ?? null}
               colCount={colCount}
             />

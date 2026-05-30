@@ -1,5 +1,5 @@
-import { AlertTriangle, Check, Download, Pencil, Plus, Trash2, X } from "lucide-react";
-import { useState } from "react";
+import { AlertTriangle, Check, ChevronDown, ChevronUp, ChevronsUpDown, Download, Pencil, Plus, Trash2, X } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import {
@@ -257,6 +257,19 @@ function ActionBtn({
   );
 }
 
+type SortKey = "hostname" | "macaddress" | "ipaddress" | "enable";
+type SortDir = "asc" | "desc";
+
+function ipToNum(ip: string): number {
+  const p = ip.split(".").map(Number);
+  return ((p[0] ?? 0) << 24) | ((p[1] ?? 0) << 16) | ((p[2] ?? 0) << 8) | (p[3] ?? 0);
+}
+
+function SortIcon({ col, sortKey, sortDir }: { col: SortKey; sortKey: SortKey; sortDir: SortDir }) {
+  if (col !== sortKey) return <ChevronsUpDown size={12} className="opacity-30" />;
+  return sortDir === "asc" ? <ChevronUp size={12} /> : <ChevronDown size={12} />;
+}
+
 export default function DhcpReservations() {
   const { routerId: routerIdParam } = useParams<{ routerId: string }>();
   const routerId = routerIdParam ?? null;
@@ -265,8 +278,26 @@ export default function DhcpReservations() {
   const create = useCreateDhcpClient(routerId);
   const update = useUpdateDhcpClient(routerId);
   const remove = useDeleteDhcpClient(routerId);
+  const [sortKey, setSortKey] = useState<SortKey>("ipaddress");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
-  const clients = clientsData?.clients ?? null;
+  function handleSort(col: SortKey) {
+    if (col === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(col); setSortDir("asc"); }
+  }
+
+  const rawClients = clientsData?.clients ?? null;
+
+  const clients = useMemo(() => {
+    if (!rawClients) return null;
+    return [...rawClients].sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "ipaddress") cmp = ipToNum(a.ipaddress) - ipToNum(b.ipaddress);
+      else if (sortKey === "enable") cmp = b.enable - a.enable;
+      else cmp = (a[sortKey] ?? "").localeCompare(b[sortKey] ?? "");
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [rawClients, sortKey, sortDir]);
 
   if (isLoading) {
     return (
@@ -322,10 +353,23 @@ export default function DhcpReservations() {
         <table className="w-full text-left">
           <thead>
             <tr className="text-xs uppercase tracking-wider text-slate-500">
-              <th className="px-4 py-3 font-medium">{t("dhcpReservations.colHost")}</th>
-              <th className="px-4 py-3 font-medium">{t("dhcpReservations.colMac")}</th>
-              <th className="px-4 py-3 font-medium">{t("dhcpReservations.colIp")}</th>
-              <th className="px-4 py-3 font-medium">{t("dhcpReservations.colStatus")}</th>
+              {([
+                ["hostname",   "dhcpReservations.colHost"],
+                ["macaddress", "dhcpReservations.colMac"],
+                ["ipaddress",  "dhcpReservations.colIp"],
+                ["enable",     "dhcpReservations.colStatus"],
+              ] as [SortKey, string][]).map(([col, labelKey]) => (
+                <th key={col} className="px-4 py-3 font-medium">
+                  <button
+                    type="button"
+                    onClick={() => handleSort(col)}
+                    className="flex items-center gap-1 hover:text-slate-300 transition-colors"
+                  >
+                    {t(labelKey)}
+                    <SortIcon col={col} sortKey={sortKey} sortDir={sortDir} />
+                  </button>
+                </th>
+              ))}
               <th className="px-4 py-3 font-medium">{t("dhcpReservations.colActions")}</th>
             </tr>
           </thead>

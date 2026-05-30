@@ -97,14 +97,15 @@ function PortsCell({ ports }: { ports?: number[] }) {
 
 function ScanHostRow({
   host,
-  isReserved,
+  reservation,
   dhcpRouterId,
 }: {
   host: ScanHost;
-  isReserved: boolean;
+  reservation: DhcpClient | undefined;
   dhcpRouterId: string | null;
 }) {
   const { t } = useTranslation();
+  const isReserved = !!reservation;
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState<Omit<DhcpClient, "id">>({
     enable: 1,
@@ -211,7 +212,12 @@ function ScanHostRow({
 
   return (
     <tr className="border-t border-slate-700/50 hover:bg-slate-800/40 transition-colors">
-      <td className="px-4 py-2.5 font-mono text-sm text-slate-200 whitespace-nowrap">{host.ip}</td>
+      <td className="px-4 py-2.5 font-mono text-sm text-slate-200 whitespace-nowrap">
+        {host.ip}
+        {reservation?.ipaddress && reservation.ipaddress !== host.ip && (
+          <div className="text-xs text-blue-400 mt-0.5">{reservation.ipaddress}</div>
+        )}
+      </td>
       <td className="px-4 py-2.5 font-mono text-xs text-slate-400 whitespace-nowrap">
         {host.mac || "—"}
       </td>
@@ -220,6 +226,9 @@ function ScanHostRow({
           <span>{host.hostname || <span className="text-slate-600 italic">—</span>}</span>
           {host.mdnsName && host.mdnsName !== host.hostname && (
             <span className="text-xs text-slate-500">{host.mdnsName}</span>
+          )}
+          {reservation?.hostname && reservation.hostname !== host.hostname && (
+            <span className="text-xs text-blue-400">{reservation.hostname}</span>
           )}
         </div>
       </td>
@@ -288,17 +297,17 @@ export default function NetworkScan() {
     if (ip) setSubnet(subnetFromIp(ip));
   }, [rawDhcp, subnet]);
 
-  const reservedMacs = useMemo<Set<string>>(() => {
+  const reservedMacs = useMemo<Map<string, DhcpClient>>(() => {
     const clients = Array.isArray(rawClients)
       ? rawClients.length > 0 && "macaddress" in rawClients[0]
         ? rawClients
         : (rawClients[0]?.dhcp?.clients ?? rawClients[0]?.dhcpclients ?? [])
       : [];
-    return new Set(
-      (clients as { macaddress?: string }[])
-        .map((c) => c.macaddress?.toLowerCase() ?? "")
-        .filter(Boolean)
-    );
+    const map = new Map<string, DhcpClient>();
+    for (const c of clients as DhcpClient[]) {
+      if (c.macaddress) map.set(c.macaddress.toLowerCase(), c);
+    }
+    return map;
   }, [rawClients]);
 
   function startScan() {
@@ -490,7 +499,7 @@ export default function NetworkScan() {
                 <ScanHostRow
                   key={h.ip}
                   host={h}
-                  isReserved={reservedMacs.has(h.mac?.toLowerCase() ?? "")}
+                  reservation={reservedMacs.get(h.mac?.toLowerCase() ?? "")}
                   dhcpRouterId={dhcpRouterId}
                 />
               ))}

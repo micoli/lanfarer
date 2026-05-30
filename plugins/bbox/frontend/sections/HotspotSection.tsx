@@ -14,13 +14,13 @@ function BboxRouterSection({ routerId }: { routerId: string }) {
   const ips = useMacIps(routerId);
   const { data: dhcpData } = useDhcpClients(dhcpRouterId);
 
-  const reservedMacs = useMemo(
-    () =>
-      new Set(
-        (dhcpData?.clients ?? []).map((c) => c.macaddress?.toLowerCase() ?? "").filter(Boolean),
-      ),
-    [dhcpData],
-  );
+  const reservedMacs = useMemo(() => {
+    const map = new Map();
+    for (const c of dhcpData?.clients ?? []) {
+      if (c.macaddress) map.set(c.macaddress.toLowerCase(), c);
+    }
+    return map;
+  }, [dhcpData]);
 
   return (
     <>
@@ -34,7 +34,7 @@ function BboxRouterSection({ routerId }: { routerId: string }) {
           <AccessPointCard
             key={`bbox-${routerId}-${ap.ssid}-${i}`}
             ap={ap}
-            routerName={`Bbox — ${ap.ssid}`}
+            routerName={ap.ssid}
             routerOnline={bboxWireless?.online ?? false}
             hostnames={hostnames}
             ips={ips}

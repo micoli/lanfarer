@@ -128,6 +128,7 @@ function HostRow({
   const { t } = useTranslation();
   const vendor = useVendor(host.mac ?? undefined);
   const isReserved = host.mac ? reservationByMac.has(host.mac.toLowerCase()) : false;
+  const reservation = host.mac ? reservationByMac.get(host.mac.toLowerCase()) : undefined;
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState<Omit<DhcpClient, "id">>({
     enable: 1,
@@ -237,8 +238,16 @@ function HostRow({
       </td>
       <td className="px-4 py-2.5 text-sm text-slate-200">
         {host.hostname || <span className="text-slate-500 italic">{t("hosts.noName")}</span>}
+        {reservation?.hostname && reservation.hostname !== host.hostname && (
+          <div className="text-xs text-blue-400 mt-0.5">{reservation.hostname}</div>
+        )}
       </td>
-      <td className="px-4 py-2.5 text-sm font-mono text-slate-300">{host.ip ?? "—"}</td>
+      <td className="px-4 py-2.5 text-sm font-mono text-slate-300">
+        {host.ip ?? "—"}
+        {reservation?.ipaddress && reservation.ipaddress !== host.ip && (
+          <div className="text-xs text-blue-400 mt-0.5">{reservation.ipaddress}</div>
+        )}
+      </td>
       <td className="px-4 py-2.5 text-xs font-mono text-slate-400">
         {host.mac ?? "—"}
         {vendor && <div className="text-slate-500 font-sans normal-case">{vendor}</div>}

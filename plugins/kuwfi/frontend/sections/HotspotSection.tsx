@@ -16,13 +16,13 @@ export default function KuwfiHotspotSection({ routers: _routers }: { routers: Ro
   const hostnames = useMacHostnames(bboxRouterId);
   const { data: dhcpData } = useDhcpClients(dhcpRouterId);
 
-  const reservedMacs = useMemo(
-    () =>
-      new Set(
-        (dhcpData?.clients ?? []).map((c) => c.macaddress?.toLowerCase() ?? "").filter(Boolean),
-      ),
-    [dhcpData],
-  );
+  const reservedMacs = useMemo(() => {
+    const map = new Map();
+    for (const c of dhcpData?.clients ?? []) {
+      if (c.macaddress) map.set(c.macaddress.toLowerCase(), c);
+    }
+    return map;
+  }, [dhcpData]);
 
   const flat = kuwfiRouters.data
     .flatMap((router) => router.accessPoints.map((ap) => ({ router, ap })))
