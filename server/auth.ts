@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import crypto from "node:crypto";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-import { CONFIG_FILE, SESSIONS_FILE } from "./config.ts";
+import { CONFIG_FILE, SESSIONS_FILE, AUTH_DISABLED } from "./config.ts";
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 
 interface User {
@@ -52,6 +52,7 @@ export function saveUsers(users: User[]): void {
 }
 
 export function isAuthEnabled(): boolean {
+  if (AUTH_DISABLED) return false;
   return loadUsers().length > 0;
 }
 

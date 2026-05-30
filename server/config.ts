@@ -83,6 +83,7 @@ export const PORT          = parseInt(process.env.PORT ?? "5176", 10);
 export const BASE_PATH     = process.env.BASE_PATH ?? "";
 export const isDev         = process.env.NODE_ENV !== "production";
 export const VERBOSE       = !!process.env.BBOX_VERBOSE;
+export const AUTH_DISABLED = !!process.env.AUTH_DISABLED;
 
 export const targetUrl        = new URL(BBOX_TARGET);
 export const isHttps          = targetUrl.protocol === "https:";

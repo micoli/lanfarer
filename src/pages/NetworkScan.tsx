@@ -290,21 +290,13 @@ export default function NetworkScan() {
 
   useEffect(() => {
     if (subnet) return;
-    const dhcp = Array.isArray(rawDhcp)
-      ? rawDhcp[0]?.dhcp
-      : (rawDhcp as { dhcp?: { minaddress?: string } })?.dhcp;
-    const ip = dhcp?.minaddress;
+    const ip = rawDhcp?.config?.minaddress;
     if (ip) setSubnet(subnetFromIp(ip));
   }, [rawDhcp, subnet]);
 
   const reservedMacs = useMemo<Map<string, DhcpClient>>(() => {
-    const clients = Array.isArray(rawClients)
-      ? rawClients.length > 0 && "macaddress" in rawClients[0]
-        ? rawClients
-        : (rawClients[0]?.dhcp?.clients ?? rawClients[0]?.dhcpclients ?? [])
-      : [];
     const map = new Map<string, DhcpClient>();
-    for (const c of clients as DhcpClient[]) {
+    for (const c of rawClients?.clients ?? []) {
       if (c.macaddress) map.set(c.macaddress.toLowerCase(), c);
     }
     return map;

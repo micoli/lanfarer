@@ -1,132 +1,78 @@
-import http from "node:http";
-import { PORT, isDev, BBOX_PASSWORD, BASE_PATH, BBOX_TARGET, BBOX_HOST, BBOX_OVERRIDE_IP, VERBOSE } from "./config.ts";
+import "reflect-metadata";
+import { NestFactory } from "@nestjs/core";
+import type { IncomingMessage, ServerResponse } from "node:http";
+import { AppModule } from "./app.module.ts";
+import {
+  PORT,
+  isDev,
+  BASE_PATH,
+  BBOX_TARGET,
+  BBOX_HOST,
+  BBOX_OVERRIDE_IP,
+  BBOX_PASSWORD,
+  VERBOSE,
+} from "./config.ts";
 import { runCodegen } from "./codegen.ts";
 import { ensureSession } from "./session.ts";
-import { handleHealth } from "./routes/health.ts";
-import { handleScan } from "./routes/scan.ts";
-import { handleCheckIp } from "./routes/check-ip.ts";
-import { handleAuthRoute, requireAuth } from "./routes/auth.ts";
-import { handleUiConfig } from "./routes/ui-config.ts";
-import { handleRouters } from "./routes/routers.ts";
-import { handleOui } from "./routes/oui.ts";
-import { createMapTopologyHandler } from "./routes/mapTopology.ts";
-import { handleHosts } from "./routes/hosts.ts";
-import { handlePing } from "./routes/ping.ts";
 import { serveStatic } from "./static.ts";
-import { loadPlugins } from "./plugins.ts";
 
-async function main() {
+function isApiPath(url: string): boolean {
+  return url.startsWith("/__") || url.startsWith("/devices/");
+}
+
+async function bootstrap() {
   if (isDev) await runCodegen();
 
-  console.log(`[config] BBOX_TARGET=${BBOX_TARGET} BBOX_HOST=${BBOX_HOST} BBOX_OVERRIDE_IP=${BBOX_OVERRIDE_IP ?? "(none)"} PASSWORD=${BBOX_PASSWORD ? "set" : "MISSING (vérifiez config.yaml)"}`);
-
-  const routerPlugins = await loadPlugins();
-  const handleMapTopology = createMapTopologyHandler(routerPlugins);
+  console.log(
+    `[config] BBOX_TARGET=${BBOX_TARGET} BBOX_HOST=${BBOX_HOST} BBOX_OVERRIDE_IP=${BBOX_OVERRIDE_IP ?? "(none)"} PASSWORD=${BBOX_PASSWORD ? "set" : "MISSING (vérifiez config.yaml)"}`,
+  );
+  console.log(`[server] BASE_PATH=${BASE_PATH}`);
 
   await ensureSession();
 
-  let appMiddleware: (req: http.IncomingMessage, res: http.ServerResponse, next?: () => void) => void =
-    (_req, res) => { res.writeHead(503); res.end("Server not ready"); };
+  const app = await NestFactory.create(AppModule, { logger: false });
 
-  console.log(`[server] BASE_PATH=${BASE_PATH}`);
-
-  const server = http.createServer(async (req, res) => {
+  // 1. Strip ingress/base path prefix — must run first
+  app.use((req: IncomingMessage & { url: string }, _res: ServerResponse, next: () => void) => {
     const ingressPath = (req.headers["x-ingress-path"] as string | undefined) ?? BASE_PATH;
-    if (VERBOSE) console.log(`[req] ${req.method} ${req.url} x-ingress-path=${req.headers["x-ingress-path"] ?? "-"} base=${ingressPath}`);
-    if (ingressPath && req.url?.startsWith(ingressPath)) {
+    if (VERBOSE) console.log(`[req] ${req.method} ${req.url} base=${ingressPath}`);
+    if (ingressPath && req.url.startsWith(ingressPath)) {
       req.url = req.url.slice(ingressPath.length) || "/";
     }
-    const url = req.url ?? "/";
-
-    if (await handleAuthRoute(req, res)) return;
-
-    if (url === "/__health") {
-      handleHealth(req, res);
-      return;
-    }
-
-    if (url.startsWith("/__scan")) {
-      if (!requireAuth(req, res)) return;
-      await handleScan(req, res);
-      return;
-    }
-
-    if (url.startsWith("/__check-ip")) {
-      if (!requireAuth(req, res)) return;
-      await handleCheckIp(req, res);
-      return;
-    }
-
-    for (const plugin of routerPlugins) {
-      if (plugin.matches(url)) {
-        if (!requireAuth(req, res)) return;
-        await plugin.handle(req, res);
-        return;
-      }
-    }
-
-    if (url.startsWith("/__ping") && req.method === "GET") {
-      if (!requireAuth(req, res)) return;
-      await handlePing(req, res);
-      return;
-    }
-
-    if (url === "/__hosts" && req.method === "GET") {
-      if (!requireAuth(req, res)) return;
-      await handleHosts(req, res, routerPlugins);
-      return;
-    }
-
-    if (url === "/__map/topology" && req.method === "GET") {
-      if (!requireAuth(req, res)) return;
-      await handleMapTopology(req, res);
-      return;
-    }
-
-    if (url === "/__config/ui") {
-      if (!requireAuth(req, res)) return;
-      handleUiConfig(req, res);
-      return;
-    }
-
-    if (url === "/__config/routers") {
-      if (!requireAuth(req, res)) return;
-      handleRouters(req, res);
-      return;
-    }
-
-    if (url.startsWith("/__oui")) {
-      if (!requireAuth(req, res)) return;
-      await handleOui(req, res);
-      return;
-    }
-
-    appMiddleware(req, res);
+    next();
   });
 
+  // 2. SPA serving — registered BEFORE NestJS routes so Vite/static handles non-API paths
+  //    before NestJS's exception handler has a chance to intercept them.
   if (isDev) {
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       configFile: "./vite.config.ts",
-      server: { middlewareMode: true, hmr: { server } },
+      server: { middlewareMode: true, hmr: { server: app.getHttpServer() } },
       appType: "spa",
       base: "/",
     });
-
-    appMiddleware = (req, res, _next) => vite.middlewares(req, res, () => {
-      res.writeHead(404);
-      res.end();
+    app.use((req: IncomingMessage & { url: string }, res: ServerResponse, next: () => void) => {
+      if (isApiPath(req.url)) return next();
+      vite.middlewares(req, res, next);
     });
   } else {
-    appMiddleware = serveStatic("dist");
+    const staticHandler = serveStatic("dist");
+    app.use((req: IncomingMessage & { url: string }, res: ServerResponse, next: () => void) => {
+      if (isApiPath(req.url)) return next();
+      staticHandler(req, res);
+    });
   }
 
-  server.listen(PORT, () => {
+  // 3. NestJS routes handle everything under /__* and /devices/*
+  await app.init();
+
+  app.getHttpServer().listen(PORT, () => {
     console.log(`[server] http://localhost:${PORT} (${isDev ? "dev" : "production"})`);
   });
 }
 
-main().catch((err) => {
+bootstrap().catch((err) => {
   console.error("[server] Erreur fatale :", err);
   process.exit(1);
 });
