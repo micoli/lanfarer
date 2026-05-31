@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { HostProbeButton } from "../components/HostProbeButton.tsx";
 import type { DhcpClient, Host, HostConnexion } from "../../plugins/contracts.ts";
 import {
   useCreateDhcpClient,
@@ -243,7 +244,10 @@ function HostRow({
         )}
       </td>
       <td className="px-4 py-2.5 text-sm font-mono text-slate-300">
-        {host.ip ?? "—"}
+        <span className="inline-flex items-center gap-0.5">
+          {host.ip ?? "—"}
+          {host.ip && <HostProbeButton ip={host.ip} />}
+        </span>
         {reservation?.ipaddress && reservation.ipaddress !== host.ip && (
           <div className="text-xs text-blue-400 mt-0.5">{reservation.ipaddress}</div>
         )}

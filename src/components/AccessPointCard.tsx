@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { HostProbeButton } from "./HostProbeButton.tsx";
 import {
   useCreateDhcpClient,
   useIpCheck,
@@ -274,7 +275,10 @@ function ClientRow({
         {client.signal_dbm} dBm
       </td>
       <td className="px-4 py-2.5">
-        <span className="font-mono text-xs text-slate-400">{ip || "—"}</span>
+        <span className="inline-flex items-center gap-0.5 font-mono text-xs text-slate-400">
+          {ip || "—"}
+          {ip && <HostProbeButton ip={ip} />}
+        </span>
         {dhcpRouterId && ip && (
           <span
             className={`ml-1.5 text-xs px-1 py-0.5 rounded ${isReserved ? "bg-blue-500/10 text-blue-400" : "bg-slate-700/60 text-slate-500"}`}

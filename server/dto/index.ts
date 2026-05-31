@@ -49,6 +49,39 @@ export class CheckIpResponse {
   mac!: string | null;
 }
 
+// ── Probe ─────────────────────────────────────────────────────────────────────
+
+export class PingStats {
+  @ApiProperty({ type: Number })
+  min!: number;
+
+  @ApiProperty({ type: Number })
+  avg!: number;
+
+  @ApiProperty({ type: Number })
+  max!: number;
+}
+
+export class ProbeResult {
+  @ApiProperty({ type: String })
+  ip!: string;
+
+  @ApiProperty({ type: () => PingStats, nullable: true })
+  pingStats!: PingStats | null;
+
+  @ApiProperty({ type: Number, isArray: true })
+  openPorts!: number[];
+
+  @ApiProperty({ type: String })
+  mdnsName!: string;
+
+  @ApiProperty({ type: String })
+  smbName!: string;
+
+  @ApiProperty({ type: String })
+  smbDomain!: string;
+}
+
 // ── OUI ──────────────────────────────────────────────────────────────────────
 
 export class OuiResponse {

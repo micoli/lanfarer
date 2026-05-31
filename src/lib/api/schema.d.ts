@@ -229,6 +229,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/__probe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sonde un hôte (ports ouverts, mDNS, SMB, ping stats) */
+        get: operations["ProbeController_probe"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/devices/api-proxy/bbox/{routerId}/wireless": {
         parameters: {
             query?: never;
@@ -751,6 +768,19 @@ export interface components {
             type: string;
             /** @example 192.168.1.1 */
             ip?: string;
+        };
+        PingStats: {
+            min: number;
+            avg: number;
+            max: number;
+        };
+        ProbeResult: {
+            ip: string;
+            pingStats: components["schemas"]["PingStats"] | null;
+            openPorts: number[];
+            mdnsName: string;
+            smbName: string;
+            smbDomain: string;
         };
         WirelessClient: {
             /** @example AA:BB:CC:DD:EE:FF */
@@ -1343,6 +1373,35 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["RouterEntry"][];
                 };
+            };
+        };
+    };
+    ProbeController_probe: {
+        parameters: {
+            query: {
+                /** @description Adresse IPv4 à sonder */
+                ip: unknown;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProbeResult"];
+                };
+            };
+            /** @description IP manquante ou invalide */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

@@ -220,5 +220,16 @@
     "loggingIn": "Connexion…",
     "logout": "Déconnexion",
     "invalidCredentials": "Identifiants incorrects"
+  },
+  "probe": {
+    "title": "Outils réseau",
+    "ping": "Ping live",
+    "scan": "Scanner les ports",
+    "scanning": "Scan en cours…",
+    "ports": "Ports ouverts",
+    "noPorts": "Aucun port ouvert",
+    "mdns": "mDNS",
+    "smb": "SMB",
+    "timeout": "Timeout"
   }
 }

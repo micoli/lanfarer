@@ -220,5 +220,16 @@
     "loggingIn": "Signing in…",
     "logout": "Sign out",
     "invalidCredentials": "Invalid credentials"
+  },
+  "probe": {
+    "title": "Network tools",
+    "ping": "Live ping",
+    "scan": "Scan ports",
+    "scanning": "Scanning…",
+    "ports": "Open ports",
+    "noPorts": "No open ports",
+    "mdns": "mDNS",
+    "smb": "SMB",
+    "timeout": "Timeout"
   }
 }

@@ -236,6 +236,30 @@ paths:
       security: *a2
       summary: Liste tous les routeurs activés dans config.yaml
       tags: *a3
+  /__probe:
+    get:
+      operationId: ProbeController_probe
+      parameters:
+        - name: ip
+          required: true
+          in: query
+          description: Adresse IPv4 à sonder
+          schema:
+            example: 192.168.1.10
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProbeResult"
+        "400":
+          description: IP manquante ou invalide
+      security:
+        - session: []
+      summary: Sonde un hôte (ports ouverts, mDNS, SMB, ping stats)
+      tags:
+        - server
   /devices/api-proxy/bbox/{routerId}/wireless:
     get:
       tags:
@@ -939,6 +963,46 @@ components:
       required:
         - name
         - type
+    PingStats:
+      type: object
+      properties:
+        min:
+          type: number
+        avg:
+          type: number
+        max:
+          type: number
+      required:
+        - min
+        - avg
+        - max
+    ProbeResult:
+      type: object
+      properties:
+        ip:
+          type: string
+        pingStats:
+          nullable: true
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/PingStats"
+        openPorts:
+          type: array
+          items:
+            type: number
+        mdnsName:
+          type: string
+        smbName:
+          type: string
+        smbDomain:
+          type: string
+      required:
+        - ip
+        - pingStats
+        - openPorts
+        - mdnsName
+        - smbName
+        - smbDomain
     WirelessClient:
       type: object
       properties:

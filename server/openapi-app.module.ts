@@ -10,6 +10,7 @@ import { CheckIpController } from "./controllers/check-ip.controller.ts";
 import { OuiController } from "./controllers/oui.controller.ts";
 import { RouterConfigController } from "./controllers/router-config.controller.ts";
 import { PluginProxyController } from "./controllers/plugin-proxy.controller.ts";
+import { ProbeController } from "./controllers/probe.controller.ts";
 
 @Module({
   providers: [{ provide: PLUGINS_TOKEN, useValue: [] }],
@@ -24,6 +25,7 @@ import { PluginProxyController } from "./controllers/plugin-proxy.controller.ts"
     OuiController,
     RouterConfigController,
     PluginProxyController,
+    ProbeController,
   ],
 })
 export class OpenApiAppModule {}
