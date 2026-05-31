@@ -749,6 +749,8 @@ export interface components {
             name: string;
             /** @example bbox */
             type: string;
+            /** @example 192.168.1.1 */
+            ip?: string;
         };
         WirelessClient: {
             /** @example AA:BB:CC:DD:EE:FF */

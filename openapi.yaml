@@ -933,6 +933,9 @@ components:
         type:
           type: string
           example: bbox
+        ip:
+          type: string
+          example: 192.168.1.1
       required:
         - name
         - type

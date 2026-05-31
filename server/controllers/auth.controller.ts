@@ -11,14 +11,6 @@ import type { Request, Response } from "express";
 import { login, getSession, deleteSession, parseSessionCookie, isAuthEnabled } from "../auth.ts";
 import { LoginRequest, LoginResponse, MeResponse } from "../dto/index.ts";
 
-function readBody(req: Request): Promise<string> {
-  return new Promise((resolve) => {
-    let data = "";
-    req.on("data", (chunk) => (data += chunk));
-    req.on("end", () => resolve(data));
-  });
-}
-
 function isHassIngress(req: Request): boolean {
   return !!req.headers["x-hass-user-id"];
 }
@@ -33,11 +25,11 @@ export class AuthController {
   @ApiResponse({ status: 400, description: "Corps de requête invalide" })
   @ApiResponse({ status: 401, description: "Identifiants incorrects" })
   async loginRoute(@Req() req: Request, @Res() res: Response): Promise<void> {
-    const text = await readBody(req);
+    const body = req.body as { username?: unknown; password?: unknown };
     let username: string;
     let password: string;
     try {
-      ({ username, password } = JSON.parse(text) as { username: string; password: string });
+      ({ username, password } = body as { username: string; password: string });
       if (typeof username !== "string" || typeof password !== "string") throw new Error();
     } catch {
       res.status(400).json({ error: "invalid request" });

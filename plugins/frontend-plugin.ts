@@ -23,6 +23,7 @@ export interface WidgetDescriptor {
 export interface RouterConfig {
   name: string;
   type: string;
+  ip?: string;
 }
 
 export interface FrontendPlugin {

@@ -50,7 +50,7 @@ export function useRouterForPage(pageId: string): string | null {
   return findInMenu(config.menu, pageId)?.router ?? null;
 }
 
-export function useRouters(): { name: string; type: string }[] | undefined {
+export function useRouters(): { name: string; type: string; ip?: string }[] | undefined {
   const { data } = useQuery({
     queryKey: ["config", "routers"],
     queryFn: async () => {

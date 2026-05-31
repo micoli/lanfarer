@@ -7,7 +7,7 @@ import { useMacHostnames } from "../hooks/useMacHostnames.ts";
 import { useMacIps } from "../hooks/useMacIps.ts";
 import { useDhcpRouterId } from "../../../../src/hooks/useUiConfig.ts";
 
-function BboxRouterSection({ routerId }: { routerId: string }) {
+function BboxRouterSection({ routerId, routerIp }: { routerId: string; routerIp?: string }) {
   const dhcpRouterId = useDhcpRouterId();
   const { data: bboxWireless } = useBboxWireless(routerId);
   const hostnames = useMacHostnames(routerId);
@@ -35,6 +35,7 @@ function BboxRouterSection({ routerId }: { routerId: string }) {
             key={`bbox-${routerId}-${ap.ssid}-${i}`}
             ap={ap}
             routerName={ap.ssid}
+            routerSubtitle={routerIp}
             routerOnline={bboxWireless?.online ?? false}
             hostnames={hostnames}
             ips={ips}
@@ -50,7 +51,7 @@ export default function BboxHotspotSection({ routers }: { routers: RouterConfig[
   return (
     <>
       {routers.map((r) => (
-        <BboxRouterSection key={r.name} routerId={r.name} />
+        <BboxRouterSection key={r.name} routerId={r.name} routerIp={r.ip} />
       ))}
     </>
   );

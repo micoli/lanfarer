@@ -64,6 +64,9 @@ export class RouterEntry {
 
   @ApiProperty({ type: String, example: "bbox" })
   type!: string;
+
+  @ApiProperty({ type: String, example: "192.168.1.1", required: false })
+  ip?: string;
 }
 
 // ── UI config ─────────────────────────────────────────────────────────────────

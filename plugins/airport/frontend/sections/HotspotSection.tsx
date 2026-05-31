@@ -8,7 +8,7 @@ import { useDhcpRouterId, useRouters } from "../../../../src/hooks/useUiConfig.t
 import type { AirportAccessPoint } from "../hooks/useAirport.ts";
 import { useAirportWireless } from "../hooks/useAirport.ts";
 
-function AirportRouterCards({ routerId, routerName }: { routerId: string; routerName: string }) {
+function AirportRouterCards({ routerId, routerName, routerIp }: { routerId: string; routerName: string; routerIp?: string }) {
   const allRouters = useRouters();
   const bboxRouterId = allRouters?.find((r) => r.type === "bbox")?.name ?? null;
   const dhcpRouterId = useDhcpRouterId();
@@ -32,6 +32,7 @@ function AirportRouterCards({ routerId, routerName }: { routerId: string; router
       <AccessPointCard
         ap={placeholder}
         routerName={routerName}
+        routerSubtitle={routerIp}
         routerOnline={false}
         hostnames={() => undefined}
         ips={() => undefined}
@@ -46,6 +47,7 @@ function AirportRouterCards({ routerId, routerName }: { routerId: string; router
       <AccessPointCard
         ap={placeholder}
         routerName={routerName}
+        routerSubtitle={routerIp}
         routerOnline={online}
         hostnames={() => undefined}
         ips={() => undefined}
@@ -75,6 +77,7 @@ function AirportRouterCards({ routerId, routerName }: { routerId: string; router
             key={`${routerName}-${ap.ssid}-${ap.band}-${i}`}
             ap={asAccessPoint}
             routerName={routerName}
+            routerSubtitle={routerIp}
             routerOnline={online}
             hostnames={hostnames}
             ips={apIp}
@@ -94,7 +97,7 @@ export default function AirportHotspotSection({ routers }: { routers: RouterConf
   return (
     <>
       {airportRouters.map((r) => (
-        <AirportRouterCards key={r.name} routerId={r.name} routerName={r.name} />
+        <AirportRouterCards key={r.name} routerId={r.name} routerName={r.name} routerIp={r.ip} />
       ))}
     </>
   );

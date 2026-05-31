@@ -103,15 +103,16 @@ export interface UiConfig {
 export interface RouterEntry {
   name: string;
   type: string;
+  ip?: string;
 }
 
 export function loadAllRouters(): RouterEntry[] {
   try {
     const raw = fs.readFileSync(CONFIG_FILE, "utf8");
-    const data = parseYaml(raw) as { routers?: { name?: string; type?: string; enabled?: boolean }[] };
+    const data = parseYaml(raw) as { routers?: { name?: string; type?: string; ip?: string; enabled?: boolean }[] };
     return (data.routers ?? [])
       .filter((r) => r.enabled !== false && r.name && r.type)
-      .map((r) => ({ name: r.name!, type: r.type! }));
+      .map((r) => ({ name: r.name!, type: r.type!, ...(r.ip ? { ip: r.ip } : {}) }));
   } catch {
     return [];
   }
