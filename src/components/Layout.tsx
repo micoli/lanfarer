@@ -186,7 +186,7 @@ export default function Layout({
           <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
             <Network size={15} className="text-white" strokeWidth={2.5} />
           </div>
-          <span className="font-semibold text-slate-100 tracking-wide">fast5688b</span>
+          <span className="font-semibold text-slate-100 tracking-wide">LanFarer</span>
         </div>
 
         <nav className="flex flex-col gap-0.5 flex-1 pt-3 pb-3 overflow-y-auto">

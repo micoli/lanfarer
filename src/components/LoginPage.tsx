@@ -34,7 +34,7 @@ export default function LoginPage({ onLogin }: Props) {
           <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center">
             <Network size={18} className="text-white" />
           </div>
-          <span className="text-xl font-semibold text-slate-100">fast5688b</span>
+          <span className="text-xl font-semibold text-slate-100">LanFarer</span>
         </div>
 
         <form

@@ -750,7 +750,7 @@ paths:
         "404":
           description: Routeur introuvable
 info:
-  title: fast5688b-gui server API
+  title: lanfarer server API
   description: |-
     API exposée par le serveur Node.js fast5688b.
     Toutes les routes plugin suivent le schéma :

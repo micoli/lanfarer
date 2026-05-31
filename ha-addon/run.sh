@@ -20,7 +20,8 @@ if [ -n "$router_config" ]; then
   echo "$router_config" > "$CUDY_CONFIG"
 fi
 
-# Derive ingress base path from HOSTNAME (8f828f58-fast5688b-gui → /8f828f58_fast5688b-gui)
+# Derive ingress base path from HOSTNAME (8f828f58-lanfarer → /8f828f58_lanfarer)
 export BASE_PATH="/${HOSTNAME%%-*}_${HOSTNAME#*-}"
 
-exec node --experimental-strip-types /app/server/index.ts
+export TSX_TSCONFIG_PATH=/app/tsconfig.node.json
+exec /app/node_modules/.bin/tsx /app/server/index.ts

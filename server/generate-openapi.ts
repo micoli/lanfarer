@@ -14,7 +14,7 @@ async function generate() {
   const app = await NestFactory.create(OpenApiAppModule, { logger: false });
 
   const config = new DocumentBuilder()
-    .setTitle("fast5688b-gui server API")
+    .setTitle("lanfarer server API")
     .setVersion("2.0.0")
     .setDescription(
       "API exposée par le serveur Node.js fast5688b.\n" +

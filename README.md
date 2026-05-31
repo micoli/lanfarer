@@ -1,6 +1,6 @@
 # Router GUI
 
-A self-hosted web interface for managing a **Bouygues Bbox** router and multiple Wi-Fi access points (**Cudy**, **KuWFi**, **Apple AirPort**) on your local network. Available as a standalone Docker container or a **Home Assistant addon**.
+A self-hosted web interface for managing router and multiple Wi-Fi access points (**Cudy**, **KuWFi**, **Apple AirPort**) on your local network. Available as a standalone Docker container or a **Home Assistant addon**.
 
 ## Features
 
@@ -30,7 +30,7 @@ Browser  ──►  Node.js server (server/)  ──►  plugins/bbox/server/   
 
 The Node.js server auto-discovers plugins at startup by scanning `plugins/*/server/index.ts`. Each plugin exports a `RouterPlugin` that declares which URLs it handles. The React frontend auto-discovers frontend plugins (e.g. host list providers) via `import.meta.glob` at build time.
 
-Authentication against the Bbox router is handled transparently server-side: a session (BBOX_ID cookie + btoken) is maintained in memory and injected on every proxied request.
+Authentication against the routers is handled transparently server-side: a session (BBOX_ID cookie + btoken) is maintained in memory and injected on every proxied request.
 
 ## Quick start
 
@@ -47,7 +47,7 @@ Or directly:
 ```bash
 docker run -p 3000:5176 \
   -v $(pwd)/config.yaml:/app/config.yaml:ro \
-  ghcr.io/micoli/fast5688b-gui-amd64:latest
+  ghcr.io/micoli/lanfarer-amd64:latest
 ```
 
 ### Development
@@ -156,9 +156,6 @@ Only optional tunables — no credentials:
 
 | Variable | Default | Description |
 |---|---|---|
-| `BBOX_TARGET` | `https://mabbox.bytel.fr` | Bbox router URL |
-| `BBOX_HOST` | `mabbox.bytel.fr` | Host header sent to the router |
-| `BBOX_VERBOSE` | — | Enable verbose request logging |
 | `PORT` | `5176` | Server port |
 
 Copy `.env.local.example` to `.env.local` for local overrides (never committed).
@@ -201,8 +198,6 @@ The addon uses a pre-built image from `ghcr.io` — no build step on the HA side
 
 | Option | Default | Description |
 |---|---|---|
-| `bbox_target` | `https://mabbox.bytel.fr` | Bbox URL |
-| `bbox_host` | `mabbox.bytel.fr` | Host header |
 | `verbose` | `false` | Enable verbose logging |
 | `router_config` | — | Inline YAML (same format as `config.yaml`) |
 

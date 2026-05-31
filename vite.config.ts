@@ -10,9 +10,9 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg"],
       manifest: {
-        name: "fast5688b-gui",
-        short_name: "fast5688b-gui",
-        description: "Interface d'administration BBox fast5688b",
+        name: "lanfarer",
+        short_name: "lanfarer",
+        description: "Interface d'administration LanFarer",
         theme_color: "#2563eb",
         background_color: "#0f172a",
         display: "standalone",
