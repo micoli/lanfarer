@@ -7,11 +7,11 @@ const OPTIONS: { value: ThemePreference; icon: typeof Sun; label: string }[] = [
   { value: "system", icon: Monitor, label: "System" },
 ];
 
-export function ThemeSelector() {
+export function ThemeSelector({ vertical = false }: { vertical?: boolean }) {
   const { preference, setTheme } = useTheme();
 
   return (
-    <div className="flex items-center gap-0.5 bg-slate-700/40 rounded-lg p-0.5">
+    <div className={`flex ${vertical ? "flex-col" : "items-center"} gap-0.5 bg-slate-700/40 rounded-lg p-0.5`}>
       {OPTIONS.map(({ value, icon: Icon, label }) => (
         <button
           key={value}

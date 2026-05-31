@@ -1,6 +1,7 @@
 import {
   Activity,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   Home,
   LogOut,
@@ -12,7 +13,8 @@ import {
   Signal,
   Wifi,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { NavLink, Outlet } from "react-router-dom";
 import type { FrontendPlugin, NavItemDescriptor } from "../../plugins/frontend-plugin.ts";
@@ -27,7 +29,7 @@ interface AuthProps {
   logout: () => Promise<void>;
 }
 
-function LangSwitcher() {
+function LangSwitcher({ collapsed = false }: { collapsed?: boolean }) {
   const { i18n: i18nHook } = useTranslation();
   const current = i18nHook.language;
 
@@ -35,6 +37,19 @@ function LangSwitcher() {
     const next = current === "fr" ? "en" : "fr";
     void i18nHook.changeLanguage(next);
     localStorage.setItem("lang", next);
+  }
+
+  if (collapsed) {
+    return (
+      <button
+        type="button"
+        onClick={toggle}
+        className="text-base leading-none p-1.5 rounded-md text-slate-500 hover:text-slate-300 transition-colors"
+        title={current === "fr" ? "Switch to English" : "Passer en français"}
+      >
+        {current === "fr" ? "🇬🇧" : "🇫🇷"}
+      </button>
+    );
   }
 
   return (
@@ -46,6 +61,34 @@ function LangSwitcher() {
     >
       {current === "fr" ? "🇬🇧 EN" : "🇫🇷 FR"}
     </button>
+  );
+}
+
+function SidebarTooltip({ label, children }: { label: string; children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+
+  function show() {
+    if (ref.current) {
+      const r = ref.current.getBoundingClientRect();
+      setPos({ top: r.top + r.height / 2, left: r.right + 8 });
+    }
+  }
+
+  return (
+    <div ref={ref} onMouseEnter={show} onMouseLeave={() => setPos(null)}>
+      {children}
+      {pos &&
+        createPortal(
+          <div
+            style={{ top: pos.top, left: pos.left, transform: "translateY(-50%)" }}
+            className="fixed px-2 py-1 rounded-md bg-slate-700 border border-slate-600 text-slate-100 text-xs whitespace-nowrap z-50 shadow-lg pointer-events-none"
+          >
+            {label}
+          </div>,
+          document.body,
+        )}
+    </div>
   );
 }
 
@@ -112,27 +155,46 @@ function buildDefaultNav(descriptors: NavItemDescriptor[], t: (key: string) => s
     }));
 }
 
-function NavItemLink({ item }: { item: NavItem }) {
-  return (
+function NavItemLink({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
+  const link = (
     <NavLink
       to={item.to}
       end={item.end}
       className={({ isActive }) =>
-        `flex items-center gap-3 px-4 py-2.5 text-sm transition-all rounded-r-xl mr-3 ${
-          isActive
-            ? "bg-blue-500/15 text-blue-400 font-semibold border-l-4 border-blue-500 pl-3"
-            : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 border-l-4 border-transparent pl-3"
-        }`
+        collapsed
+          ? `flex items-center justify-center mx-2 py-2.5 text-sm transition-all rounded-xl ${
+              isActive
+                ? "bg-blue-500/15 text-blue-400 font-semibold"
+                : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+            }`
+          : `flex items-center gap-3 px-4 py-2.5 text-sm transition-all rounded-r-xl mr-3 ${
+              isActive
+                ? "bg-blue-500/15 text-blue-400 font-semibold border-l-4 border-blue-500 pl-3"
+                : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 border-l-4 border-transparent pl-3"
+            }`
       }
     >
       <item.icon size={18} />
-      {item.label}
+      {!collapsed && item.label}
     </NavLink>
   );
+  if (collapsed) {
+    return <SidebarTooltip label={item.label}>{link}</SidebarTooltip>;
+  }
+  return link;
 }
 
-function NavGroupSection({ group }: { group: NavGroup }) {
+function NavGroupSection({ group, collapsed }: { group: NavGroup; collapsed: boolean }) {
   const [open, setOpen] = useState(true);
+  if (collapsed) {
+    return (
+      <div className="flex flex-col gap-0.5">
+        {group.children.map((child) => (
+          <NavItemLink key={child.to} item={child} collapsed={true} />
+        ))}
+      </div>
+    );
+  }
   return (
     <div>
       <button
@@ -146,7 +208,7 @@ function NavGroupSection({ group }: { group: NavGroup }) {
       {open && (
         <div className="flex flex-col gap-0.5">
           {group.children.map((child) => (
-            <NavItemLink key={child.to} item={child} />
+            <NavItemLink key={child.to} item={child} collapsed={false} />
           ))}
         </div>
       )}
@@ -163,6 +225,15 @@ export default function Layout({
 }) {
   const { t } = useTranslation();
   const uiConfig = useUiConfig();
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem("sidebar-collapsed") === "true");
+
+  function toggleCollapsed() {
+    setCollapsed((c) => {
+      const next = !c;
+      localStorage.setItem("sidebar-collapsed", String(next));
+      return next;
+    });
+  }
 
   const descriptors: NavItemDescriptor[] = [
     ...CORE_DESCRIPTORS,
@@ -181,41 +252,85 @@ export default function Layout({
   return (
     <div className="flex h-dvh bg-slate-900 text-slate-100">
       {/* Sidebar desktop */}
-      <aside className="hidden md:flex flex-col w-64 bg-slate-900 border-r border-slate-700/50 shrink-0">
-        <div className="flex items-center gap-3 px-4 py-5 border-b border-slate-700/50">
-          <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
-            <Network size={15} className="text-white" strokeWidth={2.5} />
+      <aside
+        className={`hidden md:flex flex-col ${collapsed ? "w-16" : "w-64"} bg-slate-900 border-r border-slate-700/50 shrink-0 transition-all duration-200`}
+      >
+        {collapsed ? (
+          <SidebarTooltip label={t("nav.expand")}>
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              className="flex items-center justify-center w-full py-5 border-b border-slate-700/50 text-slate-500 hover:text-slate-300 transition-colors"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </SidebarTooltip>
+        ) : (
+          <div className="flex items-center gap-3 px-4 py-5 border-b border-slate-700/50">
+            <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center shadow-lg shadow-blue-500/30 shrink-0">
+              <Network size={15} className="text-white" strokeWidth={2.5} />
+            </div>
+            <span className="font-semibold text-slate-100 tracking-wide flex-1 truncate">LanFarer</span>
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              className="text-slate-500 hover:text-slate-300 transition-colors shrink-0"
+              title={t("nav.collapse")}
+            >
+              <ChevronLeft size={16} />
+            </button>
           </div>
-          <span className="font-semibold text-slate-100 tracking-wide">LanFarer</span>
-        </div>
+        )}
 
         <nav className="flex flex-col gap-0.5 flex-1 pt-3 pb-3 overflow-y-auto">
           {NAV.map((entry) =>
             isNavGroup(entry) ? (
-              <NavGroupSection key={entry.id} group={entry} />
+              <NavGroupSection key={entry.id} group={entry} collapsed={collapsed} />
             ) : (
-              <NavItemLink key={entry.id} item={entry} />
+              <NavItemLink key={entry.id} item={entry} collapsed={collapsed} />
             )
           )}
         </nav>
 
-        <div className="border-t border-slate-700/50 px-4 py-3 flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <ThemeSelector />
-            <LangSwitcher />
-          </div>
-          {auth.authEnabled && auth.username && (
-            <button
-              type="button"
-              onClick={() => {
-                void auth.logout();
-              }}
-              className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
-              title={t("auth.logout")}
-            >
-              <LogOut size={13} />
-              {auth.username}
-            </button>
+        <div className="border-t border-slate-700/50 px-2 py-3 flex flex-col gap-2">
+          {collapsed ? (
+            <>
+              <div className="flex flex-col items-center gap-1">
+                <ThemeSelector vertical />
+                <LangSwitcher collapsed />
+              </div>
+              {auth.authEnabled && auth.username && (
+                <SidebarTooltip label={`${t("auth.logout")} (${auth.username})`}>
+                  <button
+                    type="button"
+                    onClick={() => void auth.logout()}
+                    className="flex justify-center text-slate-500 hover:text-slate-300 transition-colors py-1"
+                  >
+                    <LogOut size={13} />
+                  </button>
+                </SidebarTooltip>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between px-2">
+                <ThemeSelector />
+                <LangSwitcher />
+              </div>
+              {auth.authEnabled && auth.username && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    void auth.logout();
+                  }}
+                  className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors px-2"
+                  title={t("auth.logout")}
+                >
+                  <LogOut size={13} />
+                  {auth.username}
+                </button>
+              )}
+            </>
           )}
         </div>
       </aside>

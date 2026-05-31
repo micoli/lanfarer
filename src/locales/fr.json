@@ -11,7 +11,9 @@
     "bandwidth": "Bande passante",
     "ping": "Ping",
     "dhcpOptions": "Options DHCP",
-    "dhcpReservations": "Réservations DHCP"
+    "dhcpReservations": "Réservations DHCP",
+    "collapse": "Réduire le menu",
+    "expand": "Agrandir le menu"
   },
   "lang": {
     "fr": "FR",
