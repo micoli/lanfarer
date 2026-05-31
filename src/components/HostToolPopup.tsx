@@ -1,5 +1,5 @@
 import { Loader2, Terminal, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { usePing } from "../hooks/usePing.ts";
 import { type ProbeResult, serverApi } from "../lib/api/server.ts";
@@ -26,7 +26,7 @@ function Sparkline({ history }: { history: (number | null)[] }) {
     .filter(Boolean)
     .join(" ");
   return (
-    <svg width={W} height={H} className="opacity-70">
+    <svg width={W} height={H} className="opacity-70" aria-hidden="true">
       <polyline points={points} fill="none" stroke="#60a5fa" strokeWidth="1.5" strokeLinejoin="round" />
     </svg>
   );
@@ -40,9 +40,7 @@ export function HostToolPopup({ ip, onClose }: { ip: string; onClose: () => void
   const [probing, setProbing] = useState(false);
   const [probeError, setProbeError] = useState<string | null>(null);
 
-  useEffect(() => { void runProbe(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  async function runProbe() {
+  const runProbe = useCallback(async () => {
     setProbing(true);
     setProbeError(null);
     setProbeResult(null);
@@ -54,16 +52,22 @@ export function HostToolPopup({ ip, onClose }: { ip: string; onClose: () => void
     } finally {
       setProbing(false);
     }
-  }
+  }, [ip, t]);
+
+  useEffect(() => { void runProbe(); }, [runProbe]);
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black/40"
-      onClick={onClose}
-    >
+    <>
+      <button
+        type="button"
+        aria-label="Close"
+        className="fixed inset-0 z-50 bg-black/40"
+        onClick={onClose}
+      />
       <div
-        className="fixed right-4 top-1/2 -translate-y-1/2 w-72 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl flex flex-col overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        className="fixed right-4 top-1/2 -translate-y-1/2 w-72 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl flex flex-col overflow-hidden z-50"
       >
         {/* Header */}
         <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-700">
@@ -201,6 +205,6 @@ export function HostToolPopup({ ip, onClose }: { ip: string; onClose: () => void
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -350,7 +350,7 @@ export default function Hosts() {
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [hosts, filter, showActive, connexionFilter, sortKey, sortDir]);
+  }, [hosts, filter, showActive, connexionFilter, sortKey, sortDir, vendorMap]);
 
   function handleSort(col: SortKey) {
     if (col === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));

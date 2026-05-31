@@ -30,7 +30,8 @@ export default function HotspotsPage() {
 
       <HotspotNavProvider>
         {sections.map((plugin) => {
-          const Section = plugin.hotspotSection!;
+          const Section = plugin.hotspotSection;
+          if (!Section) return null;
           const routers = allRouters.filter((r) => r.type === plugin.type);
           return <Section key={plugin.type} routers={routers} />;
         })}

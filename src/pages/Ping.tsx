@@ -60,7 +60,7 @@ function RttSparkline({ history }: { history: (number | null)[] }) {
           : "#f87171";
 
   return (
-    <svg width={W} height={H} className="overflow-visible">
+    <svg width={W} height={H} className="overflow-visible" aria-hidden="true">
       <polyline
         points={pts}
         fill="none"
@@ -152,7 +152,7 @@ export default function Ping() {
     [data],
   );
 
-  const ips = useMemo(() => allHosts.map((h) => h.ip!), [allHosts]);
+  const ips = useMemo(() => allHosts.flatMap((h) => (h.ip ? [h.ip] : [])), [allHosts]);
   const pingStates = usePing(ips);
   const allMacs = useMemo(() => allHosts.map((h) => h.mac), [allHosts]);
   const vendorMap = useVendors(allMacs);
@@ -177,17 +177,17 @@ export default function Ping() {
       } else if (sortKey === "hostname") {
         cmp = (a.hostname ?? "").localeCompare(b.hostname ?? "");
       } else if (sortKey === "rtt") {
-        const ar = pingStates.get(a.ip!)?.avg ?? Infinity;
-        const br = pingStates.get(b.ip!)?.avg ?? Infinity;
+        const ar = pingStates.get(a.ip ?? "")?.avg ?? Infinity;
+        const br = pingStates.get(b.ip ?? "")?.avg ?? Infinity;
         cmp = ar - br;
       } else if (sortKey === "loss") {
-        const al = pingStates.get(a.ip!)?.loss ?? 0;
-        const bl = pingStates.get(b.ip!)?.loss ?? 0;
+        const al = pingStates.get(a.ip ?? "")?.loss ?? 0;
+        const bl = pingStates.get(b.ip ?? "")?.loss ?? 0;
         cmp = al - bl;
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [allHosts, showActive, filter, sortKey, sortDir, pingStates]);
+  }, [allHosts, showActive, filter, sortKey, sortDir, pingStates, vendorMap]);
 
   function handleSort(col: SortKey) {
     if (col === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -295,7 +295,7 @@ export default function Ping() {
             </thead>
             <tbody>
               {filtered.map((h, i) => (
-                <PingRow key={h.mac ?? i} host={h} ping={pingStates.get(h.ip!)} />
+                <PingRow key={h.mac ?? i} host={h} ping={h.ip ? pingStates.get(h.ip) : undefined} />
               ))}
             </tbody>
           </table>

@@ -31,10 +31,10 @@ export default function Home() {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        {widgets.map((w, i) => {
+        {widgets.map((w) => {
           const Widget = widgetRegistry.get(w.type);
           if (!Widget) return null;
-          return <Widget key={`${w.type}-${w.id}-${i}`} routerId={w.id} />;
+          return <Widget key={`${w.type}-${w.id}`} routerId={w.id} />;
         })}
       </div>
     </div>

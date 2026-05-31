@@ -5,7 +5,7 @@ import {
   Home,
   LogOut,
   type LucideIcon,
-  Map,
+  Map as MapIcon,
   Network,
   Router,
   ScanLine,
@@ -63,7 +63,7 @@ const CORE_DESCRIPTORS: NavItemDescriptor[] = [
   { id: "hosts", icon: Wifi, labelKey: "nav.hosts", path: "/hosts" },
   { id: "scan", icon: ScanLine, labelKey: "nav.scan", path: "/scan" },
   { id: "hotspots", icon: Router, labelKey: "nav.hotspots", path: "/hotspots" },
-  { id: "map", icon: Map, labelKey: "nav.map", path: "/map" },
+  { id: "map", icon: MapIcon, labelKey: "nav.map", path: "/map" },
   { id: "ping", icon: Signal, labelKey: "nav.ping", path: "/ping" },
 ];
 

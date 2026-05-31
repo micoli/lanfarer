@@ -351,7 +351,7 @@ export function AccessPointCard({
       online: routerOnline,
     });
     return () => nav.unregister(cardId);
-  }, [nav, cardId, routerName, routerSubtitle, ap.clients.length, routerOnline]);
+  }, [nav, cardId, routerName, routerSubtitle, ap.clients.length, routerOnline, ap.band, ap.ssid]);
 
   const hasDhcp = !!dhcpRouterId;
   const baseHeaders = [

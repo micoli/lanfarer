@@ -61,8 +61,7 @@ export function usePing(ips: string[]): Map<string, HostPingState> {
     return () => {
       esRef.current?.close();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ipsKey]);
+  }, [ipsKey, ips.length]);
 
   return states;
 }

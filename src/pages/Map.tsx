@@ -528,6 +528,7 @@ export default function MapPage() {
             style={{ left: tooltip.x + 14, top: tooltip.y - 10, zIndex: 10 }}
           >
             {tooltip.text.split("\n").map((line, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: tooltip lines are static per render
               <div key={i} className={i > 0 ? "mt-1 pt-1 border-t border-slate-700" : ""}>
                 {line}
               </div>
@@ -546,7 +547,7 @@ export default function MapPage() {
           {t("map.legendBbox")}
         </span>
         <span className="flex items-center gap-1.5">
-          <svg width="12" height="12" viewBox="0 0 12 12" className="shrink-0">
+          <svg width="12" height="12" viewBox="0 0 12 12" className="shrink-0" aria-hidden="true">
             <polygon points="6,0 12,6 6,12 0,6" fill="#a78bfa" />
           </svg>
           {t("map.legendHotspot")}

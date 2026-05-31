@@ -45,7 +45,7 @@ export function Sparkline({ points, color }: { points: SparkPoint[]; color: stri
   const yTicks = [0, max * 0.5, max];
 
   return (
-    <svg viewBox={`0 0 ${W} ${H + AXIS_H}`} className="w-full" preserveAspectRatio="none">
+    <svg viewBox={`0 0 ${W} ${H + AXIS_H}`} className="w-full" preserveAspectRatio="none" aria-hidden="true">
       {yTicks.map((v) => (
         <g key={v}>
           <line

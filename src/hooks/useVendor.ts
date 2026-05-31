@@ -43,6 +43,5 @@ export function useVendors(macs: (string | undefined | null)[]): Map<string, str
       if (mac && vendor) map.set(mac.toLowerCase(), vendor);
     });
     return map;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [results]);
+  }, [results, macs]);
 }
