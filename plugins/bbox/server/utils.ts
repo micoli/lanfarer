@@ -1,6 +1,11 @@
 import http from "node:http";
 
 export async function readJsonBody(req: http.IncomingMessage): Promise<Record<string, unknown>> {
+  // Express/NestJS body parser may have already consumed the stream
+  const expressBody = (req as unknown as { body?: unknown }).body;
+  if (expressBody !== null && expressBody !== undefined && typeof expressBody === "object") {
+    return expressBody as Record<string, unknown>;
+  }
   const chunks: Buffer[] = [];
   await new Promise<void>((res) => {
     req.on("data", (c: Buffer) => chunks.push(c));
