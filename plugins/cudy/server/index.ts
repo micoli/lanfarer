@@ -49,6 +49,13 @@ export const plugin: RouterPlugin = {
   },
 
 
+  routes: [
+    { method: "GET", subpath: "status" },
+    { method: "GET", subpath: "{routerId}/wireless" },
+    { method: "GET", subpath: "{routerId}/bandwidth" },
+    { method: "GET", subpath: "{routerId}/devlist" },
+  ],
+
   matches: (url) => url.startsWith("/devices/api-proxy/cudy/"),
 
   handle: (req: http.IncomingMessage, res: http.ServerResponse) => handleCudy(req, res),

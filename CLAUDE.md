@@ -139,41 +139,40 @@ Biome is the formatter/linter (not ESLint/Prettier). Config: 2-space indent, dou
 
 ## Local API CLI
 
-`cli/api.ts` — CLI auto-authentifié pour tester toutes les routes localement.
+`cli/api.ts` — CLI path-based pour tester toutes les routes localement sans serveur.
+
+Utiliser `npm run -s api` (`-s` = silent) pour un output propre sans header npm :
 
 ```bash
-npm run api -- help                          # liste des commandes
+npm run -s api -- help                                         # liste toutes les routes avec leurs paramètres
 
 # Routes serveur
-npm run api -- health                        # GET /__health
-npm run api -- hosts                         # GET /__hosts
-npm run api -- routers                       # GET /__config/routers
-npm run api -- ui-config                     # GET /__config/ui
-npm run api -- map                           # GET /__map/topology
-npm run api -- scan [subnet]                 # GET /__scan (SSE)
-npm run api -- ping 192.168.1.1,192.168.1.2 # GET /__ping (SSE)
-npm run api -- check-ip 192.168.1.1         # GET /__check-ip
-npm run api -- oui aa:bb:cc:dd:ee:ff        # GET /__oui
+npm run -s api -- __health
+npm run -s api -- __config/routers
+npm run -s api -- __config/ui
+npm run -s api -- __hosts
+npm run -s api -- __map/topology
+npm run -s api -- __check-ip ip=192.168.1.1
+npm run -s api -- __oui mac=aa:bb:cc:dd:ee:ff
+npm run -s api -- __scan subnet=192.168.1.0/24               # SSE — Ctrl+C pour arrêter
+npm run -s api -- __ping ips=192.168.1.1,192.168.1.2         # SSE continu — Ctrl+C
 
-# Plugins bbox
-npm run api -- bbox bbox-main hosts
-npm run api -- bbox bbox-main device
-npm run api -- bbox bbox-main wan/stats
-npm run api -- bbox bbox-main dhcp/clients
-npm run api -- bbox bbox-main dhcp/config PUT '{"body":...}'
-
-# Plugins airport / kuwfi / nestwifi
-npm run api -- airport status
-npm run api -- airport ap-name hosts
-npm run api -- kuwfi status
-
-# Requête brute
-npm run api -- raw /devices/api-proxy/bbox-proxy/bbox-main/dhcp/clients POST '{"ip":"..."}'
+# Plugins (chemin complet de la route)
+npm run -s api -- devices/api-proxy/bbox/bbox-main/hosts
+npm run -s api -- devices/api-proxy/bbox/bbox-main/wan/stats
+npm run -s api -- devices/api-proxy/bbox/bbox-main/dhcp/clients
+npm run -s api -- devices/api-proxy/bbox/bbox-main/dhcp/clients --method POST macaddress=aa:bb:cc:dd:ee:ff ipaddress=192.168.1.100 hostname=mypc
+npm run -s api -- devices/api-proxy/cudy/samana-veranda/wireless
+npm run -s api -- devices/api-proxy/airport/samana-rdc/hosts
 ```
 
-**Pas de serveur requis** : le CLI appelle directement les fonctions internes (imports TypeScript), sans HTTP vers localhost.
+**Pas de serveur requis** : le CLI appelle directement les handlers internes (imports TypeScript).
 
-**Auth** : si `users:` est configuré dans `config.yaml`, ajouter `cli_password: <mot-de-passe>` (+ `cli_user:` si nécessaire). La session est mise en cache dans `.cli-session`.
+**Syntaxe** : `npm run -s api -- <route> [key=value...] [--method GET|POST|PUT|DELETE]`
+- `key=value` → query string pour GET, JSON body pour POST/PUT/DELETE
+- Voir `help` pour la liste complète des routes et paramètres de chaque plugin
+
+**Auth** : si `users:` est configuré dans `config.yaml`, ajouter `cli_password: <mot-de-passe>` (+ `cli_user:` si nécessaire).
 
 ## Bbox API References
 

@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { log } from "./log.ts";
 
 const MAC_VENDOR_CACHE = "/tmp/fast5688b-mac-vendor-cache.json";
 const MAC_VENDOR_TTL   = 24 * 60 * 60 * 1000;
@@ -37,7 +38,7 @@ export async function loadVendorDb(): Promise<void> {
       vendorMap = buildVendorMap(data);
       vendorLoadedAt = Date.now();
       loaded = true;
-      console.log(`[mac-vendor] DB téléchargée : ${vendorMap.size} entrées`);
+      log(`[mac-vendor] DB téléchargée : ${vendorMap.size} entrées`);
     }
   } catch { /* réseau indisponible */ }
 
@@ -46,7 +47,7 @@ export async function loadVendorDb(): Promise<void> {
       const data = JSON.parse(fs.readFileSync(MAC_VENDOR_CACHE, "utf8")) as MacEntry[];
       vendorMap = buildVendorMap(data);
       vendorLoadedAt = Date.now();
-      console.log(`[mac-vendor] DB chargée depuis le cache : ${vendorMap.size} entrées`);
+      log(`[mac-vendor] DB chargée depuis le cache : ${vendorMap.size} entrées`);
     } catch { /* pas de cache */ }
   }
 }

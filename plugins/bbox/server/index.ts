@@ -36,6 +36,25 @@ function bboxRouterSpecs() {
 export const plugin: RouterPlugin = {
   type: "bbox",
 
+  routes: [
+    { method: "GET",    subpath: "{routerId}/wireless" },
+    { method: "GET",    subpath: "{routerId}/wifi-settings" },
+    { method: "GET",    subpath: "{routerId}/hosts" },
+    { method: "GET",    subpath: "{routerId}/device" },
+    { method: "GET",    subpath: "{routerId}/wan/stats" },
+    { method: "GET",    subpath: "{routerId}/wan/graphs" },
+    { method: "GET",    subpath: "{routerId}/dhcp/config" },
+    { method: "PUT",    subpath: "{routerId}/dhcp/config" },
+    { method: "GET",    subpath: "{routerId}/dhcp/clients" },
+    { method: "POST",   subpath: "{routerId}/dhcp/clients",       params: ["macaddress", "ipaddress", "hostname", "enable", "device", "ip6address"] },
+    { method: "PUT",    subpath: "{routerId}/dhcp/clients/{id}",  params: ["macaddress", "ipaddress", "hostname", "enable", "device", "ip6address"] },
+    { method: "DELETE", subpath: "{routerId}/dhcp/clients/{id}" },
+    { method: "GET",    subpath: "{routerId}/dhcp/options" },
+    { method: "POST",   subpath: "{routerId}/dhcp/options",       params: ["option", "value"] },
+    { method: "PUT",    subpath: "{routerId}/dhcp/options/{id}",  params: ["option", "value"] },
+    { method: "DELETE", subpath: "{routerId}/dhcp/options/{id}" },
+  ],
+
   async fetchHosts() {
     const results = await Promise.all(bboxRouterSpecs().map(({ spec }) => fetchBboxHosts(spec)));
     const seen = new Set<string>();

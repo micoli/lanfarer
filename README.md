@@ -220,10 +220,43 @@ make logs         # follow logs
 make addon-build  # build the HA addon image locally
 ```
 
+## Local API CLI
+
+`cli/api.ts` calls route handlers directly — no running server needed. Use `npm run -s api` (`-s` = silent) for clean output:
+
+```bash
+npm run -s api -- help                                          # list all routes and parameters
+
+# Server routes
+npm run -s api -- __health
+npm run -s api -- __config/routers
+npm run -s api -- __hosts
+npm run -s api -- __map/topology
+npm run -s api -- __check-ip ip=192.168.1.1
+npm run -s api -- __oui mac=aa:bb:cc:dd:ee:ff
+npm run -s api -- __scan subnet=192.168.1.0/24                 # SSE stream — Ctrl+C to stop
+npm run -s api -- __ping ips=192.168.1.1,192.168.1.2           # continuous SSE — Ctrl+C to stop
+
+# Plugin routes (full path)
+npm run -s api -- devices/api-proxy/bbox/bbox-main/hosts
+npm run -s api -- devices/api-proxy/bbox/bbox-main/wan/stats
+npm run -s api -- devices/api-proxy/bbox/bbox-main/dhcp/clients
+npm run -s api -- devices/api-proxy/bbox/bbox-main/dhcp/clients --method POST \
+    macaddress=aa:bb:cc:dd:ee:ff ipaddress=192.168.1.100 hostname=mypc
+npm run -s api -- devices/api-proxy/cudy/living-room-ap/wireless
+npm run -s api -- devices/api-proxy/airport/airport-extreme/hosts
+```
+
+**Syntax**: `npm run -s api -- <route> [key=value...] [--method GET|POST|PUT|DELETE]`
+- `key=value` → query string for GET, JSON body for POST/PUT/DELETE
+- Run `help` to see all available routes with their parameters auto-discovered from loaded plugins
+
+**Auth**: if `users:` is configured in `config.yaml`, add `cli_password: <password>` (and `cli_user:` if needed).
+
 ## Stack
 
 - **Frontend**: React 19, React Router, TanStack Query, Tailwind CSS, Three.js, i18next
-- **Backend**: Node.js (TypeScript via tsx), no framework
+- **Backend**: Node.js + NestJS (TypeScript via tsx)
 - **Tooling**: Vite, Biome, Docker
 
 ## Bbox API references

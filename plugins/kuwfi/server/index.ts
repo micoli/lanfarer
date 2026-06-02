@@ -37,6 +37,12 @@ export const plugin: RouterPlugin = {
     return { hosts };
   },
 
+  routes: [
+    { method: "GET", subpath: "status" },
+    { method: "GET", subpath: "{routerId}" },
+    { method: "GET", subpath: "{routerId}/bandwidth" },
+  ],
+
   matches: (url) => url.startsWith(PREFIX),
 
   async handle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {

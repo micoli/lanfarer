@@ -62,6 +62,16 @@ export const plugin: RouterPlugin = {
     }));
   },
 
+  routes: [
+    { method: "GET", subpath: "status" },
+    { method: "GET", subpath: "{routerId}/hosts" },
+    { method: "GET", subpath: "{routerId}/wireless" },
+    { method: "GET", subpath: "{routerId}/wifi-settings" },
+    { method: "GET", subpath: "{routerId}/device-info" },
+    { method: "GET", subpath: "{routerId}/raw-props" },
+    { method: "GET", subpath: "{routerId}/acp-debug" },
+  ],
+
   matches: (url) => url.startsWith(PREFIX),
 
   async handle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {

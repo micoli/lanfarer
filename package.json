@@ -14,7 +14,7 @@
     "lint": "biome lint --write src",
     "format": "biome format --write src",
     "check": "biome check --write src",
-    "api": "tsx cli/api.ts"
+    "api": "TSX_TSCONFIG_PATH=tsconfig.node.json tsx cli/api.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
