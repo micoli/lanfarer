@@ -13,7 +13,7 @@ export interface HostPingState {
 }
 
 function computeStats(
-  history: (number | null)[],
+  history: (number | null)[]
 ): Pick<HostPingState, "min" | "avg" | "max" | "loss"> {
   if (history.length === 0) return { min: null, avg: null, max: null, loss: 0 };
   const nums = history.filter((v): v is number => v !== null);

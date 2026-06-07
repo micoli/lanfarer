@@ -86,7 +86,7 @@ function SidebarTooltip({ label, children }: { label: string; children: React.Re
           >
             {label}
           </div>,
-          document.body,
+          document.body
         )}
     </div>
   );
@@ -225,7 +225,9 @@ export default function Layout({
 }) {
   const { t } = useTranslation();
   const uiConfig = useUiConfig();
-  const [collapsed, setCollapsed] = useState(() => localStorage.getItem("sidebar-collapsed") === "true");
+  const [collapsed, setCollapsed] = useState(
+    () => localStorage.getItem("sidebar-collapsed") === "true"
+  );
 
   function toggleCollapsed() {
     setCollapsed((c) => {
@@ -270,7 +272,9 @@ export default function Layout({
             <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center shadow-lg shadow-blue-500/30 shrink-0">
               <Network size={15} className="text-white" strokeWidth={2.5} />
             </div>
-            <span className="font-semibold text-slate-100 tracking-wide flex-1 truncate">LanFarer</span>
+            <span className="font-semibold text-slate-100 tracking-wide flex-1 truncate">
+              LanFarer
+            </span>
             <button
               type="button"
               onClick={toggleCollapsed}

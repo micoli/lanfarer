@@ -131,9 +131,7 @@ function PingRow({ host, ping }: { host: Host; ping: HostPingState | undefined }
       <td className={`px-4 py-2.5 text-xs font-mono tabular-nums ${lossColor(ping?.loss ?? 0)}`}>
         {ping !== undefined ? `${ping.loss}%` : "—"}
       </td>
-      <td className="px-4 py-2.5">
-        {ping && <RttSparkline history={ping.history} />}
-      </td>
+      <td className="px-4 py-2.5">{ping && <RttSparkline history={ping.history} />}</td>
     </tr>
   );
 }
@@ -147,10 +145,7 @@ export default function Ping() {
   const [sortKey, setSortKey] = useState<SortKey>("ip");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
-  const allHosts = useMemo(
-    () => (data?.hosts ?? []).filter((h) => h.ip),
-    [data],
-  );
+  const allHosts = useMemo(() => (data?.hosts ?? []).filter((h) => h.ip), [data]);
 
   const ips = useMemo(() => allHosts.flatMap((h) => (h.ip ? [h.ip] : [])), [allHosts]);
   const pingStates = usePing(ips);
@@ -167,7 +162,7 @@ export default function Ping() {
           h.hostname?.toLowerCase().includes(q) ||
           h.ip?.includes(q) ||
           h.mac?.toLowerCase().includes(q) ||
-          (h.mac && vendorMap.get(h.mac.toLowerCase())?.toLowerCase().includes(q)),
+          (h.mac && vendorMap.get(h.mac.toLowerCase())?.toLowerCase().includes(q))
       );
     }
     return [...list].sort((a, b) => {
@@ -191,7 +186,10 @@ export default function Ping() {
 
   function handleSort(col: SortKey) {
     if (col === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else { setSortKey(col); setSortDir("asc"); }
+    else {
+      setSortKey(col);
+      setSortDir("asc");
+    }
   }
 
   function SortTh({ label, col, className }: { label: string; col: SortKey; className?: string }) {

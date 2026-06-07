@@ -46,7 +46,9 @@ export default function LoginPage({ onLogin }: Props) {
           <h1 className="text-slate-100 font-medium text-center">{t("auth.title")}</h1>
 
           <div className="flex flex-col gap-1">
-            <label htmlFor="login-username" className="text-xs text-slate-400">{t("auth.username")}</label>
+            <label htmlFor="login-username" className="text-xs text-slate-400">
+              {t("auth.username")}
+            </label>
             <input
               id="login-username"
               type="text"
@@ -60,7 +62,9 @@ export default function LoginPage({ onLogin }: Props) {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label htmlFor="login-password" className="text-xs text-slate-400">{t("auth.password")}</label>
+            <label htmlFor="login-password" className="text-xs text-slate-400">
+              {t("auth.password")}
+            </label>
             <input
               id="login-password"
               type="password"

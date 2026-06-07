@@ -233,5 +233,11 @@
     "mdns": "mDNS",
     "smb": "SMB",
     "timeout": "Timeout"
+  },
+  "history": {
+    "title": "Historique de présence",
+    "home": "présent",
+    "noEntity": "Aucun device_tracker trouvé pour cette MAC",
+    "noData": "Pas de données"
   }
 }

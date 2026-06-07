@@ -16,9 +16,10 @@ export interface UiConfig {
   menu: MenuItemConfig[] | null;
   home: { widgets: WidgetConfig[] } | null;
   dhcp: { router: string } | null;
+  hasHomeAssistant?: boolean;
 }
 
-const DEFAULT_CONFIG: UiConfig = { menu: null, home: null, dhcp: null };
+const DEFAULT_CONFIG: UiConfig = { menu: null, home: null, dhcp: null, hasHomeAssistant: false };
 
 export function useUiConfig(): UiConfig {
   const { data } = useQuery({

@@ -229,6 +229,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/__ha/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Historique de présence Home Assistant pour une adresse MAC */
+        get: operations["HaController_history"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/__probe": {
         parameters: {
             query?: never;
@@ -760,6 +777,18 @@ export interface components {
             menu: components["schemas"]["UiMenuItem"][] | null;
             home: components["schemas"]["UiHomeConfig"] | null;
             dhcp: components["schemas"]["UiDhcpConfig"] | null;
+            hasHomeAssistant: boolean;
+        };
+        HaHistoryEntry: {
+            /** @description État de présence (home, not_home, …) */
+            state: string;
+            /** @description Unix timestamp (secondes) */
+            ts: number;
+        };
+        HaHistoryData: {
+            /** @description entity_id Home Assistant résolu */
+            entityId: string | null;
+            history: components["schemas"]["HaHistoryEntry"][];
         };
         RouterEntry: {
             /** @example bbox-main */
@@ -1373,6 +1402,44 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["RouterEntry"][];
                 };
+            };
+        };
+    };
+    HaController_history: {
+        parameters: {
+            query: {
+                /** @description Adresse MAC (tous formats acceptés) */
+                mac: unknown;
+                /** @description Nombre de jours (1-30, défaut 3) */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HaHistoryData"];
+                };
+            };
+            /** @description mac manquant */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Home Assistant non configuré */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

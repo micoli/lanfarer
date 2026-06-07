@@ -11,7 +11,6 @@ interface HostsState {
   dataUpdatedAt: number;
 }
 
-
 export function useHosts() {
   const [state, setState] = useState<HostsState>({
     data: null,
@@ -40,7 +39,14 @@ export function useHosts() {
     es.addEventListener("result", (e: MessageEvent) => {
       if (esRef.current !== es) return;
       const data = JSON.parse(e.data as string) as HostsData;
-      setState({ data, isLoading: false, progress: 100, progressLabel: "", error: null, dataUpdatedAt: Date.now() });
+      setState({
+        data,
+        isLoading: false,
+        progress: 100,
+        progressLabel: "",
+        error: null,
+        dataUpdatedAt: Date.now(),
+      });
       es.close();
     });
 

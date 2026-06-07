@@ -1,22 +1,11 @@
-import {
-  AlertTriangle,
-  Bookmark,
-  BookmarkPlus,
-  Check,
-  Wifi,
-  WifiOff,
-  X,
-} from "lucide-react";
+import { AlertTriangle, Bookmark, BookmarkPlus, Check, Wifi, WifiOff, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { HostProbeButton } from "./HostProbeButton.tsx";
-import {
-  useCreateDhcpClient,
-  useIpCheck,
-} from "../../plugins/bbox/frontend/hooks/useBbox.ts";
+import { useCreateDhcpClient, useIpCheck } from "../../plugins/bbox/frontend/hooks/useBbox.ts";
 import type { AccessPoint, DhcpClient, WirelessClient } from "../../plugins/contracts.ts";
 import { useHotspotNav } from "../contexts/HotspotNavContext.tsx";
 import { useVendor } from "../hooks/useVendor.ts";
+import { HostProbeButton } from "./HostProbeButton.tsx";
 
 export function sortAccessPoints<T extends { ssid: string; band: string }>(aps: T[]): T[] {
   return [...aps].sort((a, b) => {
@@ -56,13 +45,7 @@ const COL_WIDTHS: Record<number, string[]> = {
   6: ["32%", "16%", "22%", "10%", "10%", "10%"],
 };
 
-export function HostTable({
-  headers,
-  children,
-}: {
-  headers: string[];
-  children: React.ReactNode;
-}) {
+export function HostTable({ headers, children }: { headers: string[]; children: React.ReactNode }) {
   const widths = COL_WIDTHS[headers.length] ?? [];
   return (
     <div className="overflow-x-auto">
@@ -118,9 +101,7 @@ export function CardHeader({
       <div className="flex-1 min-w-0">
         <span className="font-medium text-sm text-slate-100">{name}</span>
         {subtitle && <span className="ml-2 text-xs text-slate-500">{subtitle}</span>}
-        {ssid && (
-          <span className="ml-2 font-mono text-xs text-slate-300">{ssid}</span>
-        )}
+        {ssid && <span className="ml-2 font-mono text-xs text-slate-300">{ssid}</span>}
         {band && (
           <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded bg-slate-700 text-slate-400">
             {band}
@@ -245,7 +226,10 @@ function ClientRow({
         </tr>
         {conflict && (
           <tr className="bg-amber-500/10 border-t border-amber-500/20">
-            <td colSpan={colCount} className="px-4 py-1.5 text-xs text-amber-400 flex items-center gap-1.5">
+            <td
+              colSpan={colCount}
+              className="px-4 py-1.5 text-xs text-amber-400 flex items-center gap-1.5"
+            >
               <AlertTriangle size={12} />
               {conflict}
               {t("common.clickAgainToForce")}
@@ -277,7 +261,7 @@ function ClientRow({
       <td className="px-4 py-2.5">
         <span className="inline-flex items-center gap-0.5 font-mono text-xs text-slate-400">
           {ip || "—"}
-          {ip && <HostProbeButton ip={ip} />}
+          {ip && <HostProbeButton ip={ip} mac={client.mac} />}
         </span>
         {dhcpRouterId && ip && (
           <span

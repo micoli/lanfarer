@@ -1,17 +1,30 @@
-import { Loader2, Terminal, X } from "lucide-react";
+import { History, Loader2, Terminal, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { usePing } from "../hooks/usePing.ts";
+import { useUiConfig } from "../hooks/useUiConfig.ts";
 import { type ProbeResult, serverApi } from "../lib/api/server.ts";
+import { DAYS_OPTIONS, HaTimeline } from "./HaTimeline.tsx";
 
 const PORT_NAMES: Record<number, string> = {
-  21: "FTP", 22: "SSH", 23: "Telnet", 25: "SMTP",
-  80: "HTTP", 443: "HTTPS", 445: "SMB", 3389: "RDP",
-  5900: "VNC", 8080: "HTTP-alt", 8443: "HTTPS-alt",
+  21: "FTP",
+  22: "SSH",
+  23: "Telnet",
+  25: "SMTP",
+  80: "HTTP",
+  443: "HTTPS",
+  445: "SMB",
+  3389: "RDP",
+  5900: "VNC",
+  8080: "HTTP-alt",
+  8443: "HTTPS-alt",
 };
 
 const HTTP_PORTS: Record<number, "http" | "https"> = {
-  80: "http", 8080: "http", 443: "https", 8443: "https",
+  80: "http",
+  8080: "http",
+  443: "https",
+  8443: "https",
 };
 
 function Sparkline({ history }: { history: (number | null)[] }) {
@@ -27,18 +40,38 @@ function Sparkline({ history }: { history: (number | null)[] }) {
     .join(" ");
   return (
     <svg width={W} height={H} className="opacity-70" aria-hidden="true">
-      <polyline points={points} fill="none" stroke="#60a5fa" strokeWidth="1.5" strokeLinejoin="round" />
+      <polyline
+        points={points}
+        fill="none"
+        stroke="#60a5fa"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
-export function HostToolPopup({ ip, onClose }: { ip: string; onClose: () => void }) {
+// ── Main popup ────────────────────────────────────────────────────────────────
+
+export function HostToolPopup({
+  ip,
+  mac,
+  onClose,
+}: {
+  ip: string;
+  mac?: string;
+  onClose: () => void;
+}) {
   const { t } = useTranslation();
+  const uiConfig = useUiConfig();
   const pingStates = usePing([ip]);
   const ping = pingStates.get(ip);
   const [probeResult, setProbeResult] = useState<ProbeResult | null>(null);
   const [probing, setProbing] = useState(false);
   const [probeError, setProbeError] = useState<string | null>(null);
+  const [historyDays, setHistoryDays] = useState<1 | 3 | 7 | 31>(3);
+
+  const showHistory = !!uiConfig.hasHomeAssistant && !!mac;
 
   const runProbe = useCallback(async () => {
     setProbing(true);
@@ -54,7 +87,9 @@ export function HostToolPopup({ ip, onClose }: { ip: string; onClose: () => void
     }
   }, [ip, t]);
 
-  useEffect(() => { void runProbe(); }, [runProbe]);
+  useEffect(() => {
+    void runProbe();
+  }, [runProbe]);
 
   return (
     <>
@@ -69,7 +104,6 @@ export function HostToolPopup({ ip, onClose }: { ip: string; onClose: () => void
         aria-modal="true"
         className="fixed right-4 top-1/2 -translate-y-1/2 w-72 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl flex flex-col overflow-hidden z-50"
       >
-        {/* Header */}
         <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-700">
           <Terminal size={14} className="text-blue-400 shrink-0" />
           <span className="font-mono text-sm text-slate-100 flex-1">{ip}</span>
@@ -114,30 +148,26 @@ export function HostToolPopup({ ip, onClose }: { ip: string; onClose: () => void
           </div>
 
           {/* Probe section */}
-          <div className="px-4 py-3">
+          <div className={`px-4 py-3 ${showHistory ? "border-b border-slate-800" : ""}`}>
             <div className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2">
               {t("probe.scan")}
             </div>
-
             {probing && (
               <div className="flex items-center gap-2 text-xs text-slate-400">
                 <Loader2 size={13} className="animate-spin" />
                 {t("probe.scanning")}
               </div>
             )}
-
-            {probeError && (
-              <span className="text-xs text-red-400">{probeError}</span>
-            )}
-
+            {probeError && <span className="text-xs text-red-400">{probeError}</span>}
             {probeResult && (
               <div className="flex flex-col gap-2">
                 {probeResult.pingStats && (
                   <div className="font-mono text-xs text-slate-400">
-                    min {probeResult.pingStats.min.toFixed(1)} / avg {probeResult.pingStats.avg.toFixed(1)} / max {probeResult.pingStats.max.toFixed(1)} ms
+                    min {probeResult.pingStats.min.toFixed(1)} / avg{" "}
+                    {probeResult.pingStats.avg.toFixed(1)} / max{" "}
+                    {probeResult.pingStats.max.toFixed(1)} ms
                   </div>
                 )}
-
                 <div>
                   <div className="text-xs text-slate-500 mb-1">{t("probe.ports")}</div>
                   {probeResult.openPorts.length === 0 ? (
@@ -148,7 +178,10 @@ export function HostToolPopup({ ip, onClose }: { ip: string; onClose: () => void
                         const label = `${p}${PORT_NAMES[p] ? ` ${PORT_NAMES[p]}` : ""}`;
                         const scheme = HTTP_PORTS[p];
                         if (scheme) {
-                          const port = (scheme === "http" && p === 80) || (scheme === "https" && p === 443) ? "" : `:${p}`;
+                          const port =
+                            (scheme === "http" && p === 80) || (scheme === "https" && p === 443)
+                              ? ""
+                              : `:${p}`;
                           return (
                             <a
                               key={p}
@@ -175,14 +208,12 @@ export function HostToolPopup({ ip, onClose }: { ip: string; onClose: () => void
                     </div>
                   )}
                 </div>
-
                 {probeResult.mdnsName && (
                   <div className="text-xs">
                     <span className="text-slate-500">{t("probe.mdns")} </span>
                     <span className="font-mono text-slate-300">{probeResult.mdnsName}</span>
                   </div>
                 )}
-
                 {probeResult.smbName && (
                   <div className="text-xs">
                     <span className="text-slate-500">{t("probe.smb")} </span>
@@ -192,7 +223,6 @@ export function HostToolPopup({ ip, onClose }: { ip: string; onClose: () => void
                     </span>
                   </div>
                 )}
-
                 <button
                   type="button"
                   onClick={() => void runProbe()}
@@ -203,6 +233,35 @@ export function HostToolPopup({ ip, onClose }: { ip: string; onClose: () => void
               </div>
             )}
           </div>
+
+          {/* HA presence history */}
+          {showHistory && (
+            <div className="px-4 py-3">
+              <div className="flex items-center gap-1.5 mb-2">
+                <History size={11} className="text-green-400 shrink-0" />
+                <span className="text-xs font-medium text-slate-400 uppercase tracking-wide flex-1">
+                  {t("history.title")}
+                </span>
+                <div className="flex gap-0.5">
+                  {DAYS_OPTIONS.map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setHistoryDays(d)}
+                      className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+                        historyDays === d
+                          ? "bg-slate-600 text-slate-100"
+                          : "text-slate-500 hover:text-slate-300"
+                      }`}
+                    >
+                      {d}d
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <HaTimeline mac={mac} days={historyDays} />
+            </div>
+          )}
         </div>
       </div>
     </>

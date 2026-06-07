@@ -14,16 +14,17 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { HostProbeButton } from "../components/HostProbeButton.tsx";
-import type { DhcpClient, Host, HostConnexion } from "../../plugins/contracts.ts";
 import {
   useCreateDhcpClient,
   useDhcpClients,
   useIpCheck,
 } from "../../plugins/bbox/frontend/hooks/useBbox.ts";
+import type { DhcpClient, Host, HostConnexion } from "../../plugins/contracts.ts";
+import { HaTimeline } from "../components/HaTimeline.tsx";
+import { HostProbeButton } from "../components/HostProbeButton.tsx";
 import { useHosts } from "../hooks/useHosts.ts";
+import { useDhcpRouterId, useUiConfig } from "../hooks/useUiConfig.ts";
 import { useVendor, useVendors } from "../hooks/useVendor.ts";
-import { useDhcpRouterId } from "../hooks/useUiConfig.ts";
 
 import { exportCsv } from "../lib/exportCsv";
 
@@ -120,11 +121,13 @@ function HostRow({
   i,
   dhcpRouterId,
   reservationByMac,
+  hasHomeAssistant,
 }: {
   host: Host;
   i: number;
   dhcpRouterId: string | null;
   reservationByMac: Map<string, DhcpClient>;
+  hasHomeAssistant: boolean;
 }) {
   const { t } = useTranslation();
   const vendor = useVendor(host.mac ?? undefined);
@@ -205,7 +208,10 @@ function HostRow({
               <button
                 type="button"
                 title={t("common.cancel")}
-                onClick={() => { setAdding(false); clearConflict(); }}
+                onClick={() => {
+                  setAdding(false);
+                  clearConflict();
+                }}
                 className="p-1 rounded text-slate-400 hover:text-slate-200 transition-colors"
               >
                 <X size={14} />
@@ -218,7 +224,10 @@ function HostRow({
         </tr>
         {conflict && (
           <tr className="bg-amber-500/10 border-t border-amber-500/20">
-            <td colSpan={8} className="px-4 py-1.5 text-xs text-amber-400 flex items-center gap-1.5">
+            <td
+              colSpan={8}
+              className="px-4 py-1.5 text-xs text-amber-400 flex items-center gap-1.5"
+            >
               <AlertTriangle size={12} />
               {conflict}
               {t("common.clickAgainToForce")}
@@ -230,65 +239,81 @@ function HostRow({
   }
 
   return (
-    <tr
-      key={host.mac ?? i}
-      className="border-t border-slate-700/50 hover:bg-slate-800/40 transition-colors"
-    >
-      <td className="px-4 py-2.5">
-        <Badge active={host.active} />
-      </td>
-      <td className="px-4 py-2.5 text-sm text-slate-200">
-        {host.hostname || <span className="text-slate-500 italic">{t("hosts.noName")}</span>}
-        {reservation?.hostname && reservation.hostname !== host.hostname && (
-          <div className="text-xs text-blue-400 mt-0.5">{reservation.hostname}</div>
-        )}
-      </td>
-      <td className="px-4 py-2.5 text-sm font-mono text-slate-300">
-        <span className="inline-flex items-center gap-0.5">
-          {host.ip ?? "—"}
-          {host.ip && <HostProbeButton ip={host.ip} />}
-        </span>
-        {reservation?.ipaddress && reservation.ipaddress !== host.ip && (
-          <div className="text-xs text-blue-400 mt-0.5">{reservation.ipaddress}</div>
-        )}
-      </td>
-      <td className="px-4 py-2.5 text-xs font-mono text-slate-400">
-        {host.mac ?? "—"}
-        {vendor && <div className="text-slate-500 font-sans normal-case">{vendor}</div>}
-      </td>
-      <td className="px-4 py-2.5 text-xs text-slate-500 uppercase">{host.type ?? "—"}</td>
-      <td className="px-4 py-2.5">
-        <ConnexionBadge connexion={host.connexion} ssid={host.ssid} />
-      </td>
-      <td className="px-4 py-2.5 text-xs text-slate-500">
-        {relativeTime(host.lastseen, t("hosts.justNow"))}
-      </td>
-      <td className="px-4 py-2.5">
-        {dhcpRouterId && (
-          isReserved ? (
-            <span title={t("hosts.reservationActive")} className="p-1 inline-flex text-blue-400">
-              <Bookmark size={14} />
-            </span>
+    <>
+      <tr
+        key={host.mac ?? i}
+        className="border-t border-slate-700/50 hover:bg-slate-800/40 transition-colors"
+      >
+        <td className="px-4 py-2.5">
+          <Badge active={host.active} />
+        </td>
+        <td className="px-4 py-2.5 text-sm text-slate-200">
+          {host.hostname || <span className="text-slate-500 italic">{t("hosts.noName")}</span>}
+          {reservation?.hostname && reservation.hostname !== host.hostname && (
+            <div className="text-xs text-blue-400 mt-0.5">{reservation.hostname}</div>
+          )}
+        </td>
+        <td className="px-4 py-2.5 text-sm font-mono text-slate-300">
+          <span className="inline-flex items-center gap-0.5">
+            {host.ip ?? "—"}
+            {host.ip && <HostProbeButton ip={host.ip} mac={host.mac ?? undefined} />}
+          </span>
+          {reservation?.ipaddress && reservation.ipaddress !== host.ip && (
+            <div className="text-xs text-blue-400 mt-0.5">{reservation.ipaddress}</div>
+          )}
+        </td>
+        <td className="px-4 py-2.5 text-xs font-mono text-slate-400">
+          {host.mac ?? "—"}
+          {vendor && <div className="text-slate-500 font-sans normal-case">{vendor}</div>}
+        </td>
+        <td className="px-4 py-2.5 text-xs text-slate-500 uppercase">{host.type ?? "—"}</td>
+        <td className="px-4 py-2.5">
+          <ConnexionBadge connexion={host.connexion} ssid={host.ssid} />
+        </td>
+        <td className="px-4 py-2.5 text-xs text-slate-500">
+          {hasHomeAssistant && host.mac ? (
+            <div className="w-40">
+              <HaTimeline mac={host.mac} days={31} showMarkers={false} showNoEntity={false} />
+            </div>
           ) : (
-            <button
-              type="button"
-              title={t("hosts.addReservation")}
-              onClick={openAdd}
-              className="p-1 rounded text-slate-500 hover:text-blue-400 transition-colors"
-            >
-              <BookmarkPlus size={14} />
-            </button>
-          )
-        )}
-      </td>
-    </tr>
+            relativeTime(host.lastseen, t("hosts.justNow"))
+          )}
+        </td>
+        <td className="px-4 py-2.5">
+          {dhcpRouterId &&
+            (isReserved ? (
+              <span title={t("hosts.reservationActive")} className="p-1 inline-flex text-blue-400">
+                <Bookmark size={14} />
+              </span>
+            ) : (
+              <button
+                type="button"
+                title={t("hosts.addReservation")}
+                onClick={openAdd}
+                className="p-1 rounded text-slate-500 hover:text-blue-400 transition-colors"
+              >
+                <BookmarkPlus size={14} />
+              </button>
+            ))}
+        </td>
+      </tr>
+    </>
   );
 }
 
 export default function Hosts() {
   const { t, i18n } = useTranslation();
-  const { data: hostsData, isLoading, progress, progressLabel, error, dataUpdatedAt, refresh } = useHosts();
+  const {
+    data: hostsData,
+    isLoading,
+    progress,
+    progressLabel,
+    error,
+    dataUpdatedAt,
+    refresh,
+  } = useHosts();
   const dhcpRouterId = useDhcpRouterId();
+  const { hasHomeAssistant } = useUiConfig();
   const { data: dhcpData } = useDhcpClients(dhcpRouterId);
   const reservationByMac = useMemo(() => {
     const map = new Map<string, DhcpClient>();
@@ -556,6 +581,7 @@ export default function Hosts() {
                 i={i}
                 dhcpRouterId={dhcpRouterId}
                 reservationByMac={reservationByMac}
+                hasHomeAssistant={!!hasHomeAssistant}
               />
             ))}
           </tbody>

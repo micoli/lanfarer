@@ -12,6 +12,7 @@ import { OuiController } from "./controllers/oui.controller.ts";
 import { RouterConfigController } from "./controllers/router-config.controller.ts";
 import { PluginProxyController } from "./controllers/plugin-proxy.controller.ts";
 import { ProbeController } from "./controllers/probe.controller.ts";
+import { HaController } from "./controllers/ha.controller.ts";
 
 @Module({
   providers: [
@@ -32,6 +33,7 @@ import { ProbeController } from "./controllers/probe.controller.ts";
     RouterConfigController,
     PluginProxyController,
     ProbeController,
+    HaController,
   ],
 })
 export class AppModule {}

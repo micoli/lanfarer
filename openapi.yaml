@@ -236,6 +236,39 @@ paths:
       security: *a2
       summary: Liste tous les routeurs activés dans config.yaml
       tags: *a3
+  /__ha/history:
+    get:
+      operationId: HaController_history
+      parameters:
+        - name: mac
+          required: true
+          in: query
+          description: Adresse MAC (tous formats acceptés)
+          schema:
+            example: AA:BB:CC:DD:EE:FF
+        - name: days
+          required: false
+          in: query
+          description: Nombre de jours (1-30, défaut 3)
+          schema:
+            type: integer
+            example: 3
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HaHistoryData"
+        "400":
+          description: mac manquant
+        "503":
+          description: Home Assistant non configuré
+      security:
+        - session: []
+      summary: Historique de présence Home Assistant pour une adresse MAC
+      tags:
+        - server
   /__probe:
     get:
       operationId: ProbeController_probe
@@ -944,10 +977,39 @@ components:
           type: object
           allOf:
             - $ref: "#/components/schemas/UiDhcpConfig"
+        hasHomeAssistant:
+          type: boolean
       required:
         - menu
         - home
         - dhcp
+        - hasHomeAssistant
+    HaHistoryEntry:
+      type: object
+      properties:
+        state:
+          type: string
+          description: "État de présence (home, not_home, …)"
+        ts:
+          type: number
+          description: Unix timestamp (secondes)
+      required:
+        - state
+        - ts
+    HaHistoryData:
+      type: object
+      properties:
+        entityId:
+          type: string
+          nullable: true
+          description: entity_id Home Assistant résolu
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/HaHistoryEntry"
+      required:
+        - entityId
+        - history
     RouterEntry:
       type: object
       properties:

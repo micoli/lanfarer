@@ -38,14 +38,16 @@ export function Sparkline({ points, color }: { points: SparkPoint[]; color: stri
     `${xS(minTs).toFixed(1)},${H}`,
   ].join(" ");
 
-  const xTicks = Array.from(
-    { length: 5 },
-    (_, i) => minTs + Math.round((i / 4) * (maxTs - minTs)),
-  );
+  const xTicks = Array.from({ length: 5 }, (_, i) => minTs + Math.round((i / 4) * (maxTs - minTs)));
   const yTicks = [0, max * 0.5, max];
 
   return (
-    <svg viewBox={`0 0 ${W} ${H + AXIS_H}`} className="w-full" preserveAspectRatio="none" aria-hidden="true">
+    <svg
+      viewBox={`0 0 ${W} ${H + AXIS_H}`}
+      className="w-full"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
       {yTicks.map((v) => (
         <g key={v}>
           <line

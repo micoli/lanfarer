@@ -74,16 +74,30 @@ function loadBboxTargetFromConfig(): string {
 
 loadEnvLocal();
 
-export const CONFIG_FILE   = process.env.CUDY_CONFIG   ?? "config.yaml";
-export const SESSIONS_FILE = process.env.SESSIONS_FILE ?? "sessions.json";
-export const BBOX_TARGET   = process.env.BBOX_TARGET   ?? loadBboxTargetFromConfig();
-export const BBOX_HOST     = process.env.BBOX_HOST     ?? "mabbox.bytel.fr";
-export const BBOX_PASSWORD = loadBboxPasswordFromConfig();
-export const PORT          = parseInt(process.env.PORT ?? "5176", 10);
-export const BASE_PATH     = process.env.BASE_PATH ?? "";
-export const isDev         = process.env.NODE_ENV !== "production";
-export const VERBOSE       = !!process.env.BBOX_VERBOSE;
-export const AUTH_DISABLED = !!process.env.AUTH_DISABLED;
+export const CONFIG_FILE      = process.env.CUDY_CONFIG   ?? "config.yaml";
+export const SESSIONS_FILE    = process.env.SESSIONS_FILE ?? "sessions.json";
+export const BBOX_TARGET      = process.env.BBOX_TARGET   ?? loadBboxTargetFromConfig();
+export const BBOX_HOST        = process.env.BBOX_HOST     ?? "mabbox.bytel.fr";
+export const BBOX_PASSWORD    = loadBboxPasswordFromConfig();
+export const PORT             = parseInt(process.env.PORT ?? "5176", 10);
+export const BASE_PATH        = process.env.BASE_PATH ?? "";
+export const isDev            = process.env.NODE_ENV !== "production";
+export const VERBOSE          = !!process.env.BBOX_VERBOSE;
+export const AUTH_DISABLED    = !!process.env.AUTH_DISABLED;
+
+function loadHaConfig(): { url: string; token: string } | null {
+  try {
+    const raw = fs.readFileSync(CONFIG_FILE, "utf8");
+    const data = parseYaml(raw) as { homeassistant?: { url?: string; long_token?: string } };
+    const ha = data.homeassistant;
+    if (ha?.long_token && ha?.url) {
+      return { url: ha.url.replace(/\/$/, ""), token: ha.long_token };
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
+export const HA_CONFIG = loadHaConfig();
 
 export const targetUrl        = new URL(BBOX_TARGET);
 export const isHttps          = targetUrl.protocol === "https:";
@@ -98,6 +112,7 @@ export interface UiConfig {
   menu: UiMenuItemConfig[] | null;
   home: { widgets: UiWidgetConfig[] } | null;
   dhcp: { router: string } | null;
+  hasHomeAssistant: boolean;
 }
 
 export interface RouterEntry {
@@ -134,7 +149,7 @@ function buildDefaultUiConfig(): UiConfig {
     menu.push({ id: "dhcp-options", router: firstBbox.name });
     menu.push({ id: "dhcp-reservations", router: firstBbox.name });
   }
-  return { menu, home: null, dhcp: firstBbox ? { router: firstBbox.name } : null };
+  return { menu, home: null, dhcp: firstBbox ? { router: firstBbox.name } : null, hasHomeAssistant: HA_CONFIG !== null };
 }
 
 export function loadUiConfig(): UiConfig {
@@ -151,6 +166,7 @@ export function loadUiConfig(): UiConfig {
       menu: ui.menu ?? null,
       home: ui.home?.widgets ? { widgets: ui.home.widgets } : null,
       dhcp,
+      hasHomeAssistant: HA_CONFIG !== null,
     };
   } catch {
     return buildDefaultUiConfig();

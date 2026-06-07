@@ -84,7 +84,7 @@ export default function MapPage() {
 
   const allClientMacs = useMemo(
     () => (topology?.accessPoints ?? []).flatMap((ap) => ap.clients.map((c) => c.mac)),
-    [topology],
+    [topology]
   );
   const vendorMap = useVendors(allClientMacs);
   const vendorMapRef = useRef<Map<string, string>>(new Map());
@@ -107,7 +107,7 @@ export default function MapPage() {
             .join(" · "),
         })),
       })),
-    [topology], // vendorMap intentionally excluded — accessed via ref
+    [topology] // vendorMap intentionally excluded — accessed via ref
   );
 
   useEffect(() => {
@@ -126,9 +126,7 @@ export default function MapPage() {
     // Compute initial position so all hotspots + clients are visible
     const sceneXZ = hotspots.length === 0 ? 3 : HOTSPOT_RING + CLIENT_ORBIT_MIN + 2;
     const usedAbsY =
-      hotspots.length > 0
-        ? Math.max(...hotspots.map((_, i) => Math.abs(hotspotHeight(i))))
-        : 0;
+      hotspots.length > 0 ? Math.max(...hotspots.map((_, i) => Math.abs(hotspotHeight(i)))) : 0;
     const fovHalfRad = (50 * Math.PI) / 180 / 2;
     const camDist = (sceneXZ / Math.tan(fovHalfRad)) * 1.15;
     const camY = usedAbsY + 4;
@@ -241,7 +239,6 @@ export default function MapPage() {
     halo.rotation.x = Math.PI / 2;
     mesh.add(halo);
 
-
     // ── Hotspots + clients ───────────────────────────────────────────────────
     const n = hotspots.length;
 
@@ -326,8 +323,7 @@ export default function MapPage() {
 
         const displayName = c.hostname ?? c.mac.slice(-8);
         const clblWrap = document.createElement("div");
-        clblWrap.style.cssText =
-          "display:flex;flex-direction:column;align-items:center;gap:1px;";
+        clblWrap.style.cssText = "display:flex;flex-direction:column;align-items:center;gap:1px;";
         const clblName = document.createElement("span");
         clblName.style.cssText =
           "background:rgba(15,23,42,0.88);color:#e2e8f0;font:600 10px/1.3 monospace;padding:1px 5px;border-radius:3px;white-space:nowrap;";
@@ -378,7 +374,10 @@ export default function MapPage() {
     };
     const onMouseLeave = () => {
       mouseNDC.set(-999, -999);
-      if (activeTipText !== null) { activeTipText = null; setTooltip(null); }
+      if (activeTipText !== null) {
+        activeTipText = null;
+        setTooltip(null);
+      }
     };
 
     let selectedGroup = -1;
@@ -414,7 +413,7 @@ export default function MapPage() {
       const hits = raycaster.intersectObjects(targets);
       const hitGroupIdx =
         hits.length > 0
-          ? ((hits[0].object as THREE.Mesh).userData.groupIdx as number | undefined) ?? -1
+          ? (((hits[0].object as THREE.Mesh).userData.groupIdx as number | undefined) ?? -1)
           : -1;
       applySelection(hitGroupIdx === selectedGroup ? -1 : hitGroupIdx);
     };

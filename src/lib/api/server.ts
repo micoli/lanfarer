@@ -4,6 +4,7 @@ import type { components } from "./schema.d.ts";
 export type HealthResponse = components["schemas"]["HealthResponse"];
 export type CheckIpResponse = components["schemas"]["CheckIpResponse"];
 export type ProbeResult = components["schemas"]["ProbeResult"];
+export type HaHistoryData = components["schemas"]["HaHistoryData"];
 // SSE event types — used by NetworkScan.tsx and useHosts.ts
 export type ScanHost = components["schemas"]["ScanHostEvent"];
 export type HostDetail = components["schemas"]["HostDetailEvent"];
@@ -19,5 +20,9 @@ export const serverApi = {
 
   probeHost(ip: string): Promise<ProbeResult> {
     return apiFetch(apiClient.GET("/__probe", { params: { query: { ip } } }));
+  },
+
+  haHistory(mac: string, days: number): Promise<HaHistoryData> {
+    return apiFetch(apiClient.GET("/__ha/history", { params: { query: { mac, days } } }));
   },
 };

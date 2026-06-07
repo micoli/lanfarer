@@ -10,13 +10,13 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { HostProbeButton } from "../components/HostProbeButton.tsx";
 import {
   useCreateDhcpClient,
   useDhcpClients,
   useDhcpConfig,
   useIpCheck,
 } from "../../plugins/bbox/frontend/hooks/useBbox";
+import { HostProbeButton } from "../components/HostProbeButton.tsx";
 import { useDhcpRouterId } from "../hooks/useUiConfig.ts";
 import type { components } from "../lib/api/schema.d.ts";
 
@@ -216,7 +216,7 @@ function ScanHostRow({
       <td className="px-4 py-2.5 font-mono text-sm text-slate-200 whitespace-nowrap">
         <span className="inline-flex items-center gap-0.5">
           {host.ip}
-          <HostProbeButton ip={host.ip} />
+          <HostProbeButton ip={host.ip} mac={host.mac} />
         </span>
         {reservation?.ipaddress && reservation.ipaddress !== host.ip && (
           <div className="text-xs text-blue-400 mt-0.5">{reservation.ipaddress}</div>
@@ -365,7 +365,7 @@ export default function NetworkScan() {
         h.mac?.toLowerCase().includes(q) ||
         h.hostname?.toLowerCase().includes(q) ||
         h.vendor?.toLowerCase().includes(q) ||
-        h.mdnsName?.toLowerCase().includes(q),
+        h.mdnsName?.toLowerCase().includes(q)
     );
   }, [hosts, filter]);
 

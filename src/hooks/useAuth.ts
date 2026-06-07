@@ -23,7 +23,11 @@ export function useAuth(): UseAuth {
     try {
       const { data, response } = await apiClient.GET("/__auth/me");
       if (response.ok && data) {
-        setState({ loading: false, authEnabled: data.authEnabled, username: data.username ?? null });
+        setState({
+          loading: false,
+          authEnabled: data.authEnabled,
+          username: data.username ?? null,
+        });
       } else {
         setState({ loading: false, authEnabled: true, username: null });
       }

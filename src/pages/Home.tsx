@@ -11,7 +11,7 @@ export default function Home() {
   const qc = useQueryClient();
 
   const widgetRegistry = new Map(
-    activePlugins.flatMap((p) => (p.widgets ?? []).map((w) => [w.type, w.component])),
+    activePlugins.flatMap((p) => (p.widgets ?? []).map((w) => [w.type, w.component]))
   );
 
   const widgets = uiConfig.home?.widgets ?? [];

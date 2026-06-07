@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
-import { BandwidthNavProvider } from "../contexts/BandwidthNavContext.tsx";
 import { frontendPlugins } from "../../plugins/frontendPlugins.ts";
+import { BandwidthNavProvider } from "../contexts/BandwidthNavContext.tsx";
 import { useRouters } from "../hooks/useUiConfig.ts";
 
 export default function Bandwidth() {

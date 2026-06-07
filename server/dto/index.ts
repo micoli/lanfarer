@@ -142,6 +142,27 @@ export class UiConfig {
 
   @ApiProperty({ type: () => UiDhcpConfig, nullable: true })
   dhcp!: UiDhcpConfig | null;
+
+  @ApiProperty({ type: Boolean })
+  hasHomeAssistant!: boolean;
+}
+
+// ── Home Assistant history ─────────────────────────────────────────────────────
+
+export class HaHistoryEntry {
+  @ApiProperty({ type: String, description: "État de présence (home, not_home, …)" })
+  state!: string;
+
+  @ApiProperty({ type: Number, description: "Unix timestamp (secondes)" })
+  ts!: number;
+}
+
+export class HaHistoryData {
+  @ApiProperty({ type: String, nullable: true, description: "entity_id Home Assistant résolu" })
+  entityId!: string | null;
+
+  @ApiProperty({ type: () => HaHistoryEntry, isArray: true })
+  history!: HaHistoryEntry[];
 }
 
 // ── Wireless ──────────────────────────────────────────────────────────────────

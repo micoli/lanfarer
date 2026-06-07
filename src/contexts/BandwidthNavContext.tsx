@@ -44,7 +44,9 @@ function NavBar({ items }: { items: BandwidthNavItem[] }) {
             <WifiOff size={13} className="text-slate-500 shrink-0" />
           )}
           <div className="flex flex-col min-w-0">
-            <span className="text-xs font-medium text-slate-200 truncate max-w-36">{item.name}</span>
+            <span className="text-xs font-medium text-slate-200 truncate max-w-36">
+              {item.name}
+            </span>
             <span className="text-xs text-slate-500">{item.type}</span>
           </div>
         </button>
