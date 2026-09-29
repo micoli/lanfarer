@@ -1,5 +1,5 @@
 name: Lanfarer
-version: "1.5.0"
+version: "1.6.0"
 slug: lanfarer
 description: Web GUI for managing routers on your local network
 url: https://github.com/micoli/lanfarer
@@ -14,11 +14,6 @@ ingress_port: 5176
 panel_icon: mdi:router-network
 
 host_network: true
-
-ports:
-  "5176/tcp": 5176
-ports_description:
-  "5176/tcp": Web interface
 
 options:
   verbose: false

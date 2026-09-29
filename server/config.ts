@@ -80,6 +80,7 @@ export const BBOX_TARGET      = process.env.BBOX_TARGET   ?? loadBboxTargetFromC
 export const BBOX_HOST        = process.env.BBOX_HOST     ?? "mabbox.bytel.fr";
 export const BBOX_PASSWORD    = loadBboxPasswordFromConfig();
 export const PORT             = parseInt(process.env.PORT ?? "5176", 10);
+export const LISTEN_HOST: string | undefined = process.env.LISTEN_HOST || undefined;
 export const BASE_PATH        = process.env.BASE_PATH ?? "";
 export const isDev            = process.env.NODE_ENV !== "production";
 export const VERBOSE          = !!process.env.BBOX_VERBOSE;

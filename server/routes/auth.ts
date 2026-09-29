@@ -1,4 +1,5 @@
 import type http from "node:http";
+import { isHassIngress } from "../hass-ingress.ts";
 import { login, getSession, deleteSession, parseSessionCookie, isAuthEnabled } from "../auth.ts";
 
 function readBody(req: http.IncomingMessage): Promise<string> {
@@ -72,10 +73,6 @@ export async function handleAuthRoute(
   }
 
   return false;
-}
-
-function isHassIngress(req: http.IncomingMessage): boolean {
-  return !!req.headers["x-hass-user-id"];
 }
 
 export function requireAuth(req: http.IncomingMessage, res: http.ServerResponse): boolean {
