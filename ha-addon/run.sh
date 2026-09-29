@@ -6,6 +6,7 @@ OPTIONS=/data/options.json
 export NODE_ENV=production
 export CUDY_CONFIG=/data/config.yaml
 export SESSIONS_FILE=/data/sessions.json
+export LISTEN_HOST=172.30.32.1
 
 bbox_target=$(jq -r '.bbox_target // empty' "$OPTIONS")
 bbox_host=$(jq -r '.bbox_host // empty' "$OPTIONS")

@@ -4,6 +4,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { AppModule } from "./app.module.ts";
 import {
   PORT,
+  LISTEN_HOST,
   isDev,
   BASE_PATH,
   BBOX_TARGET,
@@ -67,8 +68,8 @@ async function bootstrap() {
   // 3. NestJS routes handle everything under /__* and /devices/*
   await app.init();
 
-  app.getHttpServer().listen(PORT, () => {
-    console.log(`[server] http://localhost:${PORT} (${isDev ? "dev" : "production"})`);
+  app.getHttpServer().listen(PORT, LISTEN_HOST, () => {
+    console.log(`[server] http://${LISTEN_HOST ?? "localhost"}:${PORT} (${isDev ? "dev" : "production"})`);
   });
 }
 

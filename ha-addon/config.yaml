@@ -15,11 +15,6 @@ panel_icon: mdi:router-network
 
 host_network: true
 
-ports:
-  "5176/tcp": 5176
-ports_description:
-  "5176/tcp": Web interface
-
 options:
   verbose: false
   router_config: ""

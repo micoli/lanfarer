@@ -9,11 +9,8 @@ import {
 } from "@nestjs/swagger";
 import type { Request, Response } from "express";
 import { login, getSession, deleteSession, parseSessionCookie, isAuthEnabled } from "../auth.ts";
+import { isHassIngress } from "../hass-ingress.ts";
 import { LoginRequest, LoginResponse, MeResponse } from "../dto/index.ts";
-
-function isHassIngress(req: Request): boolean {
-  return !!req.headers["x-hass-user-id"];
-}
 
 @ApiTags("auth")
 @Controller("__auth")

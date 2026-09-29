@@ -1,10 +1,7 @@
 import { Injectable, CanActivate, type ExecutionContext } from "@nestjs/common";
 import type { Request, Response } from "express";
+import { isHassIngress } from "./hass-ingress.ts";
 import { isAuthEnabled, getSession, parseSessionCookie } from "./auth.ts";
-
-function isHassIngress(req: Request): boolean {
-  return !!req.headers["x-hass-user-id"];
-}
 
 @Injectable()
 export class AuthGuard implements CanActivate {
